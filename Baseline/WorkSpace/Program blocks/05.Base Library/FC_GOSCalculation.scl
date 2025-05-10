@@ -1,0 +1,168 @@
+﻿FUNCTION "FC_GOSCalculation" : Void
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 21
+// END_ATTRIBUTES
+   VAR_INPUT 
+      ir_TravelDistanceCurrentParc : Real;   // Travel distance of the current parcel till the end of the conveyor (mm)
+      ir_TravelDistanceUpstreamParc : Real;   // Travel distance of the upstream parcel till the end of the conveyor (mm)
+      ir_InitialSpeed : Real;   // Initial speed of the VFD (mm/s)
+      ir_Acceleration : Real;   // Maximum acceleration of the VFD (mm/s2)
+      ir_MaxSpeed : Real;   // Maximum speed of the VFD (mm/s)
+      ir_MinSpeed : Real;   // Minimum speed of hte VFD (mm/s)
+      ii_ParcelGapDownstream : Int;   // Downstream gap of the current parcel to his next parcel (mm)
+      ii_ParcelGapUpstream : Int;   // Upstream gap of the current parcel to his previous parcel (mm)
+      ii_RequiredGap : Int;   // Required gap between the parcels (mm)
+      ii_MarginGap : Int;   // Extra margin gap (mm)
+      ii_AllowedUpstreamGap : Int;   // Maximum allowed gap upstream (mm)
+      ix_ActionConv : Bool;   // ActionConv = True means that conveyor is running
+   END_VAR
+
+   VAR_OUTPUT 
+      qi_Speed : Int;   // Calculated speed (mm/s)
+      qi_ParcelGapRecovered : Int;   // Gap recovered by acceleration or deceleration (mm)
+      qx_Accelerate : Bool;   // Accelerate = True means that the action of acceleration is active
+      qx_Decelerate : Bool;   // Decelerate = True means that the action of deceleration is active
+      qi_TimeToChangeSpeed : LReal;   // Time for which the speed shoud be changed  [ms]
+   END_VAR
+
+   VAR_TEMP 
+      tr_NewTravelTime : Real;   // Calculated travel time (s)
+      tr_Speed : Real;   // Calculated speed (mm/s)
+      tr_RecoverdGapAccDec : Real;   // Gap that is recovered by acceleration and deceleration (mm)
+      tr_RecoverdGapDecAcc : Real;   // Gap that is recovered by deceleration and acceleration (mm)
+      tr_ParcelGapToBeRecovered : Real;   // Gap that has to be recovered (mm)
+      tr_NewTravelDistance : Real;   // Calculated travel distance (mm)
+      tr_AccDecTravelDistance : Real;   // Distance travelled by parcel when accelerated and decelerated (mm)
+   END_VAR
+
+
+BEGIN
+	(*
+	
+	----------------------------------------------------------------------------------------
+	28/01/2020  | 1.0       | R. Joosse     | first release TIA 15.1
+	28/01/2020  | 2.0       | M. Singh      | Used Absolute value of input distances so as to have correct calculations in case of a UFO
+	04/04/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 Calculation speed for acceleration and deceleration
+	    //Acceleration
+	    
+	    IF ((#ii_ParcelGapDownstream > #ii_RequiredGap + #ii_MarginGap) AND (#ii_ParcelGapUpstream < #ii_RequiredGap) AND (#ii_ParcelGapUpstream <> 0))
+	        OR (#ii_ParcelGapDownstream > #ii_RequiredGap + 100) //100mm is to be added to Config as "Additional Gap Downstream For Unconditional Acccelaeration"
+	    THEN
+	        #tr_ParcelGapToBeRecovered := #ii_ParcelGapDownstream - #ii_RequiredGap;
+	        #qx_Accelerate := True;
+	        #qx_Decelerate := FALSE;
+	        
+	        IF #ix_ActionConv
+	        THEN
+	            IF ABS_REAL(IN := #ir_TravelDistanceUpstreamParc) <= ABS_REAL(IN := #ir_TravelDistanceCurrentParc)
+	                
+	            THEN
+	                #tr_NewTravelDistance := ABS_REAL(IN := #ir_TravelDistanceUpstreamParc); //   #tr_NewTravelDistance := #ir_TravelDistance_UpstreamParc;
+	            ELSE
+	                #tr_NewTravelDistance := ABS_REAL(IN := #ir_TravelDistanceCurrentParc); //    #tr_NewTravelDistance := #ir_TravelDistance_CurrentParc;
+	            END_IF;
+	            
+	            //Calculate speed  (v2 = u2 +2as)
+	            #tr_Speed := SQRT((#ir_InitialSpeed * #ir_InitialSpeed) + (2.0 * #ir_Acceleration * ((#tr_NewTravelDistance / 2.0))));
+	            
+	            // #tr_Speed := SQRT((#ir_InitialSpeed * #ir_InitialSpeed) + (2.0 * #ir_Acceleration * ((#tr_NewTravelDistance / 2.0) - 50))); 
+	            //Calculate travel time (v = u + at)
+	            #tr_NewTravelTime := ((#tr_Speed - #ir_InitialSpeed) / #ir_Acceleration) * 2.0;
+	            
+	            //Recovered gap by acceleration and deceleration in millimeters
+	            #tr_RecoverdGapAccDec := #tr_NewTravelDistance - (#ir_InitialSpeed * #tr_NewTravelTime);
+	            
+	            IF #tr_RecoverdGapAccDec <= #tr_ParcelGapToBeRecovered
+	            THEN
+	                #qi_ParcelGapRecovered := REAL_TO_INT(#tr_RecoverdGapAccDec);
+	            ELSE
+	                #tr_NewTravelDistance := #tr_NewTravelDistance - (#tr_RecoverdGapAccDec - #tr_ParcelGapToBeRecovered);
+	                
+	                #tr_Speed := SQRT((#ir_InitialSpeed * #ir_InitialSpeed) + (2.0 * #ir_Acceleration * ((#tr_NewTravelDistance / 2.0))));
+	                
+	                //   #tr_Speed := SQRT((#ir_InitialSpeed * #ir_InitialSpeed) + (2.0 * #ir_Acceleration * ((#tr_NewTravelDistance / 2.0) - 50)));
+	                
+	                //Calculate travel time (v = u + at)
+	                #tr_NewTravelTime := ((#tr_Speed - #ir_InitialSpeed) / #ir_Acceleration) * 2.0;
+	                
+	                #qi_ParcelGapRecovered := REAL_TO_INT(#tr_NewTravelDistance - (#ir_InitialSpeed * #tr_NewTravelTime));
+	            END_IF;
+	        END_IF;
+	        
+	        //Deceleration        
+	    ELSIF (#ii_ParcelGapDownstream < #ii_RequiredGap) AND #ii_ParcelGapDownstream > 0 AND
+	        ((#ii_ParcelGapUpstream > #ii_AllowedUpstreamGap) OR (#ii_ParcelGapUpstream = 0))
+	        
+	    THEN
+	        #tr_ParcelGapToBeRecovered := #ii_RequiredGap - #ii_ParcelGapDownstream;
+	        #qx_Accelerate := FALSE;
+	        #qx_Decelerate := True;
+	        
+	        IF #ix_ActionConv
+	        THEN
+	            IF ABS_REAL(IN := #ir_TravelDistanceUpstreamParc) <= ABS_REAL(IN := #ir_TravelDistanceCurrentParc) AND
+	                (ABS_REAL(IN := #ir_TravelDistanceUpstreamParc) > 150.0)
+	            THEN
+	                #tr_NewTravelDistance := ABS_REAL(IN := #ir_TravelDistanceUpstreamParc);
+	            ELSE
+	                #tr_NewTravelDistance := ABS_REAL(IN := #ir_TravelDistanceCurrentParc);
+	            END_IF;
+	            
+	            //Calculate speed used v2 = (u2 -2as)
+	            #tr_Speed := SQRT((#ir_InitialSpeed * #ir_InitialSpeed) - ((2.0 * #ir_Acceleration * (#tr_NewTravelDistance / 2.0))));
+	            
+	            //Calculate travel time v= u + at
+	            #tr_NewTravelTime := ((#ir_InitialSpeed - #tr_Speed) / #ir_Acceleration) * 2.0;
+	            
+	            //Recovered gap by acceleration and deceleration in millimeters
+	            #tr_RecoverdGapDecAcc := (#ir_InitialSpeed * #tr_NewTravelTime) - #tr_NewTravelDistance;
+	            
+	            IF #tr_RecoverdGapDecAcc <= #tr_ParcelGapToBeRecovered
+	            THEN
+	                #qi_ParcelGapRecovered := REAL_TO_INT(#tr_RecoverdGapDecAcc);
+	            ELSE
+	                #tr_NewTravelDistance := #tr_NewTravelDistance - (#tr_RecoverdGapDecAcc - #tr_ParcelGapToBeRecovered);
+	                
+	                //Calculate speed used v2 = (u2 -2as)
+	                #tr_Speed := SQRT((#ir_InitialSpeed * #ir_InitialSpeed) - ((2.0 * #ir_Acceleration * (#tr_NewTravelDistance / 2.0))));
+	                
+	                //Calculate travel time v= u + at
+	                #tr_NewTravelTime := ((#ir_InitialSpeed - #tr_Speed) / #ir_Acceleration) * 2.0;
+	                
+	                //Recovered gap by acceleration and deceleration in millimeters
+	                #tr_RecoverdGapDecAcc := (#ir_InitialSpeed * #tr_NewTravelTime) - #tr_NewTravelDistance;
+	                
+	                #qi_ParcelGapRecovered := REAL_TO_INT(#tr_RecoverdGapDecAcc);
+	                
+	            END_IF;
+	        END_IF;
+	        
+	    ELSE
+	        //Initial speed
+	        #tr_Speed := #ir_InitialSpeed;
+	        #qx_Accelerate := FALSE;
+	        #qx_Decelerate := FALSE;
+	    END_IF;
+	END_REGION
+	
+	REGION 2 Write calculated speed on the output 
+	    #qi_TimeToChangeSpeed := REAL_TO_LREAL(IN := #tr_NewTravelTime * 1000 / 2);
+	    
+	    IF #tr_Speed > #ir_InitialSpeed
+	    THEN
+	        #qi_Speed := REAL_TO_INT(#ir_MaxSpeed);
+	    ELSIF #tr_Speed < #ir_InitialSpeed
+	    THEN
+	        #qi_Speed := REAL_TO_INT(#ir_MinSpeed);
+	    END_IF;
+	END_REGION
+	
+	
+END_FUNCTION
+

@@ -1,0 +1,143 @@
+﻿TYPE "UDT_RIOVSUStatistics"
+TITLE = UDT_RIOStatistics
+VERSION : 0.1
+//User-defined structure of FB_RIO function block statistics.
+   STRUCT
+      Int400VCBError { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Statistics of internal 400V circuit breaker not OK
+      Ext400VError { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Statistics of external 400V not OK
+      "24VError" { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Statistics of external 24V not OK
+      BrakeCBerror { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Statistics of brake circuit breaker not OK
+      BrakeThermError { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Statistics of brake thermal error
+      PNSlaveNotOnline { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Statistics of Profinet slave not online
+      PNSlaveError { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Statistics of a Profinet slave error
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_RIOVSUStatus"
+VERSION : 0.1
+   STRUCT
+      PNSlaveNotOnline : Bool;   // Profinet slave is not online
+      PNSlaveError : Bool;   // Profinet slave has an error
+      "400VCircuitBreaker" : Bool;   // 400V Circuit breaker has tripped
+      BrakeCircuitBreaker : Bool;   // Brake Circuit breaker has tripped
+      BrakeThermalError : Bool;   // Brake of the servo unit is giving a thermal error
+      "24VPowersupplyError" : Bool;   // 24V power supply is in error
+      ET200sp_ErrorModule : Array[0..31] of Bool;   // True = ET200sp Module has an error or is offline
+      PNSlaveWarning : Bool;   // Profinet slave has a warning
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_VSUCommand"
+TITLE = UDT_VSUCommand
+VERSION : 0.1
+//User-defined structure of VSU commands.
+   STRUCT
+      SemiAutomaticMode : Bool;   // Semiautomatic mode command from HMI
+      ManualMode : Bool;   // Manual mode command from HMI
+      CommandUp : Bool;   // Command from HMI to go to upper position in semiautomatic or manual mode
+      CommandDown : Bool;   // Command from HMI to go to lower position in semiautomatic or manual mode
+      JogUp : Bool;   // Command from HMI to Jog upwards
+      JogDown : Bool;   // Command from HMI to Jog downwards
+      ReferenceRun : Bool;   // Command from HMI to reference drive
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_VSUInterface"
+TITLE = UDT_VSUInterface
+VERSION : 0.1
+//User-defined structure of VSU interface parameters.
+   STRUCT
+      Decisionpoint { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Point in tracking where the destination is found on the VSU conveyor [mm]
+      RequestedPosition { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Position Requested by destination block
+      PositionSetpoint { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Position number (as configured) to go to by positioning device
+      PositionActual { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Position number the positioning device is actually on
+      SwitchingTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UInt;   // Time it takes to go from one position to the next [ms]
+      VSUMainPowerOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True = Main power for VSU ok
+      BrakeOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True = VSU brake is ok
+      PNDeviceOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Device ok
+      Automatic { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Automatic mode request
+      RunEnabled { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Running of the positioning device is enabled by VSU
+      GoReference { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Activate reference run by VSU
+      Referenced { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Positioning device is referenced
+      Manual { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Manual mode request
+      Reference_command { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Refference command
+      JogUp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Jog request to move equipment up
+      JogDown { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Jog request to move equipment down
+      Ready { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Positioning block is running and error free
+      MotorRunning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Motor is running
+      Positioning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // positioning device is moving to its position
+      ResetStatistics { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reset statistics
+      InternalErrorRIOPanel { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // RIO panel has an internal error
+      InternalWarningRIOPanel { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // RIO panel has an internal waring
+      InternalErrorVFD { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // positioning device internal error
+      InternalWarningVFD { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // positioning device has a warning
+      InternalErrorReset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reset internal faults
+      StartLowSpeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Positioning device starting in low speed
+      RequestDieBackUpstream { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // External request die back to the upstream conveyor of the VSU
+      ExternalHold { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // External request to stop the VSU conveyor
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_VSUConfiguration"
+TITLE = UDT_VSUConfig
+VERSION : 0.1
+//User-defined structure of VSU parameters.
+   STRUCT
+      PEC_EoSTimeOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Photo eye EOS time on delay [ms]
+      PEC_EoSTimeOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Photo eye EOS time off delay [ms]
+      PEC_OutTimeOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Photo eye outfeed time on delay [ms]
+      PEC_OutTimeOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Photo eye outfeed time off delay [ms]
+      PEC_JamTimeOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Photo eye jam time on delay [ms]
+      PEC_JamTimeOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Photo eye jam time off delay [ms]
+      JogNoHornTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt := 1000;   // Time within jog buttons can be pressed without new startup indication
+      SwitchingTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UInt := 950;   // Time it takes to go from one position to the next [ms]
+      DefaultPosition { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int := 2;   // Default position number (1= up or 2= down) , If left 0 the block will go to 1
+      HeadToHead { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int := 120;   // Head to head distance to downstream conveyor (upper and lower) [cm]
+      Gap { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int := 60;   // Gap to downstream conveyor (upper and lower) [cm]
+      JamDisplacementLimit { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int := 100;   // Limit displacement with PEC blocked to detect jam [cm]
+      SecurityChecked { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // If true, then in semiautomatic stop the parcel for reject (if the VSU is not directed to reject)
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_VSUStatistics"
+TITLE = UDT_VSUStatistics
+VERSION : 0.1
+//User-defined structure of FB_VerticalSwitch function block statistics.
+   STRUCT
+      UpTime { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // VSU up time
+      DownTime { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // VSU down time
+      UpperSwitchArea_Error { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Error statistics for VSU
+      LowerSwitchArea_Error { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Error statistics for VSU
+      UpperEntranceJam_Error { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Error statistics for VSU
+      LowerEntranceJam_Error { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Error statistics for VSU
+      Direction_Error { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Error statistics for VSU
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_VSUStatus"
+TITLE = UDT_VSUStatus
+VERSION : 0.1
+//User-defined structure of FB_VerticalSwitch function block status.
+   STRUCT
+      Status : Int;   // Status number
+      Specific : Struct   // Equipment specific warnings and errors
+         ReferencedError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // VFD is not referenced
+         UpperSwitchArea_Err { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Upper switching area PEC was activated when moving
+         LowerSwitchArea_Err { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Lower switching area PEC was activated when moving
+         UpperEntranceJam_Err { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Upper outfeed conveyor entrance PEC was blocked too long
+         LowerEntranceJam_Err { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Lower outfeed conveyor entrance PEC was blocked too long
+         Direction_Err { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Parcel should be rejected (in semi-automatic and security mode).
+         Keyswitch_WRN { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Keyswitch is in '0' position
+         UpperPosition { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Upper position reached
+         LowerPosition { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Lower position reached
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+

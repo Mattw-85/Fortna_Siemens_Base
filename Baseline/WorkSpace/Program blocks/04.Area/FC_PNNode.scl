@@ -1,0 +1,25 @@
+﻿FUNCTION "FC_PNNode" : Void
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 9
+// END_ATTRIBUTES
+   VAR_TEMP 
+      tx_Dummy : Bool;
+      tw_Dummy : Word;
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	
+	*)
+	
+END_FUNCTION
+

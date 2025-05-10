@@ -1,0 +1,139 @@
+﻿FUNCTION_BLOCK "FB_ParcelLength"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 20
+// END_ATTRIBUTES
+   VAR_INPUT 
+      ii_PECPosition { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //    Photoeye position [cm]
+      ii_Displacement { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //    Displacement [cm]
+      ix_LengthMeasurementEnable { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    Length measurement enable
+      ix_GapMeasurementEnable { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    Gap measurement enable
+   END_VAR
+
+   VAR_IN_OUT 
+      iqa_TrackingData : Array[*] of Int;   //    Tracking data
+   END_VAR
+
+   VAR 
+      sR_TRIG_Data {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //    Data rising edge for length and gap measurements
+      sF_TRIG_Data {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   //    Data falling edge for length and gap measurements
+      si_Length { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //    Parcel length
+      si_Gap { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //    Gap distance
+      si_GIN { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //    GIN number of current measured parcel
+      si_OldGIN { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //    GIN number of previous mesured parcel
+   END_VAR
+
+   VAR CONSTANT 
+      ci_Overflow : Int := 32767;   //    Integer overflow value
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	21/02/2020  | 3.1       | L.Klar        | first release MHSE TIA 15.1
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 – Data triggers
+	    
+	    // Triggers to detect front and end of data
+	    
+	    #sR_TRIG_Data(CLK := #iqa_TrackingData[#ii_PECPosition] > 0);
+	    #sF_TRIG_Data(CLK := #iqa_TrackingData[#ii_PECPosition] > 0);
+	    
+	END_REGION
+	
+	REGION 2 – Length counter
+	    
+	    //  Length is counted from a displacement, when data is available
+	    //  
+	    IF (#iqa_TrackingData[#ii_PECPosition] > 0
+	        AND #ix_LengthMeasurementEnable
+	        AND #si_Length < #ci_Overflow)
+	        
+	    THEN
+	        #si_Length += #ii_Displacement;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 3 – Gap counter
+	    
+	    //  Gap is counted from a displacement, when data isn't available
+	    IF (#iqa_TrackingData[#ii_PECPosition] = 0
+	        AND #ix_GapMeasurementEnable
+	        AND #si_Gap < #ci_Overflow)
+	    THEN
+	        #si_Gap += #ii_Displacement;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 4 – Parcel GIN
+	    
+	    IF (#sR_TRIG_Data.Q AND
+	        (#ix_LengthMeasurementEnable OR #ix_GapMeasurementEnable))
+	    THEN
+	        #si_GIN := #iqa_TrackingData[#ii_PECPosition];
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 5 – Write length into a GIN record
+	    
+	    IF (#sF_TRIG_Data.Q)
+	    THEN
+	        
+	        IF #ix_LengthMeasurementEnable OR #ix_GapMeasurementEnable THEN
+	            #si_OldGIN := #si_GIN;
+	        END_IF;
+	        
+	        IF (#si_GIN > 0
+	            AND ABS(#si_Length) > 0
+	            AND #ix_LengthMeasurementEnable)
+	        THEN
+	            "DB_GIN".GIN[#si_GIN].General.Length := ABS(#si_Length) - 1;
+	            #si_Length := 0;
+	        ELSE
+	            #si_Length := 0;
+	        END_IF;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 6 – Write GIN into a GIN record
+	    
+	    IF (#sR_TRIG_Data.Q)
+	    THEN
+	        IF (#si_OldGIN > 0
+	            AND #si_GIN > 0
+	            AND #si_Gap <> 0
+	            AND #si_OldGIN <> #si_GIN
+	            AND #ix_GapMeasurementEnable)
+	        THEN
+	            IF (#ii_Displacement > 0)
+	            THEN
+	                "DB_GIN".GIN[#si_GIN].General.LeadingGap := ABS(#si_Gap) - 1;
+	                "DB_GIN".GIN[#si_OldGIN].General.TrailingGap := "DB_GIN".GIN[#si_GIN].General.LeadingGap;
+	                #si_Gap := 0;
+	            ELSIF (#ii_Displacement < 0)
+	            THEN
+	                "DB_GIN".GIN[#si_OldGIN].General.LeadingGap := ABS(#si_Gap - 1);
+	                "DB_GIN".GIN[#si_GIN].General.TrailingGap := "DB_GIN".GIN[#si_OldGIN].General.LeadingGap;
+	                #si_Gap := 0;
+	            END_IF;
+	        ELSE
+	            #si_Gap := 0;
+	        END_IF;
+	    END_IF;
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

@@ -1,0 +1,151 @@
+﻿TYPE "UDT_EventStatistic"
+TITLE = UDT_EventStatistic
+VERSION : 0.1
+//User-defined structure of event statistic data.
+   STRUCT
+      NumberOfTimes : DInt;   // Number of times the event occurred since last reset
+      LastEventSeconds : DInt;   // Number of seconds of the current or last event
+      TotalEventSeconds : DInt;   // Total number of seconds the event occurred since last reset
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_PowerDistributionPanelStatus"
+VERSION : 0.1
+   STRUCT
+      Status : Int;   // Status number
+      Specific : Struct
+         CircuitBreakersTripped : Bool;   // Circuit breakers tripped when the value is true
+         CircuitBreakerTrippedF100 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF201 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF202 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF203 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF204 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF205 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF206 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF207 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF208 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF209 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF210 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF211 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF212 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF213 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF214 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF215 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF216 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF217 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF218 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF219 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF220 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF221 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF222 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF223 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF224 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF225 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF226 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF227 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF228 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF229 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF230 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF231 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF232 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF233 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF234 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF235 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF236 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF237 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF238 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF239 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF240 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF241 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF242 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF243 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF244 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF245 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF246 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF247 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF248 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF249 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF250 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF501 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF502 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF503 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF504 : Bool;   // Circuit breaker is tripped when the value is true
+         CircuitBreakerTrippedF505 : Bool;   // Circuit breaker is tripped when the value is true
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_PowerDistributionPanelStatistics"
+VERSION : 0.1
+   STRUCT
+      CircuitBreakersTripped : "UDT_EventStatistic";   // Circuit Breakers Tripped Statistics
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_PowerDistributionPanelCBState"
+VERSION : 0.1
+   STRUCT
+      CircuitBreakerStateF100 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF201 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF202 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF203 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF204 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF205 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF206 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF207 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF208 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF209 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF210 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF211 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF212 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF213 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF214 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF215 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF216 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF217 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF218 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF219 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF220 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF221 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF222 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF223 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF224 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF225 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF226 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF227 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF228 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF229 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF230 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF231 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF232 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF233 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF234 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF235 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF236 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF237 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF238 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF239 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF240 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF241 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF242 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF243 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF244 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF245 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF246 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF247 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF248 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF249 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF250 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF251 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF501 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF502 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF503 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF504 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+      CircuitBreakerStateF505 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit Breaker State Ok if the signal is true
+   END_STRUCT;
+
+END_TYPE
+

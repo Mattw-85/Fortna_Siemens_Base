@@ -1,0 +1,67 @@
+﻿FUNCTION_BLOCK "FB_Pulse"
+TITLE = FB_Pulse
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 26
+// END_ATTRIBUTES
+//Function block to generate custom pulse signal.
+   VAR_INPUT 
+      iudi_PulseTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Pulse time [ms]
+   END_VAR
+
+   VAR_OUTPUT 
+      qx_Pulse { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Pulse output
+   END_VAR
+
+   VAR 
+      R_TRIG {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Siemens "R_Trig" - to prepare rising edge trigger on "sx_Pulse" signal
+      slr_ActualPulseTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : LReal;   // Actual pulse time [ms]
+      sx_Pulse { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Pulse signal
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	24/05/2019  | 0.1       | K.Pokorski    | first release MHS TIA 15.1
+	24/07/2019  | 2.0       | L.Klar        | 2.0 MHS library release TIA 15.1
+	27/08/2019  | 2.1       | K.Pokorski    | Comments adjusted
+	04/11/2019  | 2.2       | L.Klar        | Prevoius cycle scan changed from memory to DB variable
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 - Pulse calculation
+	    
+	    // Pulse timer on
+	    IF (#iudi_PulseTime <= #slr_ActualPulseTime)
+	    THEN
+	        
+	        #sx_Pulse := TRUE;
+	        #slr_ActualPulseTime := 0;
+	        
+	    ELSE
+	        
+	        #slr_ActualPulseTime += "DB_Memory".PrevCycleTime;
+	        #sx_Pulse := FALSE;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 2 - Pulse output
+	    
+	    #R_TRIG(CLK := #sx_Pulse,
+	            Q => #qx_Pulse);
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

@@ -1,0 +1,44 @@
+﻿FUNCTION "FC_Simulation" : Void
+TITLE = FC_Simulation
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 13
+// END_ATTRIBUTES
+//Function to enable simulation mode.
+   VAR_TEMP 
+      tx_Done : Bool;
+      tx_Error : Bool;
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	24/05/2019  | 0.1       | L.Klar        | first release MHS TIA 15.1
+	24/07/2019  | 2.0       | L.Klar        | 2.0 MHS library release TIA 15.1
+	04/11/2019  | 2.1       | L.Klar        | Simulation bit changed from memory to DB variable
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 - Disabling and Enabling devices
+	    
+	    "DI_OnOffDevices"(ix_Simulation := "DB_Memory".Simulation,
+	                      qx_Done => #tx_Done,
+	                      qx_Error => #tx_Error,
+	                      iqa_ProfinetNetworks := "DB_ProfinetDiagnostic".ProfinetNetworks);
+	    
+	END_REGION
+	
+	
+	
+END_FUNCTION
+

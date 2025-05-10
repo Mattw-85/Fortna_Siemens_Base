@@ -1,0 +1,24 @@
+﻿TYPE "ST_SICK_Lector_CLV6xx"
+TITLE = SICK Lector/CLV6xx data type
+VERSION : 0.1
+//This data type includes arguments and results using by the SICK_Lector_CLV6xx_PNDP function block.
+   STRUCT
+      Matchcode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // ==Matchcode==
+         sName { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[10];   // Matchcode number (Match[1..9]) (Input)
+         nCodeType { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Char;   // Code type see device documentation. (Example: 'd'= EAN-Code; 's'=QR-Code; '*'= Don't care) (Input)
+         iMinMaxLength { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : USInt;   // Sets the min and may length. 0= Don't care (Input)
+         sContent { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[75];   // Matchcode content
+      END_STRUCT;
+      FreeCommand { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // ==Free Command==
+         sCommand { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[100];   // Command (SICK CoLa-A protocol without [STX]/[ETX] framing) (In)
+         sResult { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[100];   // Result (SICK CoLa-A protocol) (Out)
+      END_STRUCT;
+      ReadingResult { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // ==Reading Result==
+         iCounter { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : USInt;   // This counter is incremented if a new reading result has arrived (In)
+         iLength { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Byte length of the reading result (Out)
+         arrResult { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[1..200] of Byte;   // Reading result data defined in the SOPAS output format (Out)
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+

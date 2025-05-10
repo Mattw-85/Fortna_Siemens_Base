@@ -1,0 +1,40 @@
+﻿FUNCTION "FC_ForceInputs" : Void
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 3
+// END_ATTRIBUTES
+   VAR_TEMP 
+      tx_Dummy : Bool;
+      tw_Dummy : Word;
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	10/09/2019  | 2.0       | MHS           | Initial version 
+	04/11/2019  | 2.1       | L.Klar        | Memory bits changed to DB variable
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	*)
+	
+	(* Delete the whole function once commissioning is done *)
+	
+	REGION 1 - Write commissioning Bits
+	    (* Before complete commissioning please crossreference for the use of the following memory bits 
+	                    "mx_CommissioningFalse" 
+	                    "mx_CommissioningTrue"  
+	    There should not be in use at the end of the commissioning *)
+	    
+	    "DB_Memory".CommissioningFalse := FALSE;
+	    "DB_Memory".CommissioningTrue := TRUE;
+	    
+	END_REGION
+	
+END_FUNCTION
+

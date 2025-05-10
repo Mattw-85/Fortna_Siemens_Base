@@ -1,0 +1,35 @@
+﻿TYPE "UDT_DataLogic_IN"
+VERSION : 0.1
+   STRUCT
+      DataFromCamera { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;   // OK_READ - .%X0; NO_READ -.%X1; PhaseON -.%X3; PhaseOFF .%X4
+      BarCodeValue0 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;   // First character of the barcode.
+      BarCodeValue { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[1..14] of Char;   // Remaining characters of the barcode, after the barcode remaining chars are  '$00' = BYTE#16#00
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_DataLogic_OUT"
+VERSION : 0.1
+   STRUCT
+      "Unused_0.0" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Unused
+      "Unused_0.1" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Unused
+      "Unused_0.2" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Unused
+      "Unused_0.3" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Unused
+      "Unused_0.4" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Unused
+      "Unused_0.5" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Unused
+      "Unused_0.6" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Unused
+      BladeTrigger { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Camera input for trigger
+      Unused_1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;   // Unused
+      UnusedBytes { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[0..14] of Byte;   // Unused
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_DataLogicBlade_IN_SN"
+VERSION : 0.1
+   STRUCT
+      Data { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[0..15] of Byte;
+   END_STRUCT;
+
+END_TYPE
+

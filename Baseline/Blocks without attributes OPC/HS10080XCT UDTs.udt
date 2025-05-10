@@ -1,0 +1,119 @@
+﻿TYPE "UDT_EventStatistic"
+TITLE = UDT_EventStatistic
+VERSION : 0.1
+//User-defined structure of event statistic data.
+   STRUCT
+      NumberOfTimes : DInt;   // Number of times the event occurred since last reset
+      LastEventSeconds : DInt;   // Number of seconds of the current or last event
+      TotalEventSeconds : DInt;   // Total number of seconds the event occurred since last reset
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_ConveyorCommonConfiguration"
+VERSION : 0.1
+   STRUCT
+      Length { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Conveyor length [mm]
+      LengthCorrection { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Length correction [mm]
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_HS10080XCTStatus"
+TITLE = UDT_HS10080XCTStatus
+VERSION : 0.1
+//User-defined structure of FB_Xray_HS10080XCT function block status.
+   STRUCT
+      Status : Int;   // Status number
+      XraySpecific : Struct   // Equipment specific warnings and errors
+         XrayPowerNotOn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // X-ray not turned on
+         MachineNotOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // X-ray not initialised or not working properly
+         XRayNotReady { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // X-ray not ready to receive a bag
+         TransitActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Transit mode is active
+         NoScanActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // X-ray is in the no-scan mode
+         IQTestActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // IQ test is active on XRAY
+         DoorInterlockNotOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // One of the doors of the in- or outfeed tunnel is opend
+         RepairSwitch { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // X-ray mains are powered off
+         ServiceMode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // X-ray is in service mode.
+         TempOutOfRange { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // XCT operating temperature is out of range
+         GantrySpeedNotOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Gantry speed is not ok
+      END_STRUCT;
+      InfeedConvSpecific : Struct   // Equipment specific warnings and errors
+         Status : Int;   // Satus number
+         Conv_ERR { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Conveyor is in error
+         Encoder_ERR { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Encoder error
+         PEC_EoSJam { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // PE Jammed end of system pec
+      END_STRUCT;
+      MainConvSpecific : Struct   // Equipment specific warnings and errors
+         Status : Int;   // Satus number
+         Conv_ERR { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Conveyor is in error
+         Encoder_ERR { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Encoder error
+      END_STRUCT;
+      OutfeedConvSpecific : Struct   // Equipment specific warnings and errors
+         Status : Int;   // Satus number
+         Conv_ERR { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Conveyor is in error
+         Encoder_ERR { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Encoder error
+         PEC_EoSJam { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // PE Jammed end of system pec
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_HS10080XCTStatistics"
+TITLE = UDT_HS10080XCTStatistics
+VERSION : 0.1
+//User-defined structure of FB_Xray_HS10080XCT function block statistics.
+   STRUCT
+      XRayMode { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Running in X-Ray mode
+      ServiceMode { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Running in service mode
+      TransitMode { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Running in transit mode
+      EStopActive { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // E-Stop is active
+      RepairSwitch { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Mains power on
+      TempOutOfRange { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // XCT doesn’t work because XCT operating temperature isn’t given.
+      Stopped { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Machine is stopped
+      Calibrating { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Calibration is active
+      CallibrationForced { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Callibration is forced on (timed out waiting)
+      Interlock { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // One of the doors of the in or outfeed tunnel is opend
+      InfeedConveyorError { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // The Infeed conveyor was in error
+      OutfeedConveyorError { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // The Outfeed conveyor was in error
+      EncoderError { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // One of the encoders has faulted
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_HS10080XCTHMICommand"
+VERSION : 0.1
+   STRUCT
+      NoScanMode : Bool;   // NO scan mode command from HMI
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_HS10080XCTConfiguration"
+VERSION : 0.1
+   STRUCT
+      InfeedConveyor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorCommonConfiguration";
+      MainConveyor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorCommonConfiguration";
+      OutfeedConveyor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorCommonConfiguration";
+      PEC_InfeedTimeOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Photo eye time on delay [ms]
+      PEC_InfeedTimeOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Photo eye time off delay [ms]
+      PEC_InfeedDistance { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Distance between photo eye and the end of conveyor [mm]
+      PEC_InfeedDistanceOffset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Distance offset between photo eye and the end of conveyor [mm]
+      PEC_OutfeedTimeOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Photo eye time on delay [ms]
+      PEC_OutfeedTimeOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Photo eye time off delay [ms]
+      PEC_OutfeedDistance { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Distance between photo eye and the end of conveyor [mm]
+      PEC_OutfeedDistanceOffset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Distance offset between photo eye and the end of conveyor [mm]
+      OutfeedPECJamDisplacementLimit { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Limit displacement with PEC blocked to detect jam [cm]
+      InfeedPECJamDisplacementLimit { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Limit displacement with PEC blocked to detect jam [cm]
+      Gap { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Gapping tail to head value [cm]
+      CallibrationTimeout { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Max time when callibration is requested before "ix_AllowCallibration" is overruled
+      MainConvFeedbackDelayTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UInt;   // Time limit to check XRAY main conveyor speed OK feedback (ms)
+      EnergySaveLenght { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Distance conveyor travelled before energy save activate [cm]
+      CascadeTimeOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Cascade time on delay [ms]
+      Energy { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Energy save mode enable
+      FirstConveyorToStart { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // First conveyor to start cascade mode
+      ResetWithPECBlocked { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // When 'True' - Allow reset system after jam with the PEC blocked
+   END_STRUCT;
+
+END_TYPE
+

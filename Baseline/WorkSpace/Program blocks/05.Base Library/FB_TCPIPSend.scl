@@ -1,0 +1,307 @@
+﻿FUNCTION_BLOCK "FB_TCPIPSend"
+TITLE = FB_TCPIPSend
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : Communication
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 31
+// END_ATTRIBUTES
+//Function block to send data from TCPIP.
+   VAR_INPUT 
+      iUDT_Connection { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_Connection";   // Connection parameters
+      ix_EnableSend { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Enable send
+   END_VAR
+
+   VAR_OUTPUT 
+      qx_Error { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Collective error output
+      qx_Warning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Collective warning output
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_FifoLowHeader : "UDT_FifoHeader";   // Low priority FIFO header
+      iqs_FifoLowData : Array[*] of "UDT_Message";   // Low priority FIFO data
+      iqUDT_FifoMedHeader : "UDT_FifoHeader";   // Medium priority FIFO header
+      iqs_FifoMedData : Array[*] of "UDT_Message";   // Medium priority FIFO data
+      iqUDT_FifoHighHeader : "UDT_FifoHeader";   // High priority FIFO header
+      iqs_FifoHighData : Array[*] of "UDT_Message";   // High priority FIFO data
+   END_VAR
+
+   VAR 
+      sFB_TSEND {InstructionName := 'TSEND'; LibVersion := '4.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : TSEND;   // Siemens "TSEND" block - to send the data over TCPIP socket
+      sUDT_MsgArray { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_Message";   // Message character array
+      sa_TSEND { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // TSEND block structure
+         Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Word;   // TSEND - Status
+         Request { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TSEND - Request
+         Busy { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TSEND - Busy
+         Done { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TSEND - Done
+         Error { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TSEND - Error
+      END_STRUCT;
+      sa_Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Status structure
+         FIFOLowPrioStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_FifoStatus";
+         FIFOMedPrioStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_FifoStatus";
+         FIFOHighPrioStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_FifoStatus";
+         FIFOLowPrioError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // FIFO low priority error
+         FIFOLowPrioWarning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // FIFO low priority warning
+         FIFOMedPrioError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // FIFO medium priority error
+         FIFOMedPrioWarning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // FIFO medium priority warning
+         FIFOHighPrioError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // FIFO high priority error
+         FIFOHighPrioWarning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // FIFO high priority warning
+         SendError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Send operation error
+      END_STRUCT;
+      si_MaxMsgLen { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Maximum message length
+      si_MsgLen { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Message length
+      sx_MsgReady { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Message is ready to send
+      sx_MsgRead { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Message has been read
+      sx_MsgReadReq { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Request to read message
+      sx_FIFOError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Summary FIFO error
+   END_VAR
+
+   VAR CONSTANT 
+      cc_NULL : Char := '$00';   // NULL sign
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	24/05/2019  | 0.1       | L.Klar        | first release MHS TIA 15.1
+	13/06/2019  | 0.2       | A.Nowak       | Replacement of instruction if for direct write into variable - Region 7  
+	25/06/2019  | 0.5       | L.Klar        | Comments corrected
+	18/07/2019  | 0.6       | L.Klar        | Status handling changed
+	24/07/2019  | 2.0       | L.Klar        | 2.0 MHS library release TIA 15.1
+	22/08/2019  | 2.1       | K.Pokorski    | Comments adjusted
+	20/09/2019  | 2.2       | K.Pokorski    | "UDT_Status" deleted
+	26/09/2019  | 2.3       | A.Nowak       | Delete NoDataTOSend and TSEND status code from status structure. Delete region 7.
+	02/10/2019  | 2.4       | A.Nowak       | Implementation of the new FIFO block
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 – Update FIFO header status bits
+	    
+	    // Mode 'S' - High priority FIFO register status update
+	    "FC_Fifo"(ic_Mode := 'S',
+	              qUDT_Status => #sa_Status.FIFOHighPrioStatus,
+	              qx_Error => #sa_Status.FIFOHighPrioError,
+	              qx_Warning => #sa_Status.FIFOHighPrioWarning,
+	              iqv_Data := #sUDT_MsgArray,
+	              iqUDT_FifoHeader := #iqUDT_FifoHighHeader,
+	              iqv_DataBuffer := #iqs_FifoHighData);
+	    
+	    
+	    // Mode 'S' - Medium priority FIFO register status update
+	    "FC_Fifo"(ic_Mode := 'S',
+	              qUDT_Status => #sa_Status.FIFOMedPrioStatus,
+	              qx_Error => #sa_Status.FIFOMedPrioError,
+	              qx_Warning => #sa_Status.FIFOMedPrioWarning,
+	              iqv_Data := #sUDT_MsgArray,
+	              iqUDT_FifoHeader := #iqUDT_FifoMedHeader,
+	              iqv_DataBuffer := #iqs_FifoMedData);
+	    
+	    // Mode 'S' - Low priority FIFO register status update
+	    "FC_Fifo"(ic_Mode := 'S',
+	              qUDT_Status => #sa_Status.FIFOLowPrioStatus,
+	              qx_Error => #sa_Status.FIFOLowPrioError,
+	              qx_Warning => #sa_Status.FIFOLowPrioWarning,
+	              iqv_Data := #sUDT_MsgArray,
+	              iqUDT_FifoHeader := #iqUDT_FifoLowHeader,
+	              iqv_DataBuffer := #iqs_FifoLowData);
+	    
+	END_REGION
+	
+	REGION 2 – FIFO header summary error 
+	    
+	    #sx_FIFOError :=
+	    #sa_Status.FIFOHighPrioError         // High priority FIFO error 
+	    OR #sa_Status.FIFOMedPrioError       // Medium priority FIFO error
+	    OR #sa_Status.FIFOLowPrioError;      // Low priority FIFO error
+	    
+	END_REGION
+	
+	REGION 3 – FIFO Read request
+	    
+	    #sx_MsgReadReq :=
+	    #ix_EnableSend                      // Connection is established 
+	    AND NOT #sx_FIFOError               // No FIFO errors
+	    AND NOT #sa_TSEND.Error             // No TSEND errors 
+	    AND #sa_TSEND.Status = 16#7000;     // TSEND block status equal to 16#7000 - no job
+	    
+	END_REGION
+	
+	REGION 4 – Read the message from high priority FIFO data buffer
+	    
+	    IF (#sx_MsgReadReq                                                          // Read request
+	        AND NOT #iqUDT_FifoHighHeader.Status.Empty                             // High priority FIFO data buffer is not empty
+	        AND NOT #sx_MsgRead)                                                    // Message isn't read
+	    THEN
+	        
+	        // Mode 'R' - Read high priority FIFO record
+	        "FC_Fifo"(ic_Mode := 'R',
+	                  qUDT_Status => #sa_Status.FIFOHighPrioStatus,
+	                  qx_Error => #sa_Status.FIFOHighPrioError,
+	                  qx_Warning => #sa_Status.FIFOHighPrioWarning,
+	                  iqv_Data := #sUDT_MsgArray,
+	                  iqUDT_FifoHeader := #iqUDT_FifoHighHeader,
+	                  iqv_DataBuffer := #iqs_FifoHighData);
+	        
+	        #sx_MsgRead := TRUE;                                                        // Message read bit
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 5 – Read the message from medium priority FIFO data buffer
+	    
+	    IF (#sx_MsgReadReq                                                              // Read request, 
+	        AND #iqUDT_FifoHighHeader.Status.Empty                                     // High priority FIFO data buffer empty
+	        AND NOT #iqUDT_FifoMedHeader.Status.Empty                                  // Medium priority FIFO data buffer not empty
+	        AND NOT #sx_MsgRead)                                                        // Message not read
+	    THEN
+	        
+	        // Mode 'R' - Read medium priority FIFO record
+	        "FC_Fifo"(ic_Mode := 'R',
+	                  qUDT_Status => #sa_Status.FIFOMedPrioStatus,
+	                  qx_Error => #sa_Status.FIFOMedPrioError,
+	                  qx_Warning => #sa_Status.FIFOMedPrioWarning,
+	                  iqv_Data := #sUDT_MsgArray,
+	                  iqUDT_FifoHeader := #iqUDT_FifoMedHeader,
+	                  iqv_DataBuffer := #iqs_FifoMedData);
+	        
+	        #sx_MsgRead := TRUE;                                                        // Message read bit
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 6 – Read the message from low priority FIFO data buffer
+	    
+	    IF (#sx_MsgReadReq                                                          // Read request
+	        AND #iqUDT_FifoHighHeader.Status.Empty                                 // High priority FIFO data buffer empty
+	        AND #iqUDT_FifoMedHeader.Status.Empty                                  // Medium priority FIFO data buffer empty
+	        AND NOT #iqUDT_FifoLowHeader.Status.Empty                              // Low priority FIFO data buffer not empty
+	        AND NOT #sx_MsgRead)                                                    // Message not read
+	    THEN
+	        
+	        #sx_MsgRead := TRUE;                                                    // Message read bit
+	        
+	        // Mode 'R' - Read low priority FIFO record
+	        "FC_Fifo"(ic_Mode := 'R',
+	                  qUDT_Status => #sa_Status.FIFOLowPrioStatus,
+	                  qx_Error => #sa_Status.FIFOLowPrioError,
+	                  qx_Warning => #sa_Status.FIFOLowPrioWarning,
+	                  iqv_Data := #sUDT_MsgArray,
+	                  iqUDT_FifoHeader := #iqUDT_FifoLowHeader,
+	                  iqv_DataBuffer := #iqs_FifoLowData);
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 7 – Maximum number of message array elements
+	    
+	    #si_MaxMsgLen := "FC_GetNrOfArrayEl"(iv_Array := #sUDT_MsgArray.Character);
+	    
+	END_REGION
+	
+	REGION 8 – Message length
+	    
+	    // Measuring the length of a read message
+	    IF (#sx_MsgRead                                                 // The message is read
+	        AND NOT #sx_MsgReady)                                       // The message is not ready
+	    THEN
+	        
+	        // Initialize the message length 
+	        #si_MsgLen := 0;
+	        
+	        // Message character counting loop  
+	        WHILE #sUDT_MsgArray.Character[#si_MsgLen] <> #cc_NULL     // Message array character is diffrent then NULL sign
+	            AND #si_MsgLen < #si_MaxMsgLen - 1                      // Message length is lower then maximum message length minus 1
+	        DO
+	            
+	            #si_MsgLen += 1;
+	            
+	        END_WHILE;
+	        
+	        #sx_MsgReady := TRUE;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 9 – Send request
+	    
+	    IF (#sx_MsgRead                     // The message is read
+	        AND #sx_MsgReady)               // The message is ready
+	        
+	    THEN
+	        
+	        #sa_TSEND.Request := TRUE;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 10 – Send data
+	    
+	    #sFB_TSEND(REQ := #sa_TSEND.Request,
+	               ID := #iUDT_Connection.ID,
+	               LEN := INT_TO_UDINT(#si_MsgLen),
+	               DONE => #sa_TSEND.Done,
+	               BUSY => #sa_TSEND.Busy,
+	               ERROR => #sa_TSEND.Error,
+	               STATUS => #sa_TSEND.Status,
+	               DATA := #sUDT_MsgArray);
+	    
+	    // Reset send request, message read and ready bits
+	    IF (#sa_TSEND.Request                                       // Send request
+	        AND NOT #sa_TSEND.Busy                                  // TSEND block not busy
+	        AND (#sa_TSEND.Done                                     // Send operation done 
+	        OR #sa_TSEND.Status = 16#7000))                     // Communication is not established
+	    THEN
+	        
+	        #sa_TSEND.Request := FALSE;
+	        #sx_MsgRead := FALSE;
+	        #sx_MsgReady := FALSE;
+	        
+	    END_IF;
+	    
+	    // Reset send error and TSEND status after correctly sent message
+	    IF (#sa_TSEND.Done)                                                 // Send operation done 
+	    THEN
+	        
+	        #sa_Status.SendError := FALSE;
+	        
+	    END_IF;
+	    
+	    // Set send error and TSEND status if error occured
+	    IF (#sa_TSEND.Error)                                                // TSEND error
+	    THEN
+	        
+	        #sa_Status.SendError := TRUE;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 11 – Status
+	    
+	    // Parametrization collective error output
+	    #qx_Error :=
+	    #sx_FIFOError                           // FIFO errors and
+	    OR #sa_Status.SendError;                // TSEND block operation error
+	    
+	    // Parametrization collective warning output
+	    #qx_Warning :=
+	    #sa_Status.FIFOHighPrioWarning          // High priority FIFO warning bit 
+	    OR #sa_Status.FIFOMedPrioWarning        // Medium priority FIFO warning bit 
+	    OR #sa_Status.FIFOLowPrioWarning;       // Low priority FIFO warning bit 
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

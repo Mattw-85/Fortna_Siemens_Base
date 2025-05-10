@@ -1,0 +1,125 @@
+﻿FUNCTION "FC_GetPNPortStatus" : Void
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 20
+// END_ATTRIBUTES
+   VAR_INPUT 
+      ii_NumberOfPorts : Int;   //  Number of ports in device
+      iUDT_DevicePNInfo : "UDT_PNDevice";   //  PN device info structure
+   END_VAR
+
+   VAR_OUTPUT 
+      qa_PortFault : Array[1..8] of Bool;   //  When TRUE then specific port has a fault
+   END_VAR
+
+   VAR_TEMP 
+      tp_GetDiagInfo {InstructionName := 'DIS'; LibVersion := '1.0'} : DIS;   //  Diagnostic structure
+      tp_DeviceGeoAddr {InstructionName := 'GEOADDR'; LibVersion := '1.0'} : GEOADDR;   //  Device pointer structre
+      ta_PortFault : Array[1..8] of Bool;   //  When TRUE then port has a fault
+      ti_Geo2LogStatus : Int;   //  GEO2LOG status code
+      ti_GetDiagStatus : Int;   //  Get_Diag status code
+      ti_Log2GeoStatus : Int;   //  LOG2GEO status code
+      ti_Loopcounter : Int;   //  Loop counter
+      tui_cnt : UInt;   //  Not used
+      tdi_PortLaddr : HW_ANY;   //  HW identifier
+      ti_PortFault : Bool;   //  At least one port is faulty
+      tx_ConfigurationError : Bool;   //  Configuration error occurred
+   END_VAR
+
+   VAR CONSTANT 
+      ci_Area : UInt := 1;   //     Area ID of IO Profinet devices
+      ci_HWTYPE : UInt := 5;
+      ci_PortSlot : UInt := 0;
+      ci_PortSubslot : Word := 16#8000;
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	03/11/2020  | 3.0       | K.Pokorski    | first release MHS TIA 15.1
+	17/12/2020  | 3.1       | K.Pokorski    | Run operation only during error
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 - Check configuration
+	    
+	    #tx_ConfigurationError := #ii_NumberOfPorts < 1
+	    OR #ii_NumberOfPorts > 8
+	    OR NOT #iUDT_DevicePNInfo.PNDeviceFound;
+	    
+	END_REGION
+	
+	REGION 2 - Read profinet network number
+	    
+	    // Using LOG2GEO profinet network address is read
+	    #ti_Log2GeoStatus := LOG2GEO(LADDR := "DB_ProfinetDiagnostic".ProfinetNetworks[#iUDT_DevicePNInfo.PNNetworknumber].DeviceStatus[#iUDT_DevicePNInfo.PNDeviceNumber].DeviceState.HW_ID,
+	                                 GEOADDR := #tp_DeviceGeoAddr);
+	    
+	END_REGION
+	
+	REGION 3 - Preparation the device pointer
+	    
+	    // HWTYPE = 5 - Submodule
+	    #tp_DeviceGeoAddr.HWTYPE := #ci_HWTYPE;
+	    // AREA = 1 - PROFINET IO
+	    #tp_DeviceGeoAddr.AREA := #ci_Area;
+	    // SLOT = 0 - Ports are on slot 0 
+	    #tp_DeviceGeoAddr.SLOT := #ci_PortSlot;
+	    // STATION - Profinet number
+	    #tp_DeviceGeoAddr.STATION := "DB_ProfinetDiagnostic".ProfinetNetworks[#iUDT_DevicePNInfo.PNNetworknumber].DeviceStatus[#iUDT_DevicePNInfo.PNDeviceNumber].DeviceState.ProfinetNumber;
+	    
+	END_REGION
+	
+	REGION 4 - Checking the port status
+	    // If device report error and is available on the PN network
+	    IF "DB_ProfinetDiagnostic".ProfinetNetworks[#iUDT_DevicePNInfo.PNNetworknumber].DeviceStatus[#iUDT_DevicePNInfo.PNDeviceNumber].DeviceState.Error
+	        AND "DB_ProfinetDiagnostic".ProfinetNetworks[#iUDT_DevicePNInfo.PNNetworknumber].DeviceStatus[#iUDT_DevicePNInfo.PNDeviceNumber].DeviceState.Exist
+	        AND NOT #tx_ConfigurationError
+	    THEN
+	        
+	        // Loop through all profinet ports
+	        FOR #ti_Loopcounter := 1 TO #ii_NumberOfPorts DO
+	            // Reset auxiliary port fault bit 
+	            #ta_PortFault[#ti_Loopcounter] := FALSE;
+	            // SUBSLOT = 16#8000 plus port number (TIA structure to refer to port)
+	            #tp_DeviceGeoAddr.SUBSLOT := INT_TO_UINT(WORD_TO_INT(#ci_PortSubslot) + (#ti_Loopcounter));
+	            // Using GEO2LOG port address is read
+	            #ti_Geo2LogStatus := GEO2LOG(GEOADDR := #tp_DeviceGeoAddr, LADDR => #tdi_PortLaddr);
+	            // Using GET_DIAG port status is read
+	            #ti_GetDiagStatus := GET_DIAG(MODE := 1, LADDR := #tdi_PortLaddr, CNT_DIAG => #tui_cnt, DIAG := #tp_GetDiagInfo);
+	            
+	            // Set port fault if all operations do not report any error and port is faulty
+	            IF #ti_GetDiagStatus = 0
+	                AND #ti_Geo2LogStatus = 0
+	                AND #ti_Log2GeoStatus = 0
+	                AND #tp_GetDiagInfo.OwnState = 4
+	            THEN
+	                #ta_PortFault[#ti_Loopcounter] := TRUE;
+	            END_IF;
+	        END_FOR;
+	        // Reset module status if error occurred
+	    ELSIF #tx_ConfigurationError
+	    THEN
+	        FOR #ti_Loopcounter := 1 TO 8 DO
+	            #ta_PortFault[#ti_Loopcounter] := FALSE;
+	        END_FOR;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 5 - Write output
+	    
+	    #qa_PortFault := #ta_PortFault;
+	    
+	END_REGION
+	
+	
+END_FUNCTION
+

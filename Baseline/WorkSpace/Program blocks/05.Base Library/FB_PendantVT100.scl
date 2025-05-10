@@ -1,0 +1,416 @@
+﻿FUNCTION_BLOCK "FB_PendantVT100"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 222
+// END_ATTRIBUTES
+   VAR_INPUT 
+      iUDT_Configuration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_PendantVT100Configuration" := ([16#001B, 16#005B, 16#0031, 16#003B, 16#0033, 16#0048, 16#006D, 16#0000], [16#001B, 16#005B, 16#0032, 16#003B, 16#0035, 16#0048, 16#006D, 16#0000], (), (), ());
+      iUDT_PendantInputs { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_PendantVT100InBytes";   //   Input Bytes 1,2 and 3 of HW Config
+      ix_HMIDivertSelectionEnabled { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   When 'TRUE' The divert selection screen is activated from the HMI
+      ix_SimulationModeActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   When 'TRUE' Simulation mode active
+      ix_LCDDS1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   When 'TRUE' Display is busy writing a message row 1
+      ix_PowerOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   When 'TRUE' 24VDC available
+      ix_ServiceMode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   When 'TRUE' Service Mode ON
+      ix_VFDRunFeedback { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   When 'TRUE' VFD Run
+      ix_SorterSTOActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   VFD STO active feedback
+      ix_SorterSS1Active { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   VFD SS1 active feedback
+   END_VAR
+
+   VAR_OUTPUT 
+      qUDT_Display { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_PendantVT100LCDOutBytes";   //   Display bytes
+      qUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_PendantVT100Status";   //   Configuation variables for VT100 Radio Pendant
+      qUDT_Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_CommonStatus";   //   Common status structure
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_EquipmentControl : "UDT_EquipmentControl";
+      iqUDT_PendantInterface : "UDT_PendantVT100Interface";   //   Interface structure
+      iqUDT_Statistics : "UDT_PendantVT100Statistics";   //   Staristic structure
+      iq_ConveyorInterface : "UDT_ConveyorInterface";
+   END_VAR
+
+   VAR 
+      sUDT_Display { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_PendantVT100LCDOutBytes";   //    Array of 8 bytes for the display message
+      sUDT_CommonStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   //    Common status structure
+      sUDT_CommonStatusOld { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   //    Common status structure
+      sUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_PendantVT100Status";
+      sUDT_PNDevice { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_PNDevice";   //    PN device info structure
+      sFB_TimerOnOffDelayCheckSupply { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";
+      sF_TRIG_Servicemode {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   //   Falling edge trigger service mode
+      sF_TRIG_DisplayReady {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   //   Falling edge trigger display ready
+      sR_TRIG_RunCommand {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Rising edge trigger run command
+      sR_TRIG_PNReceiverNotOnline {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Rising edge trigger PN receiver not online
+      sR_TRIG_PNReceiverError {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Rising edge trigger PN device error
+      sR_TRIG_ControlHealthy {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Rising edge trigger control healthy
+      sa_Int { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   //   Integer structure
+         Step { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Int;   //    Step of the message sequence
+      END_STRUCT;
+      sa_Bool { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   //   Bool structure
+         DivertUp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    When 'TRUE' Any divert is up
+         HardwareAvailable { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    When 'TRUE' Hardware available and ready to use
+         PermissionRequested { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    When 'TRUE' Permission requested for horn to sound
+         PermissionGranted { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    When 'TRUE' Horn sounded before start of VFD
+         PowerOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    When 'TRUE' Power is present at receiver
+         PNDeviceHealthy { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    When 'TRUE' Receiver is healthy
+         RadioConnection { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    When 'TRUE' Initial connection with radio
+         RunRequest { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    When 'TRUE' Request to run
+         ServiceModeEngaged { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    True = Service mode is engaged
+      END_STRUCT;
+   END_VAR
+
+   VAR_TEMP 
+      ti_index : Int;   //   temporary integer for loops
+   END_VAR
+
+   VAR CONSTANT 
+      cudi_PowerSupplyDelayTime : UDInt := 7000;   //   Power supply delay time [ms]
+   END_VAR
+
+
+BEGIN
+	
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                     
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	14/04/2019  | 1.0       | S. Theocharis | first release TIA15.1
+	11/09/2019  | 1.1       | S. Theocharis | update for UPS EMA Baseline
+	04/11/2019  | 1.2       | S. Theocharis | Key Switch wired@safety input
+	30/01/2020  | 3.0       | S. Theocharis | Different button for fast speed, 
+	                                        | code to activate diverters
+	                                        | Status, statistics and equipement control
+	                                        | structures added
+	04/03/2020  | 3.1       | M. Piela      | Changed comments and subregions names, added constants to timers 
+	25/06/2020  | 3.2       | L. Klar       | Horn delay deleted      
+	07/07/2020  | 3.3       | M. Piela      | Delete unused signal from the interface, change condition to enable step 1
+	                                        | in service mode
+	07/07/2020  | 3.4       | M. Piela      | Added conditions to set the signaling request signal
+	28/07/2020  | 3.5       | S. Theocharis | Changed input name 
+	11/08/2020  | 3.6       | S. Theocharis | Update the divert functionality  
+	03/06/2021  | 3.7       | S. Theocharis | Force to slow speed for missing pin at service point  
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION Notes
+	(* 
+	
+	Note1: 
+	 ib_Buttons.xxxxxx1 is  the signal when the associate button is pressed half way
+	 ib_buttons.xxxxxx2 is  the signal when the associate button is pressed full
+	 
+	 Not Pressed:                 Halfway Pressed                    Full way Pressed
+	                             ib_Buttons.xxxxxx1 = TRUE           ib_Buttons.xxxxxx1 = TRUE
+	                             ib_Buttons.xxxxxx2 = FALSE          ib_Buttons.xxxxxx2 = TRUE
+	     ________  
+	     |      |                        ________
+	     |      |                        |      |                       ________
+	     |      |                        |      |                       |      |
+	 ____|      |____                 ___|      |____                ___|      |____
+	 
+	  
+	 Note2:
+	 The block is designed for the following remote controller: 
+	 Danfoss TM70/1.13DC  (Ikusi) 
+	 https://www.danfoss.com/en/products/electronic-controls/dps/plus1-remote-controls/transmitters/legacy-handheld-transmitters/
+	  *)
+	END_REGION
+	
+	REGION 1 -  Get Receiver Profinet number
+	    
+	    "FC_GetDevicePN"(is_PNDeviceName := #iUDT_Configuration.PNDeviceName,
+	                     ix_SimulationModeActive := #ix_SimulationModeActive,
+	                     iqUDT_PND := #sUDT_PNDevice);
+	    
+	END_REGION
+	
+	REGION 2 - Reset errors
+	    
+	    IF #iqUDT_EquipmentControl.Command.Reset                         // Reser errors when Reset from HMI or MCP is given
+	    THEN
+	        #sUDT_HMIStatus.Specific.PNSlaveNotOnline := FALSE;
+	        #sUDT_HMIStatus.Specific.PNSlaveError := FALSE;
+	        #sUDT_HMIStatus.Specific.CommunicationError := FALSE;          // Not in use
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 3 - Hardware checks
+	    // PN Receiver will only be available after the delay, so the device has time for the initialisation
+	    #sFB_TimerOnOffDelayCheckSupply(iudi_OnDelayTime := #cudi_PowerSupplyDelayTime,
+	                                    ix_SignalToDelay := #ix_PowerOk,
+	                                    ix_Enable := TRUE,
+	                                    qx_DelayedSignal => #sa_Bool.PowerOk);
+	    
+	    // Check if PN receiver device is online
+	    IF NOT "DB_ProfinetDiagnostic".ProfinetNetworks[#sUDT_PNDevice.PNNetworknumber].DeviceStatus[#sUDT_PNDevice.PNDeviceNumber].DeviceState.Exist
+	        AND NOT #ix_SimulationModeActive
+	        AND #sa_Bool.PowerOk
+	    THEN
+	        #sUDT_HMIStatus.Specific.PNSlaveNotOnline := TRUE;
+	    END_IF;
+	    
+	    // Check if PN Receiver device has an error
+	    IF "DB_ProfinetDiagnostic".ProfinetNetworks[#sUDT_PNDevice.PNNetworknumber].DeviceStatus[#sUDT_PNDevice.PNDeviceNumber].DeviceState.Error
+	        AND NOT #ix_SimulationModeActive
+	        AND #sa_Bool.PowerOk
+	    THEN
+	        #sUDT_HMIStatus.Specific.PNSlaveError := TRUE;
+	    END_IF;
+	    
+	    // Set bit when PN Receiver device is healthy (online and no error)
+	    #sa_Bool.PNDeviceHealthy := NOT #sUDT_HMIStatus.Specific.PNSlaveNotOnline
+	    AND NOT #sUDT_HMIStatus.Specific.PNSlaveError
+	    AND #sUDT_PNDevice.PNDeviceFound
+	    AND #sa_Bool.PowerOk;
+	    
+	    // Set hardware available bit when all conditions are met
+	    #sa_Bool.HardwareAvailable := (#sa_Bool.PowerOk
+	    AND #sa_Bool.PNDeviceHealthy)
+	    OR #ix_SimulationModeActive;
+	    
+	END_REGION
+	
+	REGION 4 -  Detect service mode selection changes
+	    
+	    //static memory to engage the service mode. Only when the sorter is standstill
+	    IF #sa_Bool.HardwareAvailable AND #ix_ServiceMode AND NOT #ix_VFDRunFeedback
+	    THEN
+	        #sa_Bool.ServiceModeEngaged := TRUE;
+	    END_IF;
+	    
+	    //disengage service mode when hardware is not available or switch is off
+	    IF NOT #sa_Bool.HardwareAvailable OR NOT #ix_ServiceMode
+	    THEN
+	        #sa_Bool.ServiceModeEngaged := FALSE;
+	    END_IF;
+	    
+	    //service mode to interface
+	    #iqUDT_PendantInterface.ServiceModeEngaged := #sa_Bool.ServiceModeEngaged;
+	    
+	    
+	    //Detect falling edge of service mode
+	    #sF_TRIG_Servicemode(CLK := #sa_Bool.ServiceModeEngaged);
+	    
+	END_REGION
+	
+	REGION 5 -  Service mode
+	    
+	    IF #sa_Bool.ServiceModeEngaged
+	    THEN
+	        
+	        REGION 5.1 - Detect Tx connection & LCD readiness to receive message
+	            
+	            #sR_TRIG_ControlHealthy(CLK := #iUDT_PendantInputs.Stop_NC);//Rising edge of communication 
+	            
+	            //set radio Tx-Rx connection 
+	            IF #sR_TRIG_ControlHealthy.Q
+	            THEN    (* or replace it directly with the input #iudt_PendantInputs.Stop_NO) *)
+	                #sa_Bool.RadioConnection := True;
+	            END_IF;
+	            
+	            #sF_TRIG_DisplayReady(CLK := #ix_LCDDS1);//LCD Status Signal. When ix_LCD_DS1 is False, the LCD is ready to receive a new message
+	            
+	        END_REGION
+	        
+	        REGION 5.2 - LCD messages
+	            //First communication established. Activate message one to move cursor in the begin of line 1
+	            
+	            IF #sa_Bool.RadioConnection
+	            THEN
+	                #sa_Int.Step := 1;           // step 1 - new message is activated 
+	                #sa_Bool.RadioConnection := FALSE;
+	            END_IF;
+	            
+	            //reset variables for display. that can be used to move the step to eg 98 and there reset the variables and move the step to 0 again 
+	            IF NOT #iUDT_PendantInputs.Stop_NC
+	            THEN
+	                // #st_Int.Step := 98;
+	                FOR #ti_index := 0 TO 7 BY 1 DO
+	                    #qUDT_Display."Byte"[#ti_index] := b#16#0;
+	                    #sUDT_Display."Byte"[#ti_index] := b#16#0;
+	                END_FOR;
+	            END_IF;
+	            
+	            // Screen  Messages
+	            CASE #sa_Int.Step OF
+	                    
+	                1: // Move Cursor in the Start Point  
+	                    #sUDT_Display."Byte" := #iUDT_Configuration.Line1Cursor;  // message
+	                    #sa_Int.Step := 2;                                 //  is written static memory
+	                    
+	                2: // when display is not busy write the output 
+	                    IF NOT #ix_LCDDS1
+	                    THEN
+	                        #qUDT_Display."Byte" := #sUDT_Display."Byte";
+	                        #sa_Int.Step := 3;    // move to next step                                 
+	                    END_IF;
+	                    
+	                3: //Write PLC name
+	                    FOR #ti_index := 0 TO 7 BY 1 DO
+	                        #sUDT_Display."Byte"[#ti_index] := CHAR_TO_BYTE(#iUDT_Configuration.DisplayName[#ti_index + 1]);
+	                    END_FOR;
+	                    #sa_Int.Step := 4;     //move to next step                                
+	                    
+	                4: //when display is not busy write the output
+	                    IF #sF_TRIG_DisplayReady.Q
+	                    THEN   (* may need to be replaced with :NOT #ix_LCD_DS1 *)
+	                        #qUDT_Display."Byte" := #sUDT_Display."Byte";
+	                        #sa_Int.Step := 99;// move to next step 
+	                    END_IF;
+	            END_CASE;
+	            
+	        END_REGION
+	        
+	        REGION 5.3 - Output to the sorter control function
+	            //Stop Button         
+	            #iqUDT_PendantInterface.PendantStopHealthy := #iUDT_PendantInputs.Stop_NC AND NOT #iUDT_PendantInputs.Stop_NO;
+	            
+	            // Reset - Control On
+	            #iqUDT_PendantInterface.PendantReset := #iUDT_PendantInputs.ResetButton1;
+	            
+	        END_REGION
+	        
+	        REGION 5.4 - Motion control
+	            // STO request to safety program
+	            #iqUDT_PendantInterface.RequestSTO := #iUDT_PendantInputs.PB_Speed1 OR #iUDT_PendantInputs.PB_Speed2;
+	            
+	            //Run reuqest condition 
+	            #sa_Bool.RunRequest := (#iUDT_PendantInputs.PB_Speed2 XOR #iUDT_PendantInputs.PB_Speed1) AND NOT #sa_Bool.DivertUp;
+	            
+	            //Check permission to run after horn sounded
+	            IF #iUDT_Configuration.HornRequest
+	            THEN
+	                
+	                //Detect new run request 
+	                #sR_TRIG_RunCommand(CLK := #sa_Bool.RunRequest AND NOT #ix_VFDRunFeedback);
+	                
+	                //On the positie edge of the new run command which requires permission set the control request and reset the permissiong granted bit
+	                IF #sR_TRIG_RunCommand.Q AND NOT #ix_SorterSS1Active AND NOT #iq_ConveyorInterface.InternalErrorVFD
+	                THEN
+	                    #iqUDT_EquipmentControl.Request.SignalingRequest := TRUE;
+	                    #sa_Bool.PermissionRequested := TRUE;
+	                    #sa_Bool.PermissionGranted := FALSE;
+	                END_IF;
+	                
+	                //when the requested memory is true but the control request is false, it means that the horn sounded and the permission to run is granted again
+	                IF #sa_Bool.PermissionRequested AND NOT #iqUDT_EquipmentControl.Request.SignalingRequest
+	                THEN
+	                    #sa_Bool.PermissionRequested := FALSE;
+	                    #sa_Bool.PermissionGranted := TRUE;
+	                END_IF;
+	                
+	            ELSE  //when horn request is deactivated via the configuration 
+	                #sa_Bool.PermissionGranted := TRUE;
+	                #sa_Bool.PermissionRequested := FALSE;
+	            END_IF;
+	            
+	            //assign commands to run and speed only when associate button is pressed and not divert is detected up
+	            #iqUDT_PendantInterface.CmdRun := NOT #ix_SorterSTOActive AND #sa_Bool.PermissionGranted AND #sa_Bool.RunRequest;
+	            
+	            #iqUDT_PendantInterface.LowSpeedSelected := (#iUDT_PendantInputs.PB_Speed1
+	            OR
+	            (#iUDT_PendantInputs.PB_Speed2 AND #iqUDT_PendantInterface.ForceLowSpeed))
+	            AND #sa_Bool.PermissionGranted
+	            AND #sa_Bool.RunRequest;
+	            
+	            
+	            #iqUDT_PendantInterface.ManualSpeedSelected := (#iUDT_PendantInputs.PB_Speed2 AND NOT #iqUDT_PendantInterface.ForceLowSpeed)
+	            AND #sa_Bool.PermissionGranted
+	            AND #sa_Bool.RunRequest;
+	            
+	        END_REGION
+	        
+	    ELSE
+	        
+	        REGION 5.7 - Reset interface bits when service mode is disengaged
+	            
+	            #iqUDT_PendantInterface.CmdRun := FALSE;
+	            #iqUDT_PendantInterface.LowSpeedSelected := FALSE;
+	            #iqUDT_PendantInterface.ManualSpeedSelected := FALSE;
+	            #iqUDT_PendantInterface.PendantReset := FALSE;
+	            #iqUDT_PendantInterface.PendantStopHealthy := FALSE;
+	            
+	            
+	        END_REGION
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 6 Divert functionality 
+	    
+	    #iqUDT_PendantInterface.CmdDivert := #iUDT_PendantInputs.PB_Divert
+	    AND #sa_Bool.ServiceModeEngaged
+	    AND #ix_HMIDivertSelectionEnabled
+	    AND NOT #ix_VFDRunFeedback;
+	    
+	END_REGION
+	
+	
+	REGION 7 - Statistics
+	    
+	    // Create trigger on error and create statistics for profinet slave not online
+	    #sR_TRIG_PNReceiverNotOnline(CLK := #sUDT_HMIStatus.Specific.PNSlaveNotOnline);
+	    
+	    IF #iqUDT_EquipmentControl.Command.ResetData OR #sUDT_HMIStatus.Specific.PNSlaveNotOnline
+	    THEN
+	        
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #sUDT_HMIStatus.Specific.PNSlaveNotOnline,
+	                        ix_RTrigActivate := #sR_TRIG_PNReceiverNotOnline.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.PNSlaveNotOnline);
+	    END_IF;
+	    
+	    // Create trigger on error and create statistics for profinet slave error
+	    #sR_TRIG_PNReceiverError(CLK := #sUDT_HMIStatus.Specific.PNSlaveError);
+	    
+	    IF #iqUDT_EquipmentControl.Command.ResetData OR #sUDT_HMIStatus.Specific.PNSlaveError
+	    THEN
+	        
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #sUDT_HMIStatus.Specific.PNSlaveError,
+	                        ix_RTrigActivate := #sR_TRIG_PNReceiverError.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.PNSlaveError);
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 8 - Status
+	    
+	    //update status of service mode engaged
+	    #sUDT_HMIStatus.Specific.ServiceModeEngaged := #sa_Bool.ServiceModeEngaged;
+	    
+	    //prepare commont status for equipment report 
+	    #sUDT_CommonStatus.Error := (#sUDT_HMIStatus.Specific.PNSlaveError OR #sUDT_HMIStatus.Specific.PNSlaveNotOnline OR #sUDT_HMIStatus.Specific.CommunicationError);
+	    
+	    // HMI status update
+	    IF #sUDT_CommonStatusOld <> #sUDT_CommonStatus      // update on change
+	    THEN
+	        // HMI status initialization
+	        #sUDT_HMIStatus.Status := 0;
+	        
+	        // HMI status calculation 
+	        IF #sUDT_HMIStatus.Specific.PNSlaveError OR #sUDT_HMIStatus.Specific.PNSlaveNotOnline
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".ProfinetError;
+	        END_IF;
+	    END_IF;
+	    
+	    #qUDT_HMIStatus := #sUDT_HMIStatus;                          // Copy HMI status to output
+	    #sUDT_CommonStatusOld := #sUDT_CommonStatus;                 // Copy status to memory
+	    #qUDT_Status := #sUDT_CommonStatus;                          // Copy status to output
+	    
+	END_REGION
+	
+	REGION 9 - Report to control block
+	    // Function to manage report between control block and conveyor block
+	    "FC_EquipmentReport"(iUDT_Status := #sUDT_CommonStatus,
+	                         iqUDT_Control := #iqUDT_EquipmentControl);
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

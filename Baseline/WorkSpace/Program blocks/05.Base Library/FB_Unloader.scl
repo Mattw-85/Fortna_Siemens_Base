@@ -1,0 +1,519 @@
+﻿FUNCTION_BLOCK "FB_Unloader"
+TITLE = FB_Unloader
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : Equimpent
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 232
+// END_ATTRIBUTES
+//Function block to control unloader.
+   VAR_INPUT 
+      iUDT_UnloaderConfiguration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_UnloaderConfiguration";   //   Unloader configuration structure
+      ix_SafetyReset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Safety reset
+      ix_SafetyOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   TRUE when Safety Circuit of the Conveyor is healthy
+      ix_24vOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   TRUE when 24VDC is healthy
+      ix_400vOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   TRUE when 400VAC is healthy
+      ix_ProfinetOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   TRUE when the PN node(s) of VSU are OK
+      ix_ReadyUnload { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   TRUE when Unloader is ready to unload
+      ix_Running { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   TRUE when Unloader is running
+      ix_TooLongParcel { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   TRUE when Unloader has detected a too long parcel (stopped)
+      ix_VFDError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   TRUE when Unloader has an VFD error
+      ix_Healthy { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   TRUE when Unloader has no Errors
+      ix_PECEoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   TRUE when the end of section photoeye is not blocked
+      ix_ManualControlled { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Unloader is controlled by
+      ix_ExternalRequestDieBack { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   External request die back
+      ix_ExternalRequestHold { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   External request hold
+      ix_ResetEnergySave { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Reset energy save mode timer
+      ix_HardwareOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE when  hardware is Ok
+   END_VAR
+
+   VAR_OUTPUT 
+      qUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_UnloaderStatus";   //   HMI status structure
+      qUDT_Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_CommonStatus";   //   Common status structure
+      qi_SpeedSelect { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Speed select (slow, normal or fast)
+      qx_ReleaseUnload { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Release Unloader
+      qx_EStopReset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      qx_FaultReset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_EquipmentControl : "UDT_EquipmentControl";   //   Equipment control structure
+      iqUDT_UnloaderCommand : "UDT_UnloaderCommand";   //   Unloader HMI control
+      iqUDT_HandShake : "UDT_ConveyorHandshake";   //   Handshake structure
+      iqUDT_EquipmentInterface : "UDT_ConveyorInterface";   //   Equipment interface structure
+      iqUDT_Statistics : "UDT_UnloaderStatistics";   //   Statistics structure
+   END_VAR
+
+   VAR 
+      sUDT_CommonStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   //   Common status structure
+      sUDT_CommonStatusOld { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   //   Auxiliary status structure
+      sUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_UnloaderStatus";   //   HMI status structure
+      s_FB_TimerOnOffDelaySafetyOKPulse { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";
+      sFB_PECEoSFiltered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   //   Filtering end of section photo eye signal
+      sFB_PECEoSJamTimer { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   //   Timer to detect photo eye jam
+      sFB_EnergySaveTimer { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   //   Timer to start energy save mode
+      sFB_PEC { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_PEC";   //   FB PEC block for PEC Jam status
+      sR_TRIG_PEC_EoSFiltered {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Rising edge trigger end of section photo eye filtered
+      sF_TRIG_PEC_EoSFiltered {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   //   Falling edge trigger end of section photo eye filtered
+      sR_TRIG_EnergySave {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Rising edge for energy save
+      sR_TRIG_ConveyorUp {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Rising edge of automatic active
+      sR_TRIG_ConveyorDown {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Rising edge of automatic not active
+      sR_TRIG_VFDError {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Rising edge of VFD error
+      sR_TRIG_NotHealthy {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Rising edge trigger if extendable not healthy
+      sR_TRIG_TooLongParcel {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Rising edge trigger for too long parcel
+      s_R_TRIG_SafetyOK {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;
+      si_AuxEnergySave { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Auxiliery energy save
+      sx_Disabled { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Operation is enabled
+      sx_Ready { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Conveyor Ready to operate in Automatic mode
+      sx_StartReceived { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Start command received from system
+      sx_PEC_EoSFiltered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   End of section photo eye filtered
+      sx_EnergySaveActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Active energy save mode
+      sx_AutomaticActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Automatic active
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	24/05/2019  | 0.1       | F.Baten       | first release MHS TIA 15.1
+	17/06/2019  | 0.3       | L.Klar        | Manual mode added to "UDT_EquipmentControl"
+	24/07/2019  | 2.0       | L.Klar        | 2.0 MHS library release TIA 15.1
+	14/10/2019  | 2.1       | L.Klar        | Updated status structure
+	15/10/2019  | 2.2       | S.Deulkar     | Deleted unused symbol, added statistcs, rearrange structure
+	04/11/2019  | 2.3       | L.Klar        | First scan bit changed from memory bit to DB variable
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	04/03/2020  | 3.1       | P.Majka       | Adapting reviews, repair statistics for too long parcels
+	31/03/2020  | 3.2       | F.Baten       | UDT_UnloaderCommand added
+	                                        | Disable by HMI added
+	22/09/2020  | 3.3       | L.Klar        | Reset added   
+	11/01/2021  | 3.4       | L.Klar        | Input safety ok added to stop conveyor condition
+	27/02/2021  | 3.5       | M. Kurpiers   | Button disable/enable operation and status fixed
+	02/03/2021  | 3.6       | K. Pokorski   | Halted and dieback status enable only when automatic on
+	13/03/2021  | 3.7       | L.Klar        | HMI status updated- warning commented, energy save added
+	13/03/2021  | 3.8       | L.Klar        | Energy save corrected
+	08/04/2021  | 3.9       | K.Pokorski    | VFD error masked when safety is not ok
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 - Initial
+	    
+	    REGION 1.1 - First PLC cycle
+	        
+	        // Bits initialization.
+	        IF "DB_Memory".FirstScan
+	        THEN
+	            #qx_ReleaseUnload := FALSE;
+	            #sx_AutomaticActive := FALSE;
+	            #sx_StartReceived := FALSE;
+	            #sx_Disabled := FALSE;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 1.2 Triggers
+	        
+	        // Rising edge trigger end of section photo eye filtered.
+	        #sR_TRIG_PEC_EoSFiltered(CLK := #sx_PEC_EoSFiltered);
+	        
+	        // Falling edge trigger end of section photo eye filtered.
+	        #sF_TRIG_PEC_EoSFiltered(CLK := #sx_PEC_EoSFiltered);
+	        
+	        // Rising edge trigger energy save.
+	        #sR_TRIG_EnergySave(CLK := #sUDT_CommonStatus.EnergySave);
+	        
+	        // Rising edge extendable up.
+	        #sR_TRIG_ConveyorUp(CLK := #sx_AutomaticActive AND #sx_Ready);
+	        
+	        // Rising edge extendable down.
+	        #sR_TRIG_ConveyorDown(CLK := #sx_AutomaticActive AND NOT #sx_Ready);
+	        
+	        // Rising edge extendable VFD error.
+	        #sR_TRIG_VFDError(CLK := #sUDT_HMIStatus.Specific.VFDError);
+	        
+	        // Rising edge extendable not healthy. 
+	        #sR_TRIG_NotHealthy(CLK := #sUDT_HMIStatus.Specific.NotHealthy);
+	        
+	        // Rising edge for too long parcel. 
+	        #sR_TRIG_TooLongParcel(CLK := #sUDT_HMIStatus.Specific.TooLongParcel);
+	        
+	    END_REGION
+	    
+	    REGION HMI button Disable/Enable operation
+	        IF #iqUDT_UnloaderCommand.Disable
+	        THEN
+	            #sx_Disabled := TRUE;
+	        ELSE
+	            #sx_Disabled := FALSE;
+	        END_IF;
+	        
+	        #iqUDT_UnloaderCommand.Disable := FALSE;
+	        
+	        
+	        // Copy status to HMI
+	        #sUDT_HMIStatus.Specific.Disabled := #sx_Disabled;
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 2 - Errors
+	    
+	    // PEC EoS.
+	    #sFB_PEC(ix_PEC := #ix_PECEoS,
+	             iUDT_PECConfiguration := #iUDT_UnloaderConfiguration.PEC_EOS,
+	             qx_PECFiltered => #sx_PEC_EoSFiltered,
+	             qUDT_HMIStatus => #sUDT_HMIStatus.Specific.PEC_EoS,
+	             iqUDT_ConveyorInterface := #iqUDT_EquipmentInterface,
+	             iqUDT_PECStatistics := #iqUDT_Statistics.PEC_EOS);
+	    
+	    // Parcel too long.
+	    #sUDT_HMIStatus.Specific.TooLongParcel := #ix_TooLongParcel;
+	    
+	    // VFD Error.
+	    #sUDT_HMIStatus.Specific.VFDError := (#ix_VFDError AND #ix_400vOk AND #ix_ProfinetOk AND #ix_SafetyOk);
+	    
+	    // Not healthy.
+	    #sUDT_HMIStatus.Specific.NotHealthy := (NOT #ix_Healthy AND #ix_400vOk AND #ix_24vOk AND #ix_ProfinetOk);
+	    
+	    // Common Error.
+	    #sUDT_CommonStatus.Error := NOT #ix_24vOk
+	    OR NOT #ix_400vOk
+	    OR NOT #ix_ProfinetOk
+	    OR NOT #ix_SafetyOk
+	    OR #sUDT_HMIStatus.Specific.PEC_EoS.Jam
+	    OR #sUDT_HMIStatus.Specific.VFDError
+	    OR #sUDT_HMIStatus.Specific.NotHealthy;
+	    
+	    // Warning.
+	    #sUDT_CommonStatus.Warning := #sUDT_HMIStatus.Specific.TooLongParcel;
+	    
+	END_REGION
+	
+	REGION 3 - Check conditions to set unloader ready    
+	    
+	    // Ready to operate.
+	    #sx_Ready := NOT #sUDT_CommonStatus.Error
+	    AND #ix_Healthy
+	    AND NOT #ix_ManualControlled;
+	    
+	END_REGION
+	
+	REGION 4 - Stop unloader
+	    
+	    // Reset bits to stop unloader.
+	    IF NOT #iqUDT_EquipmentControl.Command.AutomaticOn
+	        OR #sUDT_CommonStatus.Error
+	        OR NOT #ix_Healthy
+	        OR #ix_ManualControlled
+	        OR NOT #ix_SafetyOk
+	    THEN
+	        #qx_ReleaseUnload := FALSE;
+	        #sx_AutomaticActive := FALSE;
+	        #sx_StartReceived := FALSE;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 5 - Start Automatic mode
+	    
+	    // If start (one shot) is received from system, this is memorised until started in cascade. 
+	    IF #iqUDT_EquipmentControl.Command.Start
+	        AND #sx_Ready
+	    THEN
+	        #sx_StartReceived := TRUE;
+	    END_IF;
+	    
+	    // Activating automatic mode.
+	    IF #sx_StartReceived
+	        AND (#iqUDT_HandShake.CascadeStartUp
+	        OR #iUDT_UnloaderConfiguration.FirstConveyorToStart)
+	    THEN
+	        #sx_AutomaticActive := TRUE;
+	        #sx_StartReceived := FALSE;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 6 - Automatic mode active
+	    
+	    REGION 6.1 - Ready To Send (RTS)
+	        
+	        // Set Ready to send signal.
+	        IF #sF_TRIG_PEC_EoSFiltered.Q
+	            AND #sx_AutomaticActive
+	            AND #sx_Ready
+	            AND #ix_ReadyUnload
+	        THEN
+	            #iqUDT_HandShake.RTS := TRUE;
+	        END_IF;
+	        
+	        // Reset Ready to send signal.
+	        IF #sR_TRIG_PEC_EoSFiltered.Q
+	        THEN
+	            #iqUDT_HandShake.RTS := FALSE;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 6.2 - Operation
+	        
+	        // Run Unloader.
+	        #qx_ReleaseUnload := #sx_AutomaticActive
+	        AND #sx_Ready
+	        AND #ix_ReadyUnload
+	        AND ((#iqUDT_HandShake.RTR
+	        AND NOT #ix_ExternalRequestDieBack)
+	        OR #sx_PEC_EoSFiltered)
+	        AND NOT #sx_Disabled
+	        AND NOT #ix_ExternalRequestHold
+	        AND NOT #sx_EnergySaveActive;
+	        
+	    END_REGION
+	    
+	    REGION 6.3 - Energy save
+	        
+	        IF #iUDT_UnloaderConfiguration.Energy THEN
+	            
+	            // Set Energy save active.
+	            IF #si_AuxEnergySave >= #iUDT_UnloaderConfiguration.EnergySaveLength
+	            THEN
+	                #sx_EnergySaveActive := TRUE;
+	            END_IF;
+	            
+	            // Reset or increment displacement calculation to use for energy save.
+	            IF NOT #sx_PEC_EoSFiltered
+	                OR #ix_ResetEnergySave
+	                OR #ix_ManualControlled
+	                //OR NOT #ix_ReadyUnload
+	            THEN
+	                #si_AuxEnergySave := 0;
+	                #sx_EnergySaveActive := FALSE;
+	            ELSE
+	                #si_AuxEnergySave += #iqUDT_EquipmentInterface.Displacement;
+	            END_IF;
+	            
+	        ELSE
+	            
+	            #si_AuxEnergySave := 0;
+	            #sx_EnergySaveActive := FALSE;
+	            
+	        END_IF;
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 7 - Speed control
+	    
+	    // Copy speed setpoint from configuration.
+	    #qi_SpeedSelect := #iUDT_UnloaderConfiguration.Speedsetpoint;
+	    
+	    // Clear speed setpoint depending on wrong configuration.
+	    IF #iUDT_UnloaderConfiguration.Speedsetpoint < 0
+	        OR #iUDT_UnloaderConfiguration.Speedsetpoint > 2
+	    THEN
+	        #qi_SpeedSelect := 0;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 8 - Reset
+	    
+	    // Safety ok extended pulse
+	    #s_R_TRIG_SafetyOK(CLK := #ix_SafetyReset);
+	    
+	    #s_FB_TimerOnOffDelaySafetyOKPulse(iudi_OffDelayTime := 1000,
+	                                       ix_SignalToDelay := #s_R_TRIG_SafetyOK.Q);
+	    
+	    // Fault and Estop reset outputs
+	    #qx_FaultReset := #ix_SafetyReset OR #iqUDT_EquipmentControl.Command.Reset OR #s_FB_TimerOnOffDelaySafetyOKPulse.qx_DelayedSignal;
+	    #qx_EStopReset := #ix_SafetyReset OR #s_FB_TimerOnOffDelaySafetyOKPulse.qx_DelayedSignal;
+	    
+	END_REGION
+	
+	REGION 9 - Statistics
+	    
+	    // Up time.
+	    IF #sx_AutomaticActive
+	        AND #sx_Ready
+	        OR #iqUDT_EquipmentControl.Command.ResetData
+	    THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #sx_AutomaticActive AND #sx_Ready,
+	                        ix_RTrigActivate := #sR_TRIG_ConveyorUp.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.ExtendableUpTime);
+	    END_IF;
+	    
+	    // Down time.
+	    IF #sx_AutomaticActive
+	        AND #sx_Ready
+	        OR #iqUDT_EquipmentControl.Command.ResetData
+	    THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #sx_AutomaticActive AND NOT #sx_Ready,
+	                        ix_RTrigActivate := #sR_TRIG_ConveyorDown.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.ExtendableDownTime);
+	    END_IF;
+	    
+	    // Energy save mode active.
+	    IF #sx_EnergySaveActive
+	        OR #iqUDT_EquipmentControl.Command.ResetData
+	    THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #sUDT_CommonStatus.EnergySave,
+	                        
+	                        ix_RTrigActivate := #sR_TRIG_EnergySave.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.EnergySave);
+	    END_IF;
+	    
+	    // VFD Error.
+	    IF #sUDT_HMIStatus.Specific.VFDError
+	        OR #iqUDT_EquipmentControl.Command.ResetData
+	    THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #sUDT_HMIStatus.Specific.VFDError,
+	                        ix_RTrigActivate := #sR_TRIG_VFDError.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.VFDError);
+	    END_IF;
+	    
+	    // Not healthy .
+	    IF #sUDT_HMIStatus.Specific.NotHealthy
+	        OR #iqUDT_EquipmentControl.Command.ResetData
+	    THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #sUDT_HMIStatus.Specific.NotHealthy,
+	                        ix_RTrigActivate := #sR_TRIG_NotHealthy.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.NotHealthy);
+	    END_IF;
+	    
+	    // Too long parcel.
+	    IF #sUDT_HMIStatus.Specific.TooLongParcel
+	        OR #iqUDT_EquipmentControl.Command.ResetData
+	    THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #sUDT_HMIStatus.Specific.TooLongParcel,
+	                        ix_RTrigActivate := #sR_TRIG_TooLongParcel.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.TooLongParcel);
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 10 - Status
+	    
+	    // Set statuses.
+	    #sUDT_CommonStatus.Stopped := NOT #sx_AutomaticActive;
+	    #sUDT_CommonStatus.Running := #ix_Running;
+	    #sUDT_CommonStatus.AutoON := #sx_Ready AND #sx_AutomaticActive;
+	    #sUDT_CommonStatus.Halted := #ix_ExternalRequestHold AND #sUDT_CommonStatus.AutoON AND NOT #sx_EnergySaveActive;
+	    #sUDT_CommonStatus.Dieback := (NOT #iqUDT_HandShake.RTR OR #ix_ExternalRequestDieBack) AND #sUDT_CommonStatus.AutoON AND NOT #sx_EnergySaveActive
+	    AND NOT #sUDT_CommonStatus.EnergySave AND NOT #sUDT_CommonStatus.Running;
+	    #sUDT_CommonStatus.Manual := #ix_ManualControlled;
+	    #sUDT_CommonStatus.ManualRun := #sUDT_CommonStatus.Manual AND #sUDT_CommonStatus.Running;
+	    #sUDT_CommonStatus.EnergySave := #sx_EnergySaveActive;
+	    #sUDT_CommonStatus.SafetyStop := NOT #ix_SafetyOk;
+	    
+	    
+	    // HMI status update on change.
+	    IF #sUDT_CommonStatusOld <> #sUDT_CommonStatus
+	    THEN
+	        // HMI status initialization.
+	        #sUDT_HMIStatus.Status := 0;
+	        
+	        // Energy save.
+	        IF #sUDT_CommonStatus.EnergySave
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".EnergySave;
+	        END_IF;
+	        
+	        // Running.
+	        IF #sUDT_CommonStatus.Running
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Running;
+	        END_IF;
+	        
+	        // Stopped.
+	        IF #sUDT_CommonStatus.Stopped
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Stopped;
+	        END_IF;
+	        
+	        // Dieback.
+	        IF #sUDT_CommonStatus.Dieback
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Dieback;
+	        END_IF;
+	        
+	        // Halted.
+	        IF #sUDT_CommonStatus.Halted
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Halted;
+	        END_IF;
+	        
+	        // Dimension error.
+	        IF #sUDT_HMIStatus.Specific.TooLongParcel
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".DimensionError;
+	        END_IF;
+	        
+	        // Manual.
+	        IF #sUDT_CommonStatus.Manual
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Manual;
+	        END_IF;
+	        
+	        // Running in manual mode.
+	        IF #sUDT_CommonStatus.ManualRun
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".ManualRun;
+	        END_IF;
+	        
+	        //  PEC error.
+	        IF #sUDT_HMIStatus.Specific.PEC_EoS.Jam
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".PECJam;
+	        END_IF;
+	        
+	        // Not healthy.
+	        IF #sUDT_HMIStatus.Specific.NotHealthy
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".VFDNotHealthy;
+	        END_IF;
+	        
+	        // VFD error.
+	        IF #sUDT_HMIStatus.Specific.VFDError
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".VFDError;
+	        END_IF;
+	        
+	        // Safety stop.
+	        IF #sUDT_CommonStatus.SafetyStop
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".SafetyStop;
+	        END_IF;
+	        
+	        // Copy statuses.
+	        
+	        #sUDT_CommonStatusOld := #sUDT_CommonStatus;
+	        
+	        
+	    END_IF;
+	    
+	    #qUDT_HMIStatus := #sUDT_HMIStatus;
+	    #qUDT_Status := #sUDT_CommonStatus;
+	    
+	END_REGION
+	
+	REGION 11 - Report to control block
+	    
+	    "FC_EquipmentReport"(iUDT_Status := #sUDT_CommonStatus,
+	                         iqUDT_Control := #iqUDT_EquipmentControl);
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

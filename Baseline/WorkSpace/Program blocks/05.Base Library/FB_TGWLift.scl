@@ -1,0 +1,306 @@
+﻿FUNCTION_BLOCK "FB_TGWLift"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 272
+// END_ATTRIBUTES
+   VAR_INPUT 
+      iUDT_TGWLiftConfiguration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_TGWLiftConfiguration";   // Lift configuration structure
+      iUDT_T02MotorInput { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_VfdSEWSpeedPI";   // 010 SEW inputs structure
+      iUDT_T01MotorInput { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_VfdSEWPositioningPI";   // 020 SEW Positioning structure
+      is_ET200spPNDeviceName { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;   // Name of ET200
+      ix_010EoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // End of the section - Lift conveyor
+      ix_010BoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Begining of the section - Lift conveyor
+      ix_010PECMiddle { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Middle of the section - Lift conveyor
+      ix_010PECGapBegin { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Gap Check Beginning
+      ix_010PECGapEnd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Gap Check End
+      iUDT_LiftPI { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_TGWLiftPI";   // Reading inputs from the input card
+      ix_24vOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when 24VDC is healthy
+      ix_400vOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when 400VAC is healthy
+      ix_SafetyOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when safety is ok
+      ix_HardwareOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when hardware is ok
+      ix_MaintSupport1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Lift supporting maintenance platform 1 retracted
+      ix_MaintSupport2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Lift supporting maintenance platform 2 retracted
+      ix_KeySwitchStop { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Key switch stop
+      ix_LimitSwitchUp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Limit switch up
+      ix_LimitSwitchDown { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Limit switch down
+   END_VAR
+
+   VAR_OUTPUT 
+      qUDT_T02MotorOutput { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_VfdSEWSpeedPO";   // 010 SEW outputs structure
+      qUDT_T01MotorOutput { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_VfdSEWPositioningPO";   // 020 SEW positioning outputs structure
+      qUDT_LiftPO { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_TGWLiftPO";   // writing outputs to the output card
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_EquipmentControl : "UDT_EquipmentControl";   // Equipment control structure
+      iqUDT_TGWLiftHMICommands : "UDT_TGWLiftHmiCommands";   // HMI commands structure for lift
+      iqUDT_TGWLiftCommonStatus : "UDT_TGWLiftCommonStatus";   // Common status structure for 010 conveyor
+      iqUDT_TGWLiftStatus : "UDT_TGWLiftStatus";   // Status TGW Lift structure
+      iqUDT_TGWLiftStatistics : "UDT_TGWLiftStatistics";   // Statistics TGW Lift structure
+      iqUDT_InfeedFullDownHMICommands : "UDT_ConveyorCommand";   // HMI commands structure for lower infeed conveyor
+      iqUDT_OutfeedEmptyDownHMICommands : "UDT_ConveyorCommand";   // HMI commands structure for lower outfeed conveyor
+      iqUDT_InfeedEmptyUpHMICommands : "UDT_ConveyorCommand";   // HMI commands structure for upper infeed conveyor
+      iqUDT_OutfeedFullUpHMICommands : "UDT_ConveyorCommand";   // HMI commands structure for upper outfeed conveyor
+      iqUDT_InfeedFullDownCommonStatus : "UDT_CommonStatus";   // Common status structure for full infeed conveyor
+      iqUDT_OutfeedEmptyDownCommonStatus : "UDT_CommonStatus";   // Common status structure for empty outfeed conveyor
+      iqUDT_InfeedEmptyUpCommonStatus : "UDT_CommonStatus";   // Common status structure for empty infeed
+      iqUDT_OutfeedFullupCommonStatus : "UDT_CommonStatus";   // Common status structure for full outfeed conveyor
+      iqUDT_InfeedFullDownHandShake : "UDT_ConveyorHandshake";   // Handshake structure for full infeed conveyor
+      iqUDT_OutfeedEmptyDownHandShake : "UDT_ConveyorHandshake";   // Handshake structure for empty outfeed conveyor
+      iqUDT_InfeedEmptyUpHandShake : "UDT_ConveyorHandshake";   // Handshake structure for empty infeed conveyor
+      iqUDT_OutfeedFullUpHandShake : "UDT_ConveyorHandshake";   // Handshake structure for full outfeed conveyor
+      iqUDT_OutfeedEmptyDownHandshakeUpstream : "UDT_ConveyorHandshake";   // HandshakeUp structure for empty outfeed conveyor
+      iqUDT_OutfeedFullUpHandshakeUpstream : "UDT_ConveyorHandshake";   // HandshakeUp structure for full outfeed conveyor
+   END_VAR
+
+   VAR 
+      sUDT_020VSUInterface { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_VSUInterface";   // Interface structure for lift 020
+      sUDT_010ConveyorInterface { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorInterface";   // Interface structure for conveyor 010
+      sFB_010Displacement { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_Displacement";   // Displacement calculation for 010 conveyor
+      sFB_010PECEoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_PEC";   // Photoeye EoS handling for 010 conveyor
+      sFB_010PECBoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_PEC";   // Photoeye BoS handling for 010 conveyor
+      sFB_LiftManualControl { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_LiftManualControl";   // Function block to control lift, infeeds and outfeeds manually
+      sFB_010Conveyor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_Conveyor";   // Function block to control the 010 conveyor
+      sFB_010VfdSEWMOVICSpeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_VfdSEWMOVI-CSpeed";   // Function to interface with SEW-MoviCSpeed for  010
+      sFB_020VfdSEWMOVICPositioning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_VfdSEWMOVI-CPositioning";   // Function to interface with SEW-MoviCPositioning for  020
+      sFB_020RIOVSU { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_RIOVSU";   // Function block of RIO VSU
+      sFB_020Lift { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_Lift";   // Function block for lift control
+      sFB_020VSULift { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_VSULift";   // Funcion block of VSU Lift
+      sUDT_010HandshakeUp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorHandshake";   // HandshakeUp structure for 010
+      sUDT_010Handshake { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorHandshake";   // Handshake structure for 010
+   END_VAR
+
+   VAR_TEMP 
+      tx_LiftConveyorDirection : Bool;   // Direction of lift conveyor
+   END_VAR
+
+   VAR CONSTANT 
+      ci_LiftUp : Int := 2;   // Constant for indicating Lift up position
+      ci_LiftDown : Int := 1;   // Constant for indicating Lift down position
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	06/08/2024  | 1.0       | R. Pieczonka  | Initial version
+	12/08/2024  | 1.1       | R. Pieczonka  | Changing the block interface from struct to UDT types
+	            |           | J.Majer       | Changing input & Outputs to UDT type
+	*)
+	
+	
+	REGION LFTxx-010
+	    // Autostore picking station lift conveyor
+	    // Function variant: TV11
+	    
+	    REGION Displacement
+	        #sFB_010Displacement(#sUDT_010ConveyorInterface);
+	        
+	    END_REGION
+	    
+	    REGION EOS
+	        #sFB_010PECEoS(ix_PEC := #ix_010EoS,
+	                       iUDT_PECConfiguration := #iUDT_TGWLiftConfiguration."010".PEC_EoS,
+	                       qUDT_HMIStatus => #iqUDT_TGWLiftStatus."010".PEC_EoS,
+	                       iqUDT_ConveyorInterface := #sUDT_010ConveyorInterface,
+	                       iqUDT_PECStatistics := #iqUDT_TGWLiftStatistics."010".PEC_EoS);
+	        
+	    END_REGION
+	    
+	    REGION BOS
+	        #sFB_010PECBoS(ix_PEC := #ix_010BoS,
+	                       iUDT_PECConfiguration := #iUDT_TGWLiftConfiguration."010".PEC_BoS,
+	                       qUDT_HMIStatus => #iqUDT_TGWLiftStatus."010".PEC_BoS,
+	                       iqUDT_ConveyorInterface := #sUDT_010ConveyorInterface,
+	                       iqUDT_PECStatistics := #iqUDT_TGWLiftStatistics."010".PEC_BoS);
+	        
+	    END_REGION
+	    
+	    REGION Manual Control
+	        #sFB_LiftManualControl(ix_ManualMode := #iUDT_LiftPI.ix_ManualMode,                                     // Manual mode
+	                               ix_AutoMode := #iUDT_LiftPI.ix_AutoMode,                                         // Auto mode
+	                               ix_UpPosition := #sUDT_020VSUInterface.PositionActual = #ci_LiftUp,
+	                               ix_DownPosition := #sUDT_020VSUInterface.PositionActual = #ci_LiftDown,
+	                               ix_LiftConveyorRight := #iUDT_LiftPI.ix_LiftConveyorFwd,
+	                               ix_LiftConveyorLeft := #iUDT_LiftPI.ix_LiftConveyorRvs,
+	                               ix_InfeedConveyor := #iUDT_LiftPI.ix_InfeedConveyor,
+	                               ix_OutfeedConveyor := #iUDT_LiftPI.ix_OutfeedConveyor,
+	                               iqUDT_LiftConveyorCommand := #iqUDT_TGWLiftHMICommands."010".Conveyor,
+	                               iqUDT_LowerInfeedConveyorCommand := #iqUDT_InfeedFullDownHMICommands,
+	                               iqUDT_LowerOutfeedConveyorCommand := #iqUDT_OutfeedEmptyDownHMICommands,
+	                               iqUDT_UpperInfeedConveyorCommand := #iqUDT_InfeedEmptyUpHMICommands,
+	                               iqUDT_UpperOutfeedConveyorCommand := #iqUDT_OutfeedFullUpHMICommands);
+	        
+	    END_REGION
+	    
+	    REGION Conveyor
+	        
+	        
+	        #sFB_010Conveyor(iUDT_ConveyorConfiguration := #iUDT_TGWLiftConfiguration."010".Conveyor,
+	                         idi_PECEoSDistance := #iUDT_TGWLiftConfiguration."010".PEC_EoS.Distance,
+	                         idi_PECBoSDistance := #iUDT_TGWLiftConfiguration."010".PEC_BoS.Distance,
+	                         ii_ExternalSpeed := 0,
+	                         ix_SafetyOk := #ix_SafetyOk,
+	                         ix_24vOk := #ix_24vOk AND #iUDT_LiftPI.ix_F1400ok,
+	                         ix_400vOk := #ix_400vOk AND #iUDT_LiftPI.ix_F1002ok,
+	                         ix_HardwareOk := #ix_HardwareOk,
+	                         ix_PECEoS := #iqUDT_TGWLiftStatus."010".PEC_EoS.PEC,
+	                         ix_PECBoS := #iqUDT_TGWLiftStatus."010".PEC_BoS.PEC,
+	                         ix_ReverseDirection := #sFB_020Lift.qx_LiftConveyorDirection,
+	                         ix_ExternalRequestHold := NOT (#sUDT_020VSUInterface.PositionActual = #ci_LiftUp OR #sUDT_020VSUInterface.PositionActual = #ci_LiftDown),
+	                         qUDT_HMIStatus => #iqUDT_TGWLiftStatus."010".Conveyor,
+	                         qUDT_Status => #iqUDT_TGWLiftCommonStatus."010",
+	                         iqUDT_EquipmentControl := #iqUDT_EquipmentControl,
+	                         iqUDT_ConveyorCommand := #iqUDT_TGWLiftHMICommands."010".Conveyor,
+	                         iqUDT_ConveyorInterface := #sUDT_010ConveyorInterface,
+	                         iqUDT_HandShakeUp := #sUDT_010HandshakeUp,
+	                         iqUDT_HandShake := #sUDT_010Handshake,
+	                         iqUDT_Statistics := #iqUDT_TGWLiftStatistics."010".Conveyor);
+	        
+	        
+	        
+	    END_REGION
+	    
+	    REGION VFD
+	        
+	        #"sFB_010VfdSEWMOVICSpeed"(iUDT_VfdConfig := #iUDT_TGWLiftConfiguration."010".VFD,
+	                                   iUDT_VfdInputs := #iUDT_T02MotorInput,
+	                                   ix_PowerOK := TRUE,
+	                                   ix_SimulationModeActive := FALSE,
+	                                   ix_QuickStopDisable := TRUE,
+	                                   qUDT_HMIStatus => #iqUDT_TGWLiftStatus."010".VFD,
+	                                   qUDT_VfdOutputs => #qUDT_T02MotorOutput,
+	                                   iqUDT_ConveyorInterface := #sUDT_010ConveyorInterface,
+	                                   iqUDT_VfdStatistics := #iqUDT_TGWLiftStatistics."010".VFD);
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION LFTxx-020
+	    // Autostore picking station lift positioning
+	    // Function variant: VL11
+	    
+	    REGION VSU RIO
+	        #sFB_020RIOVSU(is_ET200spPNDeviceName := #is_ET200spPNDeviceName,
+	                       ix_400VintOk := #ix_400vOk AND #iUDT_LiftPI.ix_F1002ok,
+	                       ix_400VextOk := #iUDT_LiftPI.ix_MainSwitchCabinetOn AND #iUDT_LiftPI.ix_MaintenanceSwitchUpOn AND #ix_400vOk AND #iUDT_LiftPI.ix_F1002ok,
+	                       ix_BrakeSupplyOk := #ix_400vOk AND #iUDT_LiftPI.ix_F1002ok,
+	                       ix_ThermalBrake := #iUDT_LiftPI.ix_OverTempBrakeRes,
+	                       ix_24VOk := #ix_24vOk AND #iUDT_LiftPI.ix_F1400ok,
+	                       ix_SimulationModeActive := "DB_Memory".Simulation,
+	                       ix_HardwareOk := #ix_HardwareOk,
+	                       qUDT_HMIStatus => #iqUDT_TGWLiftStatus."020".VSU_RIO,
+	                       iqUDT_Statistics := #iqUDT_TGWLiftStatistics."020".VSU_RIO,
+	                       iqUDT_VSUInterface := #sUDT_020VSUInterface);
+	        
+	    END_REGION
+	    
+	    REGION Lift control
+	        
+	        // add BoS and EoS PEC to this block
+	        
+	        #sFB_020Lift(iUDT_LiftConveyorInterface := #sUDT_010ConveyorInterface,
+	                     iUDT_VSUInterface := #sUDT_020VSUInterface,
+	                     ix_SectionIsDown := #sUDT_020VSUInterface.PositionActual = #ci_LiftDown,
+	                     ix_SectionIsUp := #sUDT_020VSUInterface.PositionActual = #ci_LiftUp,
+	                     ix_PECLift := #ix_010PECMiddle,
+	                     ix_ConveyorEmptyInAuto := #iqUDT_InfeedEmptyUpCommonStatus.AutoON,             // Infeed UP
+	                     ix_ConveyorEmptyOutAuto := #iqUDT_OutfeedEmptyDownCommonStatus.AutoON,             // Outfeed Down
+	                     ix_ConveyorFullInAuto := #iqUDT_InfeedFullDownCommonStatus.AutoON,             // Infeed DOWN
+	                     ix_ConveyorFullOutAuto := #iqUDT_OutfeedFullupCommonStatus.AutoON,             // Outfeed UP
+	                     qi_RequestedPosition => #sUDT_020VSUInterface.RequestedPosition,
+	                     qx_TransportIdle => #sFB_020Lift.qx_TransportIdle,
+	                     qx_LiftConveyorDirection => #tx_LiftConveyorDirection,
+	                     iqUDT_LiftConveyorHandShakeUpstream := #sUDT_010HandshakeUp,
+	                     iqUDT_LiftConveyorHandShake := #sUDT_010Handshake,
+	                     iqUDT_InfeedEmptyUpHandShake := #iqUDT_InfeedEmptyUpHandShake,
+	                     iqUDT_OutfeedEmptyDownHandShake := #iqUDT_OutfeedEmptyDownHandShake,
+	                     iqUDT_InfeedFullDownHandShake := #iqUDT_InfeedFullDownHandShake,
+	                     iqUDT_OutfeedFullUpHandShake := #iqUDT_OutfeedFullUpHandShake,
+	                     iqUDT_OutfeedFullUpHandshakeUpstream := #iqUDT_OutfeedFullUpHandshakeUpstream,
+	                     iqUDT_OutfeedEmptyDownHandshakeUpstream := #iqUDT_OutfeedEmptyDownHandshakeUpstream);
+	        
+	    END_REGION
+	    
+	    REGION VSU
+	        
+	        // add the EoS and BoS to the lift Status, remove from conveyor. Lift block will check the PEC and control the conveyor accordingly
+	        
+	        #sFB_020VSULift(iUDT_VSUConfig := #iUDT_TGWLiftConfiguration."020".VSU,
+	                        ix_SafetyOk := #ix_SafetyOk,
+	                        ix_BeltTear1 := #iUDT_LiftPI.ix_BeltTearLeft,
+	                        ix_BeltTear2 := #iUDT_LiftPI.ix_BeltTearRight,
+	                        ix_MaintSupport1 := #ix_MaintSupport1,
+	                        ix_MaintSupport2 := #ix_MaintSupport2,
+	                        ix_PosUp := #sUDT_020VSUInterface.PositionActual = #ci_LiftUp,
+	                        ix_PosDown := #sUDT_020VSUInterface.PositionActual = #ci_LiftDown,
+	                        ix_PECGapEnd := #ix_010PECGapEnd,
+	                        ix_PECGapBegin := #ix_010PECGapBegin,
+	                        ix_LimitSwitchUp := #ix_LimitSwitchUp,
+	                        ix_LimitSwitchDown := #ix_LimitSwitchDown,
+	                        ix_SafetyDoorDiagDown := #iUDT_LiftPI.ix_SafetyDoorDownDiag,
+	                        ix_SafetyDoorDiagUp := #iUDT_LiftPI.ix_SafetyDoorUpDiag,
+	                        ix_LCPAutoMode := #iUDT_LiftPI.ix_AutoMode,
+	                        ix_LCPManualMode := #iUDT_LiftPI.ix_ManualMode,
+	                        ix_LCPStop := #ix_KeySwitchStop,
+	                        ix_LCPDown := #iUDT_LiftPI.ix_JogDown,
+	                        ix_LCPUp := #iUDT_LiftPI.ix_JogUp,
+	                        ix_LCPRef := #iUDT_LiftPI.ix_Reference,
+	                        ix_TransportIdle := #sFB_020Lift.qx_TransportIdle,
+	                        ix_HardwareOk := #ix_HardwareOk,
+	                        ix_MaintenanceSwitchUp := #iUDT_LiftPI.ix_MaintenanceSwitchUpOn,
+	                        ix_MainContactorFeedback := #iUDT_LiftPI.ix_MainContactorFeedbackOn,
+	                        ix_OverTempBrakingResistor := #iUDT_LiftPI.ix_OverTempBrakeRes,
+	                        qUDT_HMIStatus => #iqUDT_TGWLiftStatus."020".VSU,
+	                        qUDT_Status => #iqUDT_TGWLiftCommonStatus."020",
+	                        qx_MainContactorOn => #qUDT_LiftPO.qx_MainContactorOn,
+	                        iqUDT_EquipmentControl := #iqUDT_EquipmentControl,
+	                        iqUDT_VSUCommand := #iqUDT_TGWLiftHMICommands."020".VSU,
+	                        iqUDT_VSUInterface := #sUDT_020VSUInterface,
+	                        iqUDT_Statistics := #iqUDT_TGWLiftStatistics."020".VSU);
+	        
+	    END_REGION
+	    
+	    REGION SEW VFD MOVI-C Positioning
+	        
+	        #"sFB_020VfdSEWMOVICPositioning"(iUDT_VfdConfig := #iUDT_TGWLiftConfiguration."020".VFD,
+	                                         iUDT_VfdInputs := #iUDT_T01MotorInput,
+	                                         ix_MainPowerOk := TRUE,
+	                                         ix_BackupPowerOk := TRUE,
+	                                         ix_SimulationModeActive := "DB_Memory".Simulation,
+	                                         qUDT_HMIStatus => #iqUDT_TGWLiftStatus."020".VFD,
+	                                         qUDT_VfdOutputs => #qUDT_T01MotorOutput,
+	                                         iqUDT_VSUInterface := #sUDT_020VSUInterface,
+	                                         iqUDT_VFDStatistics := #iqUDT_TGWLiftStatistics."020".VFD);
+	        
+	    END_REGION
+	    
+	    REGION Signaling
+	        // Fault lamp 
+	        #qUDT_LiftPO.qx_Fault :=
+	        #iqUDT_TGWLiftCommonStatus."010".Error
+	        OR #iqUDT_TGWLiftCommonStatus."010".SafetyStop
+	        OR #iqUDT_TGWLiftCommonStatus."020".Error
+	        OR #iqUDT_TGWLiftCommonStatus."020".SafetyStop
+	        OR #iqUDT_InfeedEmptyUpCommonStatus.Error
+	        OR #iqUDT_InfeedEmptyUpCommonStatus.SafetyStop
+	        OR #iqUDT_InfeedFullDownCommonStatus.Error
+	        OR #iqUDT_InfeedFullDownCommonStatus.SafetyStop
+	        OR #iqUDT_OutfeedEmptyDownCommonStatus.Error
+	        OR #iqUDT_OutfeedEmptyDownCommonStatus.SafetyStop
+	        OR #iqUDT_OutfeedFullupCommonStatus.Error
+	        OR #iqUDT_OutfeedFullupCommonStatus.SafetyStop
+	        ;
+	        
+	    END_REGION
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

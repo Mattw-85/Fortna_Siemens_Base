@@ -1,0 +1,121 @@
+﻿TYPE "UDT_TGWLiftCommonStatus"
+VERSION : 0.1
+   STRUCT
+      "010" { S7_SetPoint := 'False'} : "UDT_CommonStatus";
+      "020" { S7_SetPoint := 'False'} : "UDT_CommonStatus";
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_TGWLiftConfiguration"
+VERSION : 0.1
+   STRUCT
+      "010" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Lift Conveyor configuration
+         Conveyor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ConveyorConfiguration";   // Conveyor configuration
+         PEC_BoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_PECConfiguration";   // BoS configuration
+         PEC_EoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_PECConfiguration";   // EoS configuration
+         VFD { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_VfdConfiguration";   // VFD configuration
+      END_STRUCT;
+      "020" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Vertical lift configuration
+         VSU { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_VSULiftConfiguration";   // VSU lift configuration
+         VFD { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_VfdPositioningConfiguration";   // VFD positioning configuration
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_TGWLiftHmiCommands"
+VERSION : 0.1
+   STRUCT
+      "010" : Struct
+         Conveyor { S7_SetPoint := 'False'} : "UDT_ConveyorCommand";
+      END_STRUCT;
+      "020" : Struct
+         VSU : "UDT_VSUCommand";
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_TGWLiftPI"
+VERSION : 0.1
+   STRUCT
+      ix_SafetyDoorDownDiag { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Safety door 1 diagnosis (Lower door)
+      ix_MainContactorFeedbackOn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Main Contactor Feedback
+      ix_ManualMode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Key-operated switch in manual mode
+      ix_AutoMode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Key-operated switch in automatic mode
+      ix_JogDown { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Push button Jog down
+      ix_JogUp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Push button Jog up
+      ix_Reset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Push button Reset
+      ix_LiftConveyorFwd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Push button lift conveyor foward
+      ix_Reference { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Pushbutton start lift vertical reference
+      ix_InfeedConveyor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Pushbutton infeed conveyor
+      ix_LiftConveyorRvs { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Push button lift conveyor reverse
+      ix_OutfeedConveyor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Pushbutton outfeed conveyor
+      ix_SafetyDoorUpDiag { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Safety door 1 diagnosis (Upper door)
+      Spare_1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      ix_OverTempBrakeRes { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Over temperature braking resistor
+      Spare_2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      ix_LimSwitchDown { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Limit switch down
+      ix_LimSwitchUp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Limit switch up
+      ix_BeltTearLeft { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Belt tear detector left
+      ix_BeltTearRight { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Belt tear detector right
+      ix_MainSwitchCabinetOn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Control panel main switch is on
+      ix_F1002ok { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit breaker tripped +S1 400 VAC
+      ix_F1400ok { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Circuit breaker tripped +S1 24 VDC
+      ix_MaintenanceSwitchUpOn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Maintenance Switch is on
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_TGWLiftPO"
+VERSION : 0.1
+   STRUCT
+      qx_Fault { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Fault lamp
+      qx_MainContactorOn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Main contactor on
+      Spare_1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      Spare_2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      Spare_3 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      Spare_4 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      Spare_5 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      Spare_6 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_TGWLiftStatistics"
+VERSION : 0.1
+   STRUCT
+      "010" : Struct   // Lift conveyor Statistics
+         Conveyor { S7_SetPoint := 'False'} : "UDT_ConveyorStatistics";
+         PEC_BoS : "UDT_PECStatistics";
+         PEC_EoS : "UDT_PECStatistics";
+         VFD : "UDT_VfdStatistics";
+      END_STRUCT;
+      "020" : Struct   // Vertical lift Statistics
+         VSU { S7_SetPoint := 'False'} : "UDT_VSULiftStatistics";
+         VSU_RIO : "UDT_RIOVSUStatistics";
+         VFD : "UDT_VfdStatistics";
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_TGWLiftStatus"
+VERSION : 0.1
+   STRUCT
+      "010" : Struct   // Lift conveyor status
+         Conveyor { S7_SetPoint := 'False'} : "UDT_ConveyorStatus";
+         PEC_BoS : "UDT_PECStatus";
+         PEC_EoS : "UDT_PECStatus";
+         VFD : "UDT_VfdStatus";
+      END_STRUCT;
+      "020" : Struct   // Vertical lift status
+         VSU { S7_SetPoint := 'False'} : "UDT_VSULiftStatus";
+         VSU_RIO : "UDT_RIOVSUStatus";
+         VFD : "UDT_VfdPositioningStatus";
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+

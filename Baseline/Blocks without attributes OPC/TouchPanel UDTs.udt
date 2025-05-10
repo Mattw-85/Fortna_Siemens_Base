@@ -1,0 +1,41 @@
+﻿TYPE "UDT_TPManualControlButtons"
+TITLE = UDT_TPManualControlButtons
+VERSION : 0.1
+//User defined structure to communicate buttons to and from the Touch buttons
+   STRUCT
+      ManualMode : Bool;
+      ManualStart : Bool;
+      ManualStop : Bool;
+      ManualFullSpeed : Bool;
+      ManualLowSpeed : Bool;
+      ManualJog : Bool;
+      ManualReverse : Bool;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_TPInterface"
+VERSION : 0.1
+   STRUCT
+      SelectedZone { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;
+      SelectedZoneNumber { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;
+      SelectedSection { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;
+      SelectedConveyor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;
+      ConnectionOK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      UserLoggedOn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      HeartBeat { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      RequestManual { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      UserGroup { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_TPConfiguration"
+VERSION : 0.1
+   STRUCT
+      AreaName { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;
+      ProjectName { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;
+   END_STRUCT;
+
+END_TYPE
+

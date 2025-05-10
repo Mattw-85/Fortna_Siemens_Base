@@ -1,0 +1,49 @@
+﻿TYPE "UDT_FlowStatistics"
+VERSION : 0.1
+   STRUCT
+      FlowCount : DInt;   // Flow counted since last reset
+      "1minFlow" : Int;   // Flowrate per 1 minute
+      "3minFlow" : Int;   // Flowrate per 3 minute
+      "10minFlow" : Int;   // Flowrate per 10 minute
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_FlowMeasurement"
+VERSION : 0.1
+   STRUCT
+      FlowCount { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;
+      "30secFlow" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;
+      "1minFlow" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;
+      "3minFlow" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;
+      "10minFlow" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;
+      "15secFlowCount" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[1..50] of Int;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_FlowControlData"
+VERSION : 0.1
+   STRUCT
+      LimitFlow { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // stop infeed request
+      "30secFlow" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // 30 seconds pph rate
+      "1minFlow" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // 1 minute pph rate
+      "3minFlow" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // 3 minutes pph rate
+      "10minFlow" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // 10 minutes pph rate
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_FlowConfiguration"
+VERSION : 0.1
+   STRUCT
+      FactorMerges { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[1..6] of Real := [6(1.0)];
+      MiniumGap { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int := 500;   // Minimum Gap setting [mm]
+      MaxGap { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int := 2000;   // Maximum Gap setting [mm]
+      PeriodSorterCapacity { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt := 30;   // Time  to check average empty carriers [s]
+      PeriodMergeCapacity { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt := 30;   // Timer to check average merge flow [s]
+      MaxCapacityMerge { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Max capacity Merge
+   END_STRUCT;
+
+END_TYPE
+

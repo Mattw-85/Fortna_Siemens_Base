@@ -1,0 +1,98 @@
+﻿TYPE "UDT_NerakLiftConfiguration"
+VERSION : 0.1
+   STRUCT
+      Mode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Int;   // 1 - lowering mode 2 - lifting mode
+      CollisionSensorDelayOn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : UDInt;   // Collision sensor delay on
+      CollisionSensorDelayOff { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : UDInt;   // Collision sensor delay off
+      FallingThroughSensorDelayOn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : UDInt;   // Falling through sensor delay on
+      FallingThroughSensorDelayOff { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : UDInt;   // Falling through sensor delay off
+      TailbackControlFrontSensorDelayOn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : UDInt;   // Tailback control front sensor delay on
+      TailbackControlFrontSensorDelayOff { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : UDInt;   // Tailback control front sensor delay off
+      TailbackControlRearSensorDelayOn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : UDInt;   // Tailback control rear sensor delay on
+      TailbackControlRearSensorDelayOff { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : UDInt;   // Tailback control rear sensor delay off
+      PlatformPositionSensorDelayOn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : UDInt;   // Platform position sensor delay on
+      PlatformPositionSensorDelayOff { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : UDInt;   // Platform position sensor delay off
+      PlatformLength { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Int := 759;   // Platform length [mm]
+      Length { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : DInt := 6000;   // Distance to be traveled by the package from start to end[mm]
+      EnergySaveLength { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : DInt := 10000;   // Distance to run before energy saving is activated [cm]
+      PEC_EoSDistanceOffset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : DInt := 300;   // Position to stop during dieback [mm]
+      CascadeTimeOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : UDInt := 200;   // Cascade start delay
+      FirstConveyorToStart { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Bool := FALSE;   // Lift first to start in cascade
+      SpeedSetpointNominal { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Int := 1000;   // Speed setpoint nominal
+      Energy { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Bool := TRUE;   // TRUE when energy saving mode enable
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_NerakLiftPI"
+VERSION : 0.1
+   STRUCT
+      ix_PowerOK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // -10F1, -12F1 and -12Q1 are switched ON
+      ix_ManualDown { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Push button manual DOWN
+      ix_ManualMode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Key switch manual mode
+      ix_FaultReset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Push button reset fault
+      ix_AutomaticMode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Key switch automatic mode
+      "ix_spare_0.5" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      ix_ManualUp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Push button manual UP
+      ix_B11ColisionControl { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Sensor -B11 Collisiion control top
+      ix_B1Infeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Sensor  -B1 Infeed occupied
+      "ix_B3.3FallingThrought" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Sensor -B3.3 Falling through control 
+      ix_B2_CollisionControl { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Sensor -B2 Collision at infeed
+      ix_B4TailbackControlFront { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Sensor -B4 Outfeed occupied
+      "ix_B3.1FallingThrought" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Sensor -B3.1 Falling through control 
+      ix_B5TailbackControlBack { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Sensor -B4 Product before Outfeed 
+      "ix_B3.2FallingThrought" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Sensor -B3.2 Falling through control 
+      ix_B10_PlatforninPosition { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Sensor -B10 Platform in position to start infeed
+      ix_DoorSwitchBottom { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Door switch bottom -16S3 diagnostic
+      "ix_spare_2.1" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      ix_DoorSwitchTop { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Door switch up -16S4 diagnostic
+      "ix_spare_2.3" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      "ix_spare_2.4" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      "ix_spare_2.5" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      "ix_spare_2.6" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      "ix_spare_2.7" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_NerakLiftPO"
+VERSION : 0.1
+   STRUCT
+      qx_PowerRelease { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Release main contactor 17Q1
+      "qx_spare_0.1" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      qx_ReadyLamp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // LED lamp GREEN - Ready
+      "qx_spare_0.3" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      qx_FaultLamp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // LED lamp RED - Fault
+      "qx_spare_0.5" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      "qx_spare_0.6" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      "qx_spare_0.7" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_NerakLiftStatistics"
+VERSION : 0.1
+   STRUCT
+      ProductFellDown { S7_SetPoint := 'False'} : "UDT_EventStatistic";
+      CollisionDetected { S7_SetPoint := 'False'} : "UDT_EventStatistic";
+      EnergySave { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Number of times that save energy mode occurs
+      ConveyorUp { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Conveyor up statistics
+      ConveyorDown { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Conveyor down statistics
+      ConveyorStop { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Conveyor down statistics
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_NerakLiftStatus"
+VERSION : 0.1
+   STRUCT
+      Status : Int;   // Status number
+      Specific : Struct
+         Reverse : Bool;
+         CollisionDetected : Bool;
+         ProductFellDown : Bool;
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+

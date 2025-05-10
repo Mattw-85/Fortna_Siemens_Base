@@ -1,0 +1,135 @@
+﻿FUNCTION_BLOCK "FB_InchingBulk"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 13
+// END_ATTRIBUTES
+   VAR_INPUT 
+      ix_PECUp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // PEC Sum signal from upstream conveyor
+      ix_InchingActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // If TRUE inching is activate
+      ix_ClearCommand { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Command to clear full status
+      ix_DownstreamFull { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE if downstream conveyors are full
+      ii_OnDelayGap { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Distance to conveyor release [mm]
+      ii_InchingGap { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Inching distance [mm]
+      ii_Displacement_Upstream { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Upstream conveyor displacement
+      ii_Displacement { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Inching conveyor displacement
+   END_VAR
+
+   VAR_OUTPUT 
+      qx_ExternalRequestHold { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // External output to request conveyor hold
+      qx_Full { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Inching conveyor is full status
+   END_VAR
+
+   VAR 
+      sUDT_Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_InchingStatus";
+      sUDT_StatusOld { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_InchingStatus";
+      F_TRIG_PECEoSUp {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   // Falling edge trigger PEC EoS
+      si_ActualInchingGap { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Distance to request hold
+      si_ActualOnGap { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Distance to conveyor release
+      sx_StartRelease { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Conveyor release
+      sx_ConveyorFull { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                      
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	01/04/2021  | 1.0       | M.Kocot       | first release TIA 16
+	08/04/2021  | 1.1       | H.Rutkwoski   | Added status full
+	14/08/2021  | 1.2       | M. Jager      | Reset sx_full when inching is not active 
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	12/03/2024  | 4.1       | S. Nieswiec   | Removed underscore from function name
+	*)
+	
+	REGION 1 - Triggers
+	    
+	    // Falling edge trigger PEC EoS.
+	    #F_TRIG_PECEoSUp(CLK := #ix_PECUp);
+	    
+	END_REGION
+	
+	
+	REGION 2 - Inching
+	    // Statement section REGION
+	    
+	    #qx_ExternalRequestHold := #ix_InchingActive;
+	    
+	    IF #F_TRIG_PECEoSUp.Q AND #ix_InchingActive THEN
+	        #si_ActualOnGap := DINT_TO_INT(#ii_OnDelayGap / 10);
+	        #si_ActualInchingGap := DINT_TO_INT(#ii_InchingGap / 10);
+	        
+	    END_IF;
+	    
+	    IF #si_ActualOnGap > 0 THEN
+	        
+	        #si_ActualOnGap := #si_ActualOnGap - #ii_Displacement_Upstream;
+	        
+	    END_IF;
+	    
+	    IF #ix_PECUp AND #si_ActualInchingGap > 0 THEN
+	        #si_ActualInchingGap := #si_ActualInchingGap - #ii_Displacement;
+	    END_IF;
+	    
+	    IF #si_ActualOnGap <= 0
+	        OR #sx_StartRelease
+	    THEN
+	        #sx_StartRelease := TRUE;
+	    END_IF;
+	    
+	    IF #si_ActualInchingGap <= 0
+	    THEN
+	        #sx_StartRelease := FALSE;
+	    END_IF;
+	    
+	    IF #sx_StartRelease THEN
+	        #qx_ExternalRequestHold := FALSE;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 3 - Internal status - convayor full
+	    
+	    // Set conveyor status to full when:
+	    IF #ix_InchingActive                     // inching is active 
+	        AND #ix_DownstreamFull               // downstream is full
+	        AND NOT #ix_ClearCommand             // there is no clear command active
+	    THEN
+	        #sx_ConveyorFull := TRUE;
+	    END_IF;
+	    
+	    // Set conveyor status to NOT full when:
+	    IF (#ix_InchingActive                   // Inching is active
+	        AND #ix_ClearCommand                // clear command is active
+	        AND NOT #ix_DownstreamFull)         // downstream is NOT full)             
+	        OR NOT #ix_InchingActive            // OR Inching isnt active
+	    THEN
+	        #sx_ConveyorFull := FALSE;
+	    END_IF;
+	    
+	END_REGION
+	
+	
+	REGION 4 - Status
+	    
+	    // Convsyor is full status
+	    #sUDT_Status.Full := #sx_ConveyorFull;
+	    
+	    #sUDT_Status.Active := #ix_InchingActive;
+	    
+	    // Status update on change.
+	    IF #sUDT_StatusOld <> #sUDT_Status
+	    THEN
+	        #qx_Full := #sUDT_Status.Full;
+	        #sUDT_StatusOld := #sUDT_Status;
+	    END_IF;
+	    
+	END_REGION
+	
+	
+END_FUNCTION_BLOCK
+

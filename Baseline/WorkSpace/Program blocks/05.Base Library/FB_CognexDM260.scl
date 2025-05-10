@@ -1,0 +1,518 @@
+﻿FUNCTION_BLOCK "FB_CognexDM260"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 263
+// END_ATTRIBUTES
+   VAR_INPUT 
+      iUDT_CognexDM260_IN { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_CognexDM260_IN";   // Data from camera
+      ix_Trigger { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Trigger - Activate barcode scanning inside this function
+   END_VAR
+
+   VAR_OUTPUT 
+      qUDT_CognexDM260_OUT { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_CognexDM260_OUT";   // Data send to camera
+      qs_Barcode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;
+      qw_RetVal { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Word;   // Error code (W#16#...): A - TimeOut; B - Bit from camera "Result available" blocked; C - NO READ; C5 - 5 NO READ in row;  C0 - Empty data from camera
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_EquipmentControl { S7_HiddenAssignment := 'HideIfNoParamAssigned'} : "UDT_EquipmentControl";   // Optional. Use UDT to reset errors and statistic [ or two next bits:  ix_ResetError  to reset erors and ResetStatistic]
+   END_VAR
+
+   VAR 
+      sFB_TimerOnOffDelay_TimeOut { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // TimeOut timer
+      sFB_TimerOnOffDelay_ResultsAvailableError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // Timer for control Result Avilable duration time
+      sFB_TimerOnOffDelay_ActTimeToNextReady { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // Time from trigger to get data from camera (Result_Available)
+      sFB_TimerOnOffDelay_ActReadingFromCameraTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // Time from trigger to get data from camera (Result_Available)
+      sR_TRIG_StatisticActCycleTime {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge for (#R_TRIG_Result_available.Q OR #sx_ErrorTimeOut)
+      sR_TRIG_Trigger {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge trigger signal
+      sR_TRIG_TriggerReady {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge for bit from camera "trigger ready"
+      sR_TRIG_ResultAvailable {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge for bit from camera "Result_Available"
+      sR_TRIG_NoReadCounter {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge for general counter NO_READ
+      sR_TRIG_OkReadCounter {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge for general counter OK_READ
+      sR_TRIG_TimeOutCounter {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge for general counter TimeOut
+      sR_TRIG_ResetStatistics {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge for ResetStatistics
+      ss_LastResults { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Copy of last result reading barcode value
+         ID { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // The value of the “Trigger ID” when the trigger that generated these results was issued. Used to match up triggers with corresponding result data (16-bit Integer).
+         Flags { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Indicates the success or failure of the read that produced these results (16-bit Integer).Bit 0,1=read, 0=no read, Bit 1,1=validated, 0=not validated (or validation not in use),  Bit 2,1=verified, 0=not verified (or verification not in use)  Bit 3,1=acquisition trigger overrun  Bit 4,1=acquisition buffer overflow
+         Length { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Actual number of bytes of read data contained in the “Result Data” field (16-bitInteger).
+         DataBarCode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[0..63] of Char;   // Last barcode
+         DataBarCodeString { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;   // Last barcode as string // for future use
+      END_STRUCT;
+      ss_Statistic { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // All statistics
+         udi_ActReadingFromCameraTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Actual time measurement from trigger to get data from camera
+         udi_PrevReadingFromCameraTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Previous time measurement from trigger to get data from camera
+         udi_ShortestReadingTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // The shortest time of reading data from camera  (only OK READ)
+         udi_LongestReadingTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // The longest time of reading data from camera  (only OK READ)
+         udi_AvgReadingTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Average time of reading data from camera (only OK READ)
+         udi_SumOfTimesOkRead { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Sum of all OK READ times - for use in average
+         udi_ActTimeToNextReady { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Time from trigger to get next high state on bit "Trigger Ready" from camera
+         si_OK_READ_CounterGeneral { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UInt;   // Total number of correct readings
+         si_TimeOut_CounterGeneral { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UInt;   // Total number of timeouts
+         si_NO_READ_CounterGeneral { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UInt;   // Total number of NO READ
+         si_NO_READ_CounterInRow { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UInt;   // Number of No READ in a row (after 5 generate error)
+      END_STRUCT;
+      sw_ErrorCode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Word;   // Error code
+      sx_BUSY { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Function is processing data (set with trigger, reset at the end of processing data from the camera)
+      sx_OK_READ { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Correct reading
+      sx_NO_READ { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Camera can't read last barcode
+      sx_ErrorTimeOut { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Begin measuring time with trigger and finish when camera activate "Results Available". Time set up in constants
+      "sx_General Fault" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Any error set this bit
+      sx_ResetResultAvailableBit { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit is used as memory during the reset procedure of "Result available" bit ( it requires communication between the camera and the PLC)
+      sx_ResetErrorsInterlocked { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit is used as memory during error reset process.
+   END_VAR
+
+   VAR_TEMP 
+      ti_Trigger_ID : Int;   // ID value of the next trigger to be issued (16-bit integer). Copy of input tag get from camera after decoding UDT bytes (original TriggerID)
+      ti_ResultID : Int;   // “Trigger ID” when the trigger that generated these results was. Copy of input tag get from camera after decoding UDT bytes (original ResultID)
+      ti_ResultCode : Int;   // Indicates the success or failure of the read that produced these results Copy of input tag get from camera after decoding UDT bytes (original Result Code or "flags")
+      ti_ResultLength : Int;   // Actual number of bytes of read data contained in the “Result Data” field (16-bit)  Copy of input tag get from camera after decoding UDT bytes (original Result Code or "flags")
+      tx_Decoding : Bool;   // Indicates that the DataMan is decoding an acquired image. The value of the Decoding bit is identical to the value of the Acquiring bit. Both bits are true if an acquisition, or series of acquisitions of the same trigger, is in progress. Copy of input tag get from camera after decoding UDT bytes (original Decoding)
+      tx_DecodeComplete : Bool;   // Bit is toggled on the completion of a decode operation when the new results are made available (0 -> 1 or 1 -> 0).  Copy of input tag get from camera after decoding UDT bytes (original Decode complete)
+      tx_ResultsBufferOverrun : Bool;   // Indicates that the DataMan has discarded a set of read results because the results Copy of input tag get from camera after decoding UDT bytes (orginal Results Buffer Overrun)
+      tx_CameraNoRead : Bool;   // Result Code = 0 -> Camera NO READ code
+      tx_CameraOkRead : Bool;   // Result Code = 1 -> Camera READ code
+      tx_ResultsAvailable : Bool;   // Indicates that a new set of read results are available, that is, the contents of the Result Data module are valid. Cleared when the results are acknowledged. Copy of input tag get from camera after decoding UDT bytes (orginal Result Available)
+   END_VAR
+
+   VAR CONSTANT 
+      cudi_TimeOut : UDInt := 110;   // Timeout time
+      cudi_MaxUDint : UDInt := 4_294_967_295;   // Maximal value of UDint
+   END_VAR
+
+
+BEGIN
+	(*
+	                                                                                 
+	Version history:
+	Date        | Version   | Author             | Remark
+	----------------------------------------------------------------------------------------
+	08/05/2024   | 0.1       | Grzegorz Czekała    | first release TIA Portal 17 (upd 6)
+	11/05/2024   | 0.2       | S. Nieswiec         | removed optional inputs, added barcode string to outputs,
+	                                               | changed system commands to equipment control
+	25/05/2024   | 0.3       | S. Nieswiec         | Switched IEC timers for FB_TimerOnOffDelay 
+	27/05/2024   | 0.4       | S. Nieswiec         | Cleaned up code, changed region names
+	                                               | TO DO, clean up statistics region, can't just copy paste it higher because statistics brake
+	*)
+	
+	
+	REGION 1 - Initial
+	    
+	    REGION 1.1 - Reset Temp variables
+	        #ti_Trigger_ID := 0;
+	        #ti_ResultID := 0;
+	        #ti_ResultCode := 0;
+	        #ti_ResultLength := 0;
+	        #tx_Decoding := FALSE;
+	        #tx_DecodeComplete := FALSE;
+	        #tx_ResultsBufferOverrun := FALSE;
+	        #tx_CameraOkRead := FALSE;
+	        #tx_CameraNoRead := FALSE;
+	        #tx_ResultsAvailable := FALSE;
+	    END_REGION
+	    
+	    REGION 1.2 - Timers
+	        REGION 1.2.1 - Timeout
+	            #sFB_TimerOnOffDelay_TimeOut(iudi_OnDelayTime := #cudi_TimeOut,
+	                                         ix_SignalToDelay := #sx_BUSY AND NOT #tx_ResultsAvailable,
+	                                         ix_Enable := TRUE);
+	        END_REGION
+	        
+	        REGION 1.2.2 - Results available timeout
+	            #sFB_TimerOnOffDelay_ResultsAvailableError(iudi_OnDelayTime := 20,
+	                                                       ix_SignalToDelay := #tx_ResultsAvailable,
+	                                                       ix_Enable := TRUE);
+	        END_REGION
+	    END_REGION
+	    
+	    REGION 1.3 - Triggers
+	        #sR_TRIG_Trigger(CLK := #ix_Trigger);  //Rising edge trigger signal
+	        //  #sR_TRIG_TriggerReady(CLK := #iUDT_CognexDM260_IN.TriggerReady); lower in code
+	        // #sR_TRIG_ResultAvailable(CLK := #"tx_ResultsAvailable");    // lower in code
+	        #sR_TRIG_OkReadCounter(CLK := #sx_OK_READ);
+	        #sR_TRIG_NoReadCounter(CLK := #sx_NO_READ);
+	        #sR_TRIG_ResetStatistics(CLK := #iqUDT_EquipmentControl.Command.ResetData);
+	    END_REGION
+	    
+	    REGION 1.4 - Trigger Enable
+	        
+	        #qUDT_CognexDM260_OUT.TriggerEnable := TRUE;  // Camera always ready to trigger
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 2. Trigger activation
+	    
+	    #"tx_ResultsAvailable" := #iUDT_CognexDM260_IN.BYTE_Decoding.%X3; // decoding info from camera "Results Available" (Information on receiving data from the camera regardless of whether the barcode is read or not.) 
+	    
+	    // Activate camera trigger when: camera is ready, input trigger is activated and previous process is completed without errors
+	    IF #sR_TRIG_Trigger.Q
+	        AND #iUDT_CognexDM260_IN.TriggerReady
+	        AND NOT #qUDT_CognexDM260_OUT.Trigger
+	        AND NOT #iUDT_CognexDM260_IN.TriggerAck
+	        AND NOT #"tx_ResultsAvailable"
+	        AND NOT #qUDT_CognexDM260_OUT.ResultsAck
+	        AND NOT #sx_BUSY
+	        AND NOT #sx_ResetErrorsInterlocked
+	    THEN
+	        #qUDT_CognexDM260_OUT.Trigger := TRUE;
+	        #sx_BUSY := TRUE;   // process in progress
+	        #sx_ErrorTimeOut := FALSE;
+	        #sx_NO_READ := FALSE;
+	        #sx_OK_READ := FALSE;
+	        #sw_ErrorCode := 16#0;
+	    END_IF;
+	END_REGION
+	
+	
+	REGION 3 - Handling data received from camera
+	    
+	    IF #sx_BUSY
+	        AND #tx_ResultsAvailable
+	        AND NOT #qUDT_CognexDM260_OUT.ResultsAck
+	    THEN
+	        #qUDT_CognexDM260_OUT.Trigger := FALSE;
+	        #qUDT_CognexDM260_OUT.ResultsAck := TRUE;
+	        
+	        REGION 3.1 - Decoding data
+	            
+	            // Data decoding is necessary because we receive data from the camera in the form of bytes when we need integers and bit
+	            // Decoding byte nr 3
+	            #tx_Decoding := #iUDT_CognexDM260_IN.BYTE_Decoding.%X0;
+	            #"tx_DecodeComplete" := #iUDT_CognexDM260_IN.BYTE_Decoding.%X1;
+	            #"tx_ResultsBufferOverrun" := #iUDT_CognexDM260_IN.BYTE_Decoding.%X2;
+	            // #"Results Available" := #iUDT_Cognex260_control."BYTE_Decoding-GeneralFault".%X3;  // This is decoding upper line
+	            #"sx_General Fault" := #iUDT_CognexDM260_IN.BYTE_Decoding.%X7;
+	            
+	            // Trigger ID
+	            #ti_Trigger_ID.%B1 := #iUDT_CognexDM260_IN.TriggerID;
+	            #ti_Trigger_ID.%B0 := #iUDT_CognexDM260_IN."TriggerID 1";
+	            
+	            // Result ID
+	            #ti_ResultID.%B1 := #iUDT_CognexDM260_IN.ResultID;
+	            #ti_ResultID.%B0 := #iUDT_CognexDM260_IN."ResultID 1";
+	            
+	            // Result Code
+	            #ti_ResultCode.%B1 := #iUDT_CognexDM260_IN."Result Code";
+	            #ti_ResultCode.%B0 := #iUDT_CognexDM260_IN."Result Code_1";
+	            
+	            // Result Lenght
+	            #ti_ResultLength.%B1 := #iUDT_CognexDM260_IN."Result Length";
+	            #ti_ResultLength.%B0 := #iUDT_CognexDM260_IN."Result Length_1";
+	            
+	            REGION 3.1.1 - Copying last result barcode value
+	                
+	                // Copy Last Result NO_READ sign
+	                #ss_LastResults.DataBarCode[0] := #iUDT_CognexDM260_IN."BarCodeValue[0]-NO_READ_sign";
+	                
+	                // Copy last result barcode value to DB
+	                MOVE_BLK(IN := #iUDT_CognexDM260_IN.BarCodeValue[1],
+	                         COUNT := 63,
+	                         OUT => #ss_LastResults.DataBarCode[1]);
+	                
+	                // Marge Bytes to int
+	                #ss_LastResults.ID := #ti_ResultID;
+	                #ss_LastResults.Flags := #ti_ResultCode;
+	                #ss_LastResults.Length := #ti_ResultLength;
+	                
+	                // For future use conversion from char to string 
+	                Chars_TO_Strg(Chars := #ss_LastResults.DataBarCode,
+	                              pChars := 0,
+	                              Cnt := 0,
+	                              Strg => #ss_LastResults.DataBarCodeString);
+	                #qs_Barcode := #ss_LastResults.DataBarCodeString;
+	            END_REGION
+	            
+	        END_REGION
+	        
+	        REGION 3.2  No READ // When NO_READ this bit is activate (is set until new trigger)
+	            
+	            // Check when get new data if there is "!"
+	            IF #qUDT_CognexDM260_OUT.ResultsAck AND #ss_LastResults.DataBarCode[0] = '!'
+	            THEN
+	                #sx_NO_READ := TRUE;
+	                #sx_OK_READ := FALSE;
+	            END_IF;
+	            
+	            IF #qUDT_CognexDM260_OUT.ResultsAck AND #ss_LastResults.DataBarCode[0] <> '!'
+	            THEN
+	                #sx_NO_READ := FALSE;
+	                #sx_OK_READ := TRUE;
+	            END_IF;
+	            
+	            //Addidtional data from camera
+	            #tx_CameraOkRead := #ti_ResultCode.%X0 AND #qUDT_CognexDM260_OUT.ResultsAck;
+	            #tx_CameraNoRead := NOT #ti_ResultCode.%X0 AND #qUDT_CognexDM260_OUT.ResultsAck;
+	            
+	        END_REGION
+	    END_IF;
+	    
+	    REGION 3.3  End of reading procedure 
+	        //Resets bits  is READY TO next trigger
+	        IF #sx_BUSY
+	            AND #qUDT_CognexDM260_OUT.ResultsAck
+	            AND NOT #"tx_ResultsAvailable"
+	        THEN
+	            #qUDT_CognexDM260_OUT.ResultsAck := FALSE;
+	            #sx_BUSY := FALSE;
+	        END_IF;
+	        
+	    END_REGION
+	END_REGION
+	
+	
+	REGION 4 - Statistics 
+	    
+	    
+	    REGION 4.1  Time statistics
+	        
+	        ////////////////////////////////// Time measured from trigger to receiving a response "Results Available".
+	        
+	        #sR_TRIG_ResultAvailable(CLK := #"tx_ResultsAvailable");
+	        #sR_TRIG_StatisticActCycleTime(CLK := #sR_TRIG_ResultAvailable.Q OR #sx_ErrorTimeOut);
+	        
+	        
+	        IF #sR_TRIG_StatisticActCycleTime.Q  // Sending the time only once in the event of receiving data or exceeding the timeout.
+	        THEN
+	            #ss_Statistic.udi_PrevReadingFromCameraTime := #ss_Statistic.udi_ActReadingFromCameraTime;
+	            #ss_Statistic.udi_ActReadingFromCameraTime := LREAL_TO_UDINT(#sFB_TimerOnOffDelay_ActTimeToNextReady.qlr_ActualTime);
+	            #sFB_TimerOnOffDelay_ActReadingFromCameraTime.ix_SignalToDelay := FALSE;
+	        END_IF;
+	        
+	        REGION 4.1.1 Longest, shortest and average reading time
+	            
+	            // Statistics include only OK_READ process
+	            IF #sR_TRIG_ResultAvailable.Q AND #sx_OK_READ
+	            THEN
+	                
+	                // Chceck the longest time
+	                IF #ss_Statistic.udi_ActReadingFromCameraTime > #ss_Statistic.udi_LongestReadingTime
+	                THEN
+	                    #ss_Statistic.udi_LongestReadingTime := #ss_Statistic.udi_ActReadingFromCameraTime;
+	                    
+	                END_IF;
+	                
+	                // When PLC startup the shortest time is 0ms, so we put there other start shortest time value
+	                IF #ss_Statistic.udi_ShortestReadingTime < 1
+	                THEN
+	                    #ss_Statistic.udi_ShortestReadingTime := #ss_Statistic.udi_ActReadingFromCameraTime;
+	                END_IF;
+	                
+	                // Chceck the shortest time
+	                IF (#ss_Statistic.udi_ActReadingFromCameraTime < #ss_Statistic.udi_ShortestReadingTime)
+	                THEN
+	                    
+	                    #ss_Statistic.udi_ShortestReadingTime := #ss_Statistic.udi_ActReadingFromCameraTime;
+	                END_IF;
+	                
+	                // Calculate average time of OK_READs
+	                #ss_Statistic.udi_SumOfTimesOkRead := #ss_Statistic.udi_SumOfTimesOkRead + #ss_Statistic.udi_ActReadingFromCameraTime;
+	                #ss_Statistic.udi_AvgReadingTime := #ss_Statistic.udi_SumOfTimesOkRead / #ss_Statistic.si_OK_READ_CounterGeneral;
+	                
+	            END_IF;
+	        END_REGION
+	        
+	        REGION 4.1.2 Time from trigger to ResultsAvailable
+	            
+	            IF #sx_BUSY AND NOT #tx_ResultsAvailable THEN
+	                #sFB_TimerOnOffDelay_ActReadingFromCameraTime.ix_SignalToDelay := TRUE;
+	            END_IF;
+	            
+	            #sFB_TimerOnOffDelay_ActReadingFromCameraTime(iudi_OnDelayTime := #cudi_MaxUDint,
+	                                                          ix_Enable := TRUE);
+	            
+	            //Time measured from trigger to receiving a response "Trigger ready".
+	            #sR_TRIG_TriggerReady(CLK := #iUDT_CognexDM260_IN.TriggerReady);
+	            
+	            IF #sx_BUSY THEN
+	                #sFB_TimerOnOffDelay_ActTimeToNextReady.ix_SignalToDelay := TRUE;
+	            END_IF;
+	            
+	            IF #sR_TRIG_TriggerReady.Q OR #sx_ErrorTimeOut
+	            THEN
+	                #ss_Statistic.udi_ActTimeToNextReady := LREAL_TO_UDINT(#sFB_TimerOnOffDelay_ActTimeToNextReady.qlr_ActualTime);
+	                #sFB_TimerOnOffDelay_ActTimeToNextReady.ix_SignalToDelay := FALSE;
+	            END_IF;
+	            
+	            #sFB_TimerOnOffDelay_ActTimeToNextReady(iudi_OnDelayTime := #cudi_MaxUDint,
+	                                                    ix_Enable := TRUE);
+	        END_REGION
+	    END_REGION
+	    
+	    
+	    REGION 4.2 - Count statistics
+	        REGION 4.2.1 - OK_READ 
+	            
+	            IF #sR_TRIG_OkReadCounter.Q
+	            THEN
+	                #ss_Statistic.si_OK_READ_CounterGeneral += 1;
+	            END_IF;
+	        END_REGION
+	        
+	        REGION 4.2.2 -  NO_READ and NO_READ in row
+	            
+	            IF #sx_OK_READ
+	            THEN
+	                #ss_Statistic.si_NO_READ_CounterInRow := 0;
+	            END_IF;
+	            
+	            IF #sR_TRIG_NoReadCounter.Q
+	            THEN
+	                #ss_Statistic.si_NO_READ_CounterGeneral += 1;
+	                #ss_Statistic.si_NO_READ_CounterInRow += 1;
+	            END_IF;
+	        END_REGION
+	    END_REGION
+	    
+	    REGION 4.3 - Reset statistics
+	        
+	        // Reset all statistic
+	        IF #sR_TRIG_ResetStatistics.Q
+	        THEN
+	            #ss_Statistic.udi_ActReadingFromCameraTime := 0;
+	            #ss_Statistic.udi_PrevReadingFromCameraTime := 0;
+	            #ss_Statistic.udi_ShortestReadingTime := 0;
+	            #ss_Statistic.udi_SumOfTimesOkRead := 0;
+	            #ss_Statistic.udi_LongestReadingTime := 0;
+	            #ss_Statistic.udi_ActTimeToNextReady := 0;
+	            #ss_Statistic.udi_AvgReadingTime := 0;
+	            #ss_Statistic.si_OK_READ_CounterGeneral := 0;
+	            #ss_Statistic.si_TimeOut_CounterGeneral := 0;
+	            #ss_Statistic.si_NO_READ_CounterInRow := 0;
+	            #ss_Statistic.si_NO_READ_CounterGeneral := 0;
+	        END_IF;
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 5 - End of reading procedure
+	    
+	    IF #sx_BUSY
+	        AND #qUDT_CognexDM260_OUT.ResultsAck
+	        AND NOT #"tx_ResultsAvailable"
+	    THEN
+	        #qUDT_CognexDM260_OUT.ResultsAck := FALSE;
+	        #sx_BUSY := FALSE;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 6 - Errors
+	    
+	    REGION 4.1 - Timeout
+	        
+	        IF #sFB_TimerOnOffDelay_TimeOut.qx_DelayedSignal THEN
+	            #sx_ErrorTimeOut := TRUE;
+	        END_IF;
+	        
+	        IF #sR_TRIG_TimeOutCounter.Q
+	        THEN
+	            #ss_Statistic.si_TimeOut_CounterGeneral += 1;
+	        END_IF;
+	    END_REGION
+	    
+	    REGION 4.2 - Results available blocked
+	        
+	        IF #sFB_TimerOnOffDelay_ResultsAvailableError.qx_DelayedSignal
+	        THEN
+	            #"sx_General Fault" := TRUE;
+	            #sw_ErrorCode := 16#800B;             // Bit from camera "Result available" blocked
+	            #sx_ResetErrorsInterlocked := TRUE;  // Start procedure of reset bit Results Available
+	        END_IF;
+	        
+	        IF #sx_ErrorTimeOut AND #"tx_ResultsAvailable"
+	        THEN
+	            #sx_ResetErrorsInterlocked := TRUE;  // Reset bit Results Available
+	        END_IF;
+	    END_REGION
+	    
+	    REGION 4.3 - Error codes
+	        
+	        REGION 4.3.1 - Timeout
+	            IF #sx_ErrorTimeOut
+	            THEN
+	                #"sx_General Fault" := TRUE;
+	                #sw_ErrorCode := 16#800A;
+	            END_IF;
+	        END_REGION
+	        
+	        REGION 4.3.2 - No read
+	            IF #sx_NO_READ
+	            THEN
+	                #"sx_General Fault" := TRUE;
+	                #sw_ErrorCode := 16#800C;     // NO READ
+	            END_IF;
+	        END_REGION
+	        
+	        REGION 4.3.3 - Five no read in row
+	            IF #ss_Statistic.si_NO_READ_CounterInRow >= 5
+	            THEN
+	                #"sx_General Fault" := TRUE;
+	                #sw_ErrorCode := 16#805C;    // 5 NO READ in row
+	            END_IF;
+	        END_REGION
+	        
+	        REGION 4.3.4 - Empty data from camera
+	            IF #qUDT_CognexDM260_OUT.ResultsAck AND #ss_LastResults.DataBarCode[0] = '$00'
+	            THEN
+	                #"sx_General Fault" := TRUE;
+	                #sw_ErrorCode := 16#80C0;    // Empty data from camera
+	            END_IF;
+	        END_REGION
+	        
+	        REGION 4.3.5 - Writing error code to ouput
+	            
+	            #qw_RetVal := #sw_ErrorCode;
+	            
+	        END_REGION
+	    END_REGION
+	END_REGION
+	
+	REGION 7 - Errors reset
+	    
+	    REGION 6.1 - General
+	        IF #iqUDT_EquipmentControl.Command.Reset THEN
+	            #ss_Statistic.si_TimeOut_CounterGeneral := 0;
+	            #ss_Statistic.si_NO_READ_CounterInRow := 0;
+	            
+	            #sx_BUSY := FALSE;
+	            #qUDT_CognexDM260_OUT.ResultsAck := FALSE;
+	            #"sx_General Fault" := TRUE;
+	            #sw_ErrorCode := 16#0000;
+	            
+	            #sx_ResetErrorsInterlocked := TRUE;
+	        END_IF;
+	    END_REGION
+	    
+	    REGION 6.2 Reset "Result Available" and Trigger Ack bit from camera
+	        
+	        // To clear the bit "#Results Available" from camera, it is necessary to SET the bit "ResultsAck" and wait for confirmation from the camera.
+	        IF #sx_ResetResultAvailableBit AND NOT #"tx_ResultsAvailable"
+	        THEN
+	            #sx_ResetResultAvailableBit := FALSE;
+	            #qUDT_CognexDM260_OUT.ResultsAck := FALSE;
+	            #qUDT_CognexDM260_OUT.Trigger := FALSE;
+	        END_IF;
+	        
+	        IF #sx_ResetErrorsInterlocked AND #"tx_ResultsAvailable"
+	        THEN
+	            #qUDT_CognexDM260_OUT.ResultsAck := TRUE;
+	            #sx_ResetResultAvailableBit := TRUE;
+	        END_IF;
+	        
+	        
+	        IF #sx_ResetErrorsInterlocked AND NOT #"tx_ResultsAvailable"
+	        THEN
+	            #sx_ResetErrorsInterlocked := FALSE;
+	        END_IF;
+	        
+	    END_REGION
+	END_REGION
+	
+	
+	
+END_FUNCTION_BLOCK
+

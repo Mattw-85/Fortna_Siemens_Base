@@ -1,0 +1,3452 @@
+﻿TYPE "UDT_DeviceState"
+TITLE = UDT_DeviceState
+VERSION : 0.1
+//User-defined structure of device states.
+   STRUCT
+      Configure { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Device configured in TIA Portal hardware
+      Exist { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Device physically connected
+      Error { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Device has an error
+      ProfinetNumber : UInt;   // Profinet slave number
+      HW_ID : UInt;   // Device's HW_ID
+      PNDeviceName : String;   // Device's project name
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_ModuleState"
+TITLE = UDT_ModuleState
+VERSION : 0.1
+//User-defined structure of module states.
+   STRUCT
+      Configured { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Module configured
+      Exist { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Module exist
+      Error { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Module has error
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_CommonStatus"
+TITLE = UDT_CommonStatus
+VERSION : 0.1
+//User-defined structure of common statuses.
+   STRUCT
+      SafetyStop { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Emergancy stop
+      Error { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // An error is active
+      Warning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // A warning is active
+      ManualRun { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Running in manual mode
+      Manual { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // In manual mode
+      Halted { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Halted
+      Dieback { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // In dieback
+      Stopped { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Stopped
+      Running { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Running
+      EnergySave { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // In energy saving mode
+      AutoON { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Automatic started
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_ProfinetDevice"
+TITLE = UDT_ProfinetDevice
+VERSION : 0.1
+//User-defined structure of profinet device state.
+   STRUCT
+      DeviceState : "UDT_DeviceState";   // Device state
+      Module { S7_SetPoint := 'False'} : Array[0..31] of "UDT_ModuleState";   // Modules
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_FifoHeader"
+TITLE = UDT_FifoHeader
+VERSION : 0.1
+//User-defined structure of FIFO register header information.
+   STRUCT
+      Status : Struct   // Status bits
+         Empty { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // FIFO Empty
+         Prefull { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // FIFO Prefull
+         Full { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // FIFO Full
+      END_STRUCT;
+      NextEntryToRead : Int;   // Next FIFO entry to read
+      NextEntryToWrite : Int;   // Next FIFO entry to write
+      MaxNrOfEntries : Int;   // Maximum number of FIFO entries
+      TotalEntriesStored : Int;   // Total number of FIFO entries
+   END_STRUCT;
+
+END_TYPE
+
+DATA_BLOCK "DB_Memory"
+TITLE = DB_Memory
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+VERSION : 3.0
+NON_RETAIN
+   VAR 
+      ClockByte { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;   // System clock byte
+      Clock_10Hz { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 10 Hz system clock bit
+      Clock_5Hz { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 5 Hz system clock bit
+      "Clock_2.5Hz" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 2.5 Hz system clock bit
+      Clock_2Hz { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 2 Hz system clock bit
+      "Clock_1.25Hz" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1.25 Hz system clock bit
+      Clock_1Hz { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1 Hz system clock bit
+      "Clock_0.625Hz" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 0.625 Hz system clock bit
+      "Clock_0.5Hz" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 0.5 Hz system clock bit
+      SystemByte { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;   // System byte
+      OSClockByte { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;   // One shot of clock pulse
+      "OS_0.1sec" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // One shot every 0.1 sec
+      "OS_0.2sec" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // One shot every 0.2 sec
+      "OS_0.4sec" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // One shot every 0.4 sec
+      "OS_0.5sec" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // One shot every 0.5 sec
+      "OS_0.8sec" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // One shot every 0.8 sec
+      OS_1sec { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // One shot every 1 sec
+      "OS_1.6sec" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // One shot every 1.6 sec
+      OS_2sec { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // One shot every 2 sec
+      PrevCycleTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : LReal;   // Previous PLC cycle Time
+      RuntimeMem { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : LReal;   // Runtime memory
+      FirstScan { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // First scan bit
+      DiagStatusUpdate { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Diagnostic status update
+      AlwaysTrue { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Always True bit
+      AlwaysFalse { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Always False bit
+      CommissioningFalse { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Commissioning always false
+      CommissioningTrue { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Commissioning always true
+      ReconnectCommand { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reconnect command
+      ScanMainRack { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Trigger to check main rack confiuration
+      ScanProfinet { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Scan profinet bit
+      Simulation { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Simulation
+      PN1OK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet ok
+      "Local~PROFINET_IO-System" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : HW_ANY;   // HW Intentifier of PN-IO System
+      "Local~PROFINET_IO-System_1" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : HW_ANY;   // HW Intentifier of PN-IOSystem 1
+      "Local~PROFINET_IO-System_2" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : HW_ANY;   // HW Intentifier of PN-IOSystem 2
+      "Local~PROFINET_IO-System_3" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : HW_ANY;   // HW Intentifier of PN-IOSystem 3
+      "Local~PROFINET_IO-System_4" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : HW_ANY;   // HW Intentifier of PN-IOSystem 4
+      "Local~PROFINET_IO-System_5" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : HW_ANY;   // HW Intentifier of PN-IOSystem 5
+      "Local~PROFINET_IO-System_6" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : HW_ANY;   // HW Intentifier of PN-IOSystem 6
+      "Local~PROFINET_IO-System_7" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : HW_ANY;   // HW Intentifier of PN-IOSystem 7
+      "Local~PROFINET_IO-System_8" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : HW_ANY;   // HW Intentifier of PN-IOSystem 8
+      "Local~PROFINET_IO-System_9" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : HW_ANY;   // HW Intentifier of PN-IOSystem 9
+   END_VAR
+
+
+BEGIN
+
+END_DATA_BLOCK
+
+FUNCTION "FC_GetNrOfArrayEl" : Int
+TITLE = FC_GetNrOfArrayEl
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 19
+// END_ATTRIBUTES
+//Function to get the number of array elements.
+   VAR_INPUT 
+      iv_Array : Variant;   // Input array
+   END_VAR
+
+   VAR_TEMP 
+      ti_NrOfArrayEl : Int;   // Number of array elements
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	24/05/2019  | 0.1       | L.Klar        | first release MHS TIA 15.1
+	24/07/2019  | 2.0       | L.Klar        | 2.0 MHS library release TIA 15.1
+	27/08/2019  | 2.1       | K.Pokorski    | Comments adjusted
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 – Number of an array elements
+	    
+	    IF IS_ARRAY(#iv_Array)                                                  // Input variable is an array
+	    THEN
+	        
+	        #ti_NrOfArrayEl := UDINT_TO_INT(CountOfElements(#iv_Array));
+	        
+	        // Reset array length if the input variable isn't an array
+	    ELSE
+	        
+	        #ti_NrOfArrayEl := 0;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 2 – Return output
+	    
+	    #FC_GetNrOfArrayEl := #ti_NrOfArrayEl;
+	    
+	END_REGION
+	
+END_FUNCTION
+
+TYPE "UDT_FifoStatus"
+TITLE = UDT_FifoStatus
+VERSION : 0.1
+//
+//User-defined structure of FC_Fifo function status.
+//Version History:
+//Date              | Version   | Author         | Remark
+//24/05/2019  | 0.1           | K.Pokorski   | first release MHSE TIA 15.1
+//24/05/2019  | 0.2           | K.Pokorski   | first release MHSE TIA 15.1
+//
+   STRUCT
+      InvalidMode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Invalid mode selected
+      InvalidMaxNrOfEntries { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Invalid maximum number of entries or buffer is not an array
+      InvalidTotalEntriesStored { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Invalid total number of entries
+      InvalidNextEntryToWrite { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Invalid number of next entry to write
+      InvalidNextEntryToRead { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Invalid number of next entry to read
+      InvalidDataType { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Message and buffer element data type inconsistent
+      FifoPreFull { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 90 % of FIFO data buffer capacity reached
+      FifoFull { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // FIFO data buffer full
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_EventStatistic"
+TITLE = UDT_EventStatistic
+VERSION : 0.1
+//User-defined structure of event statistic data.
+   STRUCT
+      NumberOfTimes : DInt;   // Number of times the event occurred since last reset
+      LastEventSeconds : DInt;   // Number of seconds of the current or last event
+      TotalEventSeconds : DInt;   // Total number of seconds the event occurred since last reset
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_ProfinetNetwork"
+TITLE = UDT_ProfinetNetwork
+VERSION : 0.1
+//User-defined structure of profinet network state.
+   STRUCT
+      DeviceStatus : Array[0..512] of "UDT_ProfinetDevice";   // Profinet device status
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_EquipmentControl"
+TITLE = UDT_EquipmentControl
+VERSION : 0.1
+//User-defined structure of equipment control commands.
+   STRUCT
+      Command : Struct   // Control command
+         Start { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Start conveyor
+         Stop { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Stop conveyor
+         Reset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Faults reset
+         ResetData { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Statistics reset
+         ManualMode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Manual mode required
+         DisableManualMode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Disable manual mode
+         AutomaticOn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // System is started in automatic mode
+         StopRequest { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      END_STRUCT;
+      Report { S7_SetPoint := 'False'} : "UDT_CommonStatus";   // Conveyors state
+      Request : Struct   // Request from equipment
+         RestartRequired { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Restart required from system control
+         SignalingRequest { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Beeper required
+         InhibitStop { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_TCPIPReceiveStatistics"
+TITLE = UDT_TCPIPReceiveStatistics
+VERSION : 0.1
+//User-defined structure of FB_TCPIPReceive function block statistics.
+   STRUCT
+      InvalidMsg : UInt;   // Invalid message received
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_TCPIPConnectStatistics"
+TITLE = UDT_TCPIPConnectStatistics
+VERSION : 0.1
+//User-defined structure of FB_TCPIPConnect function block statistics.
+   STRUCT
+      ConnectionLost { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Connection lost statistics
+   END_STRUCT;
+
+END_TYPE
+
+FUNCTION "FC_Fifo" : Void
+TITLE = FC_Fifo
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 17
+// END_ATTRIBUTES
+//Function for controlling FIFO register.
+   VAR_INPUT 
+      ic_Mode : Char;   // Mode selector: "W" - Write; "R" - Read; "C" - Clear (Reset) "S" - Status
+   END_VAR
+
+   VAR_OUTPUT 
+      qUDT_Status : "UDT_FifoStatus";   // FIFO status structure
+      qx_Error : Bool;   // Collective error output
+      qx_Warning : Bool;   // Collective warning output
+   END_VAR
+
+   VAR_IN_OUT 
+      iqv_Data : Variant;   // Data
+      iqUDT_FifoHeader : "UDT_FifoHeader";   // FIFO header
+      iqv_DataBuffer : Variant;   // FIFO data buffer
+   END_VAR
+
+   VAR_TEMP 
+      tUDT_Status : "UDT_FifoStatus";   // Status structure
+      ti_MoveBLKErrorCode : Int;   // Move_BLK_Variant function return
+      tx_HeaderValid : Bool;   // Header valid
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	24/05/2019  | 0.1       | L.Klar        | first release MHS TIA 15.1
+	14/06/2019  | 0.2       | A.Nowak       | Replacement of instruction if for direct write into variable - Region 3 , 4.1 , 4.2 , 4.3 , 4.4 , 8.1  , 8.2 
+	17/07/2019  | 0.3       | L.Klar        | Status handling changed
+	24/07/2019  | 2.0       | L.Klar        | 2.0 MHS library release TIA 15.1
+	23/08/2019  | 2.1       | K.Pokorski    | Comments corrected
+	27/08/2019  | 2.2       | M.Kurpiers    | Comments adjusted
+	27/09/2019  | 2.3       | K.Pokorski    | Variant input included
+	01/10/2019  | 2.4       | A.Nowak       | Correct comments and rename regions
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 – Diagnostic bits initialization
+	    
+	    // Clear FIFO statuses
+	    #tUDT_Status.FifoFull := FALSE;
+	    #tUDT_Status.FifoPreFull := FALSE;
+	    
+	END_REGION
+	
+	REGION 2 – Array's information
+	    
+	    // If buffer elements type is invalid, set the error 
+	    #tUDT_Status.InvalidDataType := NOT (TypeOf(#iqv_Data) = TypeOfElements(#iqv_DataBuffer));
+	    
+	END_REGION
+	
+	REGION 3 – Mode validation
+	    
+	    // Set the mode invalid if selected mode isn't one of the following: W- Write, R - Read, C - Clear, S - Status
+	    #tUDT_Status.InvalidMode := #ic_Mode <> 'W'
+	    AND #ic_Mode <> 'R'
+	    AND #ic_Mode <> 'C'
+	    AND #ic_Mode <> 'S';
+	    
+	END_REGION
+	
+	REGION 4 – The header settings checking
+	    
+	    // The correct mode has been selected and data type is valid
+	    IF (NOT #tUDT_Status.InvalidMode
+	        AND NOT #tUDT_Status.InvalidDataType)
+	    THEN
+	        
+	        REGION 4.1 – The number of maximum FIFO entries validation 
+	            
+	            // Write the number of array's elements to FIFO header
+	            #iqUDT_FifoHeader.MaxNrOfEntries := "FC_GetNrOfArrayEl"(#iqv_DataBuffer);
+	            
+	            // Set the invalid maximum number of entries error 
+	            #tUDT_Status.InvalidMaxNrOfEntries := #iqUDT_FifoHeader.MaxNrOfEntries <= 0;
+	            
+	        END_REGION
+	        
+	        REGION 4.2 – The number of total FIFO entries validation
+	            
+	            // Set the invalid total number of entries error 
+	            #tUDT_Status.InvalidTotalEntriesStored := #iqUDT_FifoHeader.TotalEntriesStored < 0        // The total number of entries is lower than 0
+	            OR #iqUDT_FifoHeader.TotalEntriesStored > #iqUDT_FifoHeader.MaxNrOfEntries;               // The total number of entries is greater than the maximum number of entries
+	            
+	        END_REGION
+	        
+	        REGION 4.3 – The number of the next entry to write 
+	            
+	            // Set the invalid next entry to write
+	            #tUDT_Status.InvalidNextEntryToWrite := #iqUDT_FifoHeader.NextEntryToWrite < 0            // The number of next entry to write is lower than 0  
+	            OR #iqUDT_FifoHeader.NextEntryToWrite >= #iqUDT_FifoHeader.MaxNrOfEntries;                // The number of next entry to write is greater or equal to the maximum number of entries 
+	            
+	        END_REGION
+	        
+	        REGION 4.4 – The number of the next entry to read 
+	            
+	            // Set the invalid next entry to read
+	            #tUDT_Status.InvalidNextEntryToRead := #iqUDT_FifoHeader.NextEntryToRead < 0              // The number of next entry to read is lower than 0 
+	            OR #iqUDT_FifoHeader.NextEntryToRead >= #iqUDT_FifoHeader.MaxNrOfEntries;                 // The number of next entry to read is greater or equal to the maximum nr of entries 
+	            
+	        END_REGION
+	        
+	        REGION 4.5 – FIFO header validation summary
+	            
+	            // Create collective header error
+	            #tx_HeaderValid := NOT #tUDT_Status.InvalidMaxNrOfEntries
+	            AND NOT #tUDT_Status.InvalidTotalEntriesStored
+	            AND NOT #tUDT_Status.InvalidNextEntryToWrite
+	            AND NOT #tUDT_Status.InvalidNextEntryToRead;
+	            
+	        END_REGION
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 5 – Writing the data into the FIFO buffer
+	    
+	    IF (#ic_Mode = 'W'                                                                          // Write mode selected                                                               
+	        AND #tx_HeaderValid                                                                     // FIFO header valid 
+	        AND NOT #tUDT_Status.InvalidDataType)                                                  // Buffer data type valid
+	    THEN
+	        
+	        
+	        IF (#iqUDT_FifoHeader.TotalEntriesStored < #iqUDT_FifoHeader.MaxNrOfEntries)          // Checking total number of stored entries                
+	        THEN
+	            
+	            // Move input data to FIFO data buffer  
+	            #ti_MoveBLKErrorCode := MOVE_BLK_VARIANT(SRC := #iqv_Data,
+	                                                     COUNT := 1,
+	                                                     SRC_INDEX := 0,
+	                                                     DEST_INDEX := #iqUDT_FifoHeader.NextEntryToWrite,
+	                                                     DEST => #iqv_DataBuffer);
+	            
+	            // Increment the number of the next entry to write 
+	            #iqUDT_FifoHeader.NextEntryToWrite += 1;
+	            
+	            // Increment the total number of stored entries 
+	            #iqUDT_FifoHeader.TotalEntriesStored += 1;
+	            
+	            
+	            IF (#iqUDT_FifoHeader.NextEntryToWrite >= #iqUDT_FifoHeader.MaxNrOfEntries)       // Check the number of the next entry to write                             
+	            THEN
+	                
+	                #iqUDT_FifoHeader.NextEntryToWrite := 0;
+	                
+	            END_IF;
+	            
+	        ELSE
+	            
+	            #tUDT_Status.FifoFull := TRUE;
+	            
+	        END_IF;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 6 – Reading the data from the FIFO data buffer
+	    
+	    IF (#ic_Mode = 'R'                                                                  // Read mode selected    
+	        AND #tx_HeaderValid                                                             // FIFO header valid 
+	        AND NOT #tUDT_Status.InvalidDataType)                                           // Buffer data type valid                                                
+	    THEN
+	        
+	        IF (#iqUDT_FifoHeader.TotalEntriesStored > 0)                                   // Checking total number of stored entries                                                     
+	        THEN
+	            
+	            // Move the FIFO data to the data output
+	            #ti_MoveBLKErrorCode := MOVE_BLK_VARIANT(SRC := #iqv_DataBuffer,
+	                                                     COUNT := 1,
+	                                                     SRC_INDEX := #iqUDT_FifoHeader.NextEntryToRead,
+	                                                     DEST_INDEX := 0,
+	                                                     DEST => #iqv_Data);
+	            
+	            // Increment the number of the next entry to read
+	            #iqUDT_FifoHeader.NextEntryToRead += 1;
+	            
+	            // Decrement the total number of stored entries
+	            #iqUDT_FifoHeader.TotalEntriesStored -= 1;
+	            
+	            IF (#iqUDT_FifoHeader.NextEntryToRead >= #iqUDT_FifoHeader.MaxNrOfEntries)  // Check the number of the next entry to read                 
+	            THEN
+	                
+	                #iqUDT_FifoHeader.NextEntryToRead := 0;
+	                
+	            END_IF;
+	            
+	        END_IF;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 7 – Clearing the FIFO header
+	    
+	    IF (#ic_Mode = 'C'                      // Clear mode selected  
+	        AND #tx_HeaderValid)                // FIFO header valid                         
+	    THEN
+	        
+	        #iqUDT_FifoHeader.TotalEntriesStored := 0;
+	        #iqUDT_FifoHeader.NextEntryToWrite := 0;
+	        #iqUDT_FifoHeader.NextEntryToRead := 0;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 8 – FIFO management status update
+	    
+	    IF (#tx_HeaderValid)                   // The header is valid                                     
+	    THEN
+	        
+	        REGION 8.1 – FIFO Empty
+	            
+	            // Set the FIFO empty status bit
+	            #iqUDT_FifoHeader.Status.Empty := #iqUDT_FifoHeader.TotalEntriesStored = 0;
+	            
+	        END_REGION
+	        
+	        REGION 8.2 – FIFO Full
+	            
+	            // Set the FIFO full status bit 
+	            #iqUDT_FifoHeader.Status.Full := #iqUDT_FifoHeader.TotalEntriesStored = #iqUDT_FifoHeader.MaxNrOfEntries;
+	            
+	        END_REGION
+	        
+	        REGION 8.3 – FIFO Pre-full
+	            
+	            IF (#iqUDT_FifoHeader.TotalEntriesStored >= 0.9 * #iqUDT_FifoHeader.MaxNrOfEntries)       // Checking if the number of total stored entries is greater or equal to 90% of the max number of entries     
+	            THEN
+	                
+	                // Set the FIFO pre-full status 
+	                #iqUDT_FifoHeader.Status.Prefull := TRUE;
+	                #tUDT_Status.FifoPreFull := TRUE;
+	                
+	            ELSE
+	                
+	                #iqUDT_FifoHeader.Status.Prefull := FALSE;
+	                
+	            END_IF;
+	            
+	        END_REGION
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 9 – Status
+	    
+	    REGION 9.1 – Common status update
+	        
+	        // Collective error output
+	        #qx_Error := NOT #tx_HeaderValid
+	        OR #tUDT_Status.InvalidMode
+	        OR #tUDT_Status.FifoFull
+	        OR #tUDT_Status.InvalidDataType;
+	        
+	        // Collective warning output              
+	        #qx_Warning := #tUDT_Status.FifoPreFull;
+	        
+	    END_REGION
+	    
+	    REGION 9.2 – Status update
+	        
+	        // Update the outer status structure with internal status structure
+	        #qUDT_Status := #tUDT_Status;
+	        
+	    END_REGION
+	    
+	END_REGION
+END_FUNCTION
+
+TYPE "UDT_Message"
+TITLE = UDT_Message
+VERSION : 0.1
+//User-defined structure of the message characters array.
+   STRUCT
+      Character : Array[0..499] of Char;   // Message character
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_TCPIPConnectStatus"
+TITLE = UDT_TCPIPConnectStatus
+VERSION : 0.1
+//User-defined structure of FB_TCPIPConnect function block status.
+   STRUCT
+      Status : Int;   // Status number
+      Specific : Struct   // Specific status structure
+         ErrorCode : Struct   // Error code structure
+            TCON : Word;   // Siemens TCON error code - Check documetation
+            TDISCON : Word;   // Siemens TDISCON error code - Check documetation
+            TDIAG : Word;   // Siemens TDIAG error code - Check documetation
+         END_STRUCT;
+         Connected { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Connected
+         CommunicationFault { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Communication fault
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+FUNCTION_BLOCK "FB_TimerOnOffDelay"
+TITLE = FB_TimerOnOffDelay
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 32
+// END_ATTRIBUTES
+//Function block to generate on/off signal delay.
+   VAR_INPUT 
+      iudi_OnDelayTime : UDInt;   // On delay time [ms]
+      iudi_OffDelayTime : UDInt;   // Off delay time [ms]
+      ix_SignalToDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Input signal to be delayed
+      ix_Enable : Bool := TRUE;   // Timer Enable
+   END_VAR
+
+   VAR_OUTPUT 
+      qlr_ActualTime : LReal;   // Actual time
+      qx_DelayedSignal { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Delayed signal output
+   END_VAR
+
+   VAR 
+      s_R_TRIG_Signal {InstructionName := 'R_TRIG'; LibVersion := '1.0'} : R_TRIG;   // Siemens "R_Trig" - to prepare the rising edge trigger on "ix_SignalToDelay" signal
+      s_F_TRIG_Signal {InstructionName := 'F_TRIG'; LibVersion := '1.0'} : F_TRIG;   // Siemens "F_Trig" - to prepare the falling edge trigger on "ix_SignalToDelay" signal
+   END_VAR
+   VAR RETAIN
+      slr_ActualDelayTime : LReal;   // Actual delay time [ms]
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	24/05/2019  | 0.1       | L.Klar        | first release MHS TIA 15.1
+	24/07/2019  | 2.0       | L.Klar        | 2.0 MHS library release TIA 15.1
+	26/08/2019  | 2.1       | M.Kurpiers    | Comments adjusted
+	04/11/2019  | 2.2       | L.Klar        | Prevoius cycle scan changed from memory to DB variable
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION Step 1 – Input signal edge detection 
+	    
+	    #s_R_TRIG_Signal(CLK := #ix_SignalToDelay);
+	    
+	    
+	    #s_F_TRIG_Signal(CLK := #ix_SignalToDelay);
+	    
+	END_REGION
+	
+	REGION Step 2 – Actual delay time initialization
+	    
+	    IF (#s_R_TRIG_Signal.Q OR #s_F_TRIG_Signal.Q)           // Input signal changed        
+	    THEN
+	        
+	        #slr_ActualDelayTime := 0;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION Step 3 – On/Off delay time calculation
+	    
+	    
+	    IF (#ix_SignalToDelay                                       // Signal to be delayed is active
+	        AND #ix_Enable)                                         // Ttimer enabled                   
+	    THEN
+	        
+	        // Timer on
+	        IF (#slr_ActualDelayTime >= #iudi_OnDelayTime)
+	        THEN
+	            
+	            #qx_DelayedSignal := TRUE;
+	            
+	        ELSE
+	            
+	            #slr_ActualDelayTime += "DB_Memory".PrevCycleTime;
+	            
+	        END_IF;
+	        
+	    END_IF;
+	    
+	    // Timer off
+	    IF (NOT #ix_SignalToDelay                                   // Signal to delay is not active
+	        AND #ix_Enable)                                         // Timer is enabled                  
+	    THEN
+	        
+	        IF (#slr_ActualDelayTime >= #iudi_OffDelayTime)
+	        THEN
+	            
+	            #qx_DelayedSignal := FALSE;
+	            
+	        ELSE
+	            
+	            #slr_ActualDelayTime += "DB_Memory".PrevCycleTime;
+	            
+	        END_IF;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION Step 4 – Actual time
+	    
+	    #qlr_ActualTime := #slr_ActualDelayTime;
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+
+TYPE "UDT_Connection"
+TITLE = UDT_Connection
+VERSION : 0.1
+//User-defined structure of connection parameters.
+   STRUCT
+      ActiveEstablished : Bool := FALSE;   // 0 – Passive connection establishment; 1 – Active connection establishment
+      Interface_ID : HW_ANY := 64;   // Interface ID of CPU Ethernet interface
+      ID : CONN_OUC;   // Unique ID as system reference for the connection
+      IP : Array[1..4] of Int;   // IP address
+      Port : UInt;   // Port number of the communication partner
+      ConTimeout : DInt;   // Maximum waiting time for response from the communication partner [ms]
+   END_STRUCT;
+
+END_TYPE
+
+DATA_BLOCK "DB_HMIStatusConfiguration"
+TITLE = DB_HMIStatusConfiguration
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+VERSION : 3.0
+NON_RETAIN
+   VAR 
+      FireAlarm : Int;   // Fire alarm active
+      SafetyStop : Int;   // Safety stop error status
+      Error : Int;   // Error status
+      Warning : Int;   // Warning status
+      ManualRun : Int;   // Manual run status
+      Manual : Int;   // Manual status
+      Halted : Int;   // Halted status
+      Dieback : Int;   // Die back status
+      Stopped : Int;   // Stopped status
+      Running : Int;   // Running status
+      EnergySave : Int;   // Energy save status
+      CommunicationError : Int;   // Communication error status
+      CBError : Int;   // CB error status
+      ProfinetError : Int;   // Profinet error status
+      HardwareError : Int;   // Hardware error status
+      VFDNotHealthy : Int;   // VFD noth healthy status
+      VFDError : Int;   // VFD error status
+      PECJam : Int;   // PEC jam status
+      ChuteFull : Int;   // Chute full status
+      EncoderError : Int;   // Encoder error status
+      TrackingError : Int;   // Tracking error status
+      DimensionError : Int;   // Dimension error status
+      OperationalError : Int;   // Operational error status
+      AutoON : Int;   // Automatic is on
+      ChuteHalfFull : Int;   // Disable by operator
+      DisableByManagement : Int;   // Disable by management
+      GateOpen : Int;   // Manual operated gate is open
+      GateClosed : Int;   // Manual operated gate is closed
+      GateClosedAndNoOperatorPresent : Int;   // Manual operated gate is closed and no operator is present
+      PositionChangeOngoing : Int;   // Lifting device or arm diverter changing position
+      BufferMode : Int;   // BufferMode Active
+      ContinuousMode : Int;   // ContinuousMode Active
+      LabbelingMode : Int;   // LabbelingMode Active
+   END_VAR
+
+
+BEGIN
+   FireAlarm := 1;
+   SafetyStop := 3;
+   Error := 5;
+   Warning := 7;
+   ManualRun := 9;
+   Manual := 11;
+   Halted := 13;
+   Dieback := 15;
+   Stopped := 17;
+   Running := 19;
+   EnergySave := 21;
+   CommunicationError := 23;
+   CBError := 25;
+   ProfinetError := 27;
+   HardwareError := 29;
+   VFDNotHealthy := 31;
+   VFDError := 33;
+   PECJam := 35;
+   ChuteFull := 37;
+   EncoderError := 39;
+   TrackingError := 41;
+   DimensionError := 43;
+   OperationalError := 45;
+   AutoON := 47;
+   ChuteHalfFull := 49;
+   DisableByManagement := 51;
+   GateOpen := 53;
+   GateClosed := 55;
+   GateClosedAndNoOperatorPresent := 57;
+   PositionChangeOngoing := 59;
+   BufferMode := 61;
+   ContinuousMode := 63;
+   LabbelingMode := 65;
+
+END_DATA_BLOCK
+
+FUNCTION_BLOCK "FB_OnOffDevices"
+TITLE = FB_OnOffDevices
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 19
+// END_ATTRIBUTES
+//Function block to enable and disable profinet devices.
+   VAR_INPUT 
+      ix_Simulation { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Simulation on or off
+   END_VAR
+
+   VAR_OUTPUT 
+      qx_Done { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Operation done
+      qx_Error { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Collective error output
+   END_VAR
+
+   VAR_IN_OUT 
+      iqa_ProfinetNetworks : Array[*] of "UDT_ProfinetNetwork";   // Profinet networks structure
+   END_VAR
+
+   VAR 
+      sR_TRIG_StartSim {InstructionName := 'R_TRIG'; LibVersion := '1.0'} : R_TRIG;   // Rising edge simulation bit
+      sF_TRIG_StartSim {InstructionName := 'F_TRIG'; LibVersion := '1.0'} : F_TRIG;   // Falling edge simulation bit
+      si_ActualStatus { S7_SetPoint := 'True'} : Int;   // Status structure
+      si_Mode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : USInt;   // Simulation mode 1 - simulation off 2 - simulation on
+      sx_OperationReq { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Operation required
+   END_VAR
+
+   VAR_TEMP 
+      ti_LoopCounterDevices : Int;   // Temporary counter of "for" loop
+      ti_LoopCounterNetworks : Int;   // Temporary counter of "for" loop
+      ti_NrOfProfinetDevices : Int;   // Number of profinet devices
+      ti_NrOfNetworks : Int;   // Number of Profinet networks
+      tx_Busy : Bool;   // D_ACT_DP busy
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	24/05/2019  | 0.1       | K.Pokorski    | first release MHS TIA 15.1
+	24/06/2019  | 0.2       | L.Klar        | Status running added
+	19/07/2019  | 0.5       | L.Klar        | Status handling changed, output qx_Done added
+	24/07/2019  | 2.0       | L.Klar        | 2.0 MHS library release TIA 15.1
+	14/08/2019  | 2.1       | K.Pokorski    | Devices HW_ID extract deleted
+	26/08/2019  | 2.2       | K.Pokorski    | Comments adjusted
+	30/09/2019  | 2.3       | K.Pokorski    | Network seach started from 1 instead 0
+	04/11/2019  | 2.4       | L.Klar        | First scan bit changed from memory bit to DB variable
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 – Mode selection
+	    
+	    #sR_TRIG_StartSim(CLK := #ix_Simulation);
+	    
+	    #sF_TRIG_StartSim(CLK := #ix_Simulation);
+	    
+	    // Set operation request and operation mode (2 - devices deactivation) (1 - devices activation) when the simulation input has changed or the first PLC scan occurred
+	    IF (#sR_TRIG_StartSim.Q            // Device activation required
+	        OR #sF_TRIG_StartSim.Q         // Device deactivation required
+	        OR "DB_Memory".FirstScan)       // First PLC scan occured
+	    THEN
+	        
+	        #sx_OperationReq := TRUE;
+	        
+	        IF (NOT #ix_Simulation)                                             // Simulation turned off 
+	        THEN
+	            
+	            #si_Mode := 1;
+	            
+	        END_IF;
+	        
+	        IF (#ix_Simulation)                                                 // Simulation turned on 
+	        THEN
+	            
+	            #si_Mode := 2;
+	            
+	        END_IF;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 2 – Activation or deactivation of devices
+	    
+	    // Change of device state if request is active
+	    IF (#sx_OperationReq)                       // Change the device mode twice
+	    THEN
+	        
+	        // Maximum number of Profinet networks 
+	        #ti_NrOfNetworks := "FC_GetNrOfArrayEl"(iv_Array := #iqa_ProfinetNetworks);
+	        
+	        // Initial operation request reset
+	        #sx_OperationReq := FALSE;
+	        
+	        // Reset summary error output 
+	        #qx_Error := FALSE;
+	        
+	        // A loop operating on Profinet networks
+	        FOR #ti_LoopCounterNetworks := 1 TO #ti_NrOfNetworks DO
+	            
+	            // Maximum number of Profinet devices
+	            #ti_NrOfProfinetDevices := "FC_GetNrOfArrayEl"(#iqa_ProfinetNetworks[#ti_LoopCounterNetworks].DeviceStatus);
+	            
+	            // A loop operating on Profinet devices
+	            FOR #ti_LoopCounterDevices := 1 TO ((#ti_NrOfProfinetDevices) - 1) DO
+	                
+	                // Activation or deactivation device if the device is configured
+	                IF (#iqa_ProfinetNetworks[#ti_LoopCounterNetworks].DeviceStatus[#ti_LoopCounterDevices].DeviceState.Configure)                                         // Device configured
+	                THEN
+	                    // Turning off (mode = 2) or turning on (mode = 1) devices
+	                    #si_ActualStatus := D_ACT_DP(REQ := TRUE,
+	                                                 MODE := #si_Mode,
+	                                                 LADDR := #iqa_ProfinetNetworks[#ti_LoopCounterNetworks].DeviceStatus[#ti_LoopCounterDevices].DeviceState.HW_ID,
+	                                                 BUSY => #tx_Busy);
+	                    
+	                    // Operation still required when function "D_ACT_DP" is busy 
+	                    #sx_OperationReq := #sx_OperationReq OR #tx_Busy;
+	                    
+	                    // Set the output error when D_ACT_DP has an error
+	                    IF (INT_TO_WORD(#si_ActualStatus) > 16#8000)    // Error during disabling the devices 
+	                    THEN
+	                        
+	                        #qx_Error := TRUE;
+	                        
+	                    END_IF;
+	                    
+	                END_IF;
+	                
+	            END_FOR;
+	            
+	        END_FOR;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 3 – Operation done
+	    
+	    // Update simulation done output
+	    #qx_Done := NOT #sx_OperationReq;
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+
+FUNCTION "FC_Statistics" : Void
+TITLE = FC_Statistics
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 26
+// END_ATTRIBUTES
+//Function to calculate statistics.
+   VAR_INPUT 
+      ix_Reset : Bool;   // Reset statistics data
+      ix_Activate : Bool;   // Activete statistics counters
+      ix_RTrigActivate : Bool;   // Activation rise trigger
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_Statistics : "UDT_EventStatistic";   // Statistic structure
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	24/05/2019  | 0.1       | C. Leite      | first release MHS TIA 15.1
+	17/07/2019  | 0.2       | A.Nowak       | Add comments
+	24/07/2019  | 2.0       | L.Klar        | 2.0 MHS library release TIA 15.1
+	27/08/2019  | 2.1       | M.Kurpiers    | Comments adjusted
+	04/11/2019  | 2.2       | L.Klar        | 1 second pulse changed from memory bit to DB variable
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 - Number of events
+	    
+	    IF (#ix_RTrigActivate)      // Event occured                                
+	    THEN
+	        
+	        // Increment the number of times the event occurred and clear the time of the current or last event
+	        #iqUDT_Statistics.NumberOfTimes += 1;
+	        #iqUDT_Statistics.LastEventSeconds := 0;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 2 - Event time
+	    
+	    // 1 shot every 1 sec and activate statistic counter 
+	    IF ("DB_Memory".OS_1sec AND #ix_Activate)
+	    THEN
+	        
+	        // Increment the time of the current or last event and the time of all events that occured
+	        #iqUDT_Statistics.LastEventSeconds += 1;
+	        #iqUDT_Statistics.TotalEventSeconds += 1;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 3 - Data reset
+	    
+	    
+	    IF (#ix_Reset)                                            // Reset statistics data                                          
+	    THEN
+	        
+	        IF (NOT #ix_Activate)                                 // Statistic counter isn't activate                                
+	        THEN
+	            
+	            // Clear statistics data
+	            #iqUDT_Statistics.NumberOfTimes := 0;
+	            #iqUDT_Statistics.LastEventSeconds := 0;
+	            #iqUDT_Statistics.TotalEventSeconds := 0;
+	            
+	        ELSE
+	            
+	            // Write 1 to the number of times the event occurred and clear times  
+	            #iqUDT_Statistics.NumberOfTimes := 1;
+	            #iqUDT_Statistics.LastEventSeconds := 0;
+	            #iqUDT_Statistics.TotalEventSeconds := 0;
+	            
+	        END_IF;
+	        
+	    END_IF;
+	    
+	END_REGION
+END_FUNCTION
+
+FUNCTION "FC_EquipmentReport" : Void
+TITLE = FC_Equipment_Report
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 16
+// END_ATTRIBUTES
+//Function to generate equipment report.
+   VAR_INPUT 
+      iUDT_Status : "UDT_CommonStatus";   // Status structure
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_Control : "UDT_EquipmentControl";   // Equipment control
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	24/05/2019  | 0.1       | F.Baten       | first release MHS TIA 15.1
+	17/06/2019  | 0.3       | L.Klar        | Manual mode added to "UDT_EquipmentControl"
+	17/07/2019  | 0.4       | A.Nowak       | Add all statuses and comments
+	24/07/2019  | 2.0       | L.Klar        | 2.0 MHS library release TIA 15.1
+	27/08/2019  | 2.1       | K.Pokorski    | Comments adjusted
+	16/09/2019  | 2.2       | K.Pokorski    | Equipment error free condition added to "Restart required" status
+	06/10/2019  | 2.3       | S. Deukar     | Updated accoring to new UDT equipment report
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	05/02/2024  | 3.1       | L.Klar        | Auto On extention added 
+	13/03/2024  | 4.0       | S. Nieswiec   | Added to baseline
+	*)
+	
+	REGION 1 - Equipment report update
+	    
+	    // Extension of stopped equipment report with the stopped status
+	    #iqUDT_Control.Report.Stopped := #iUDT_Status.Stopped
+	    OR #iqUDT_Control.Report.Stopped;
+	    
+	    // Extension of started equipment report with the started status
+	    #iqUDT_Control.Report.Running := #iUDT_Status.Running
+	    OR #iqUDT_Control.Report.Running;
+	    
+	    // Extension of energy save equipment report with the energy save status
+	    #iqUDT_Control.Report.EnergySave := #iUDT_Status.EnergySave
+	    OR #iqUDT_Control.Report.EnergySave;
+	    
+	    // Extension of warning equipment report with the warning status
+	    #iqUDT_Control.Report.Warning := #iUDT_Status.Warning
+	    OR #iqUDT_Control.Report.Warning;
+	    
+	    // Extension of manual mode equipment report with the manual mode status
+	    #iqUDT_Control.Report.Manual := #iUDT_Status.Manual
+	    OR #iqUDT_Control.Report.Manual;
+	    
+	    // Extension of error equipment report with the error status
+	    #iqUDT_Control.Report.Error := #iUDT_Status.Error
+	    OR #iqUDT_Control.Report.Error;
+	    
+	    // Extension of safety stop equipment report with the safety stop status
+	    #iqUDT_Control.Report.SafetyStop := #iUDT_Status.SafetyStop
+	    OR #iqUDT_Control.Report.SafetyStop;
+	    
+	    // Extension of Auto On equipment report with the Auto On status
+	    #iqUDT_Control.Report.AutoON := #iUDT_Status.AutoON
+	    OR #iqUDT_Control.Report.AutoON;
+	    
+	    // Extension of restart required equipment report with the restart required and no equipment error statuses
+	    #iqUDT_Control.Request.RestartRequired := #iUDT_Status.Stopped
+	    AND NOT #iUDT_Status.Error
+	    OR #iqUDT_Control.Request.RestartRequired;
+	    
+	END_REGION
+END_FUNCTION
+
+FUNCTION_BLOCK "FB_TCPIPReceive"
+TITLE = FB_TCPIPReceive
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : Communication
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 30
+// END_ATTRIBUTES
+//Function block to receive data from TCPIP.
+// END_ATTRIBUTES
+//Function block to receive data from TCPIP.
+   VAR_INPUT 
+      iUDT_Connection : "UDT_Connection";   // Connection parameters
+      ix_EnableReceive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Enable receive
+   END_VAR
+
+   VAR_OUTPUT 
+      qx_Error { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Collective error output
+      qx_Warning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Collective warning output
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_FifoHeader : "UDT_FifoHeader";   // Fifo header
+      iqUDT_Statistics : "UDT_TCPIPReceiveStatistics";   // Statistic structure
+      iqa_FifoData : Array[*] of "UDT_Message";   // Fifo data
+   END_VAR
+
+   VAR 
+      sFB_TRCV {InstructionName := 'TRCV'; LibVersion := '4.0'} : TRCV;   // Siemens "TRCV" block - to receive the data from TCPIP socket
+      sa_TRCV : Struct   // TRCV block interface structure
+         Enable { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    TRCV - Enable
+         NDR { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    TRCV - New data available
+         Busy { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    TRCV - Busy
+         Error { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    TRCV - Error
+         Status : Word;   //    TRCV - Status
+         RcvLen : UDInt;   //    TRCV - Received length
+         Data : Array[0..999] of Char;   //    TRCV - Data
+      END_STRUCT;
+      sUDT_MsgArray : "UDT_Message";   // Message character array
+      sUDT_MsgPartArray : "UDT_Message";   // Part of the message character array
+      sa_Status : Struct   // Status structure
+         ErrorCode : Struct   // Error code structure
+            TRCV : Word;   // Siemens TRCV error code - Check documentation
+         END_STRUCT;
+         FIFORcvStatus : "UDT_FifoStatus";   // Receive FIFO status structure
+         FIFORcvError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Bool;   // Receive FIFO error
+         FIFORcvWarning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Bool;   // Receive  FIFO warning
+         ReceiveError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRCV block operation error - Check TRCVStatus
+      END_STRUCT;
+      sdi_RcvMsgCounter : DInt;   // Total received messages counter
+      si_RcvMsgOffset : Int;   // Received message offset
+      si_RcvMsgLen : Int;   // Received message length
+      si_NrOfRcvMsg : Int;   // Number of received messages in one frame
+      si_RcvMsgPartLen : Int;   // Length of the part of received message
+      si_LoopCounter : Int;   // Loop counter
+      si_MaxMsgLen : Int;   // Maximum message length
+      sx_RcvMsgPart { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Received part of the message
+      sx_InvalidTermination { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Termination sign missing
+   END_VAR
+
+   VAR CONSTANT 
+      cc_CRLF_R : Char := '$R';   // First termination sign
+      cc_CRLF_L : Char := '$L';   // Last termination sign
+      cc_NULL : Char := '$00';   // NULL sign
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	24/05/2019  | 0.1       | L.Klar        | first release MHS TIA 15.1
+	17/06/2019  | 0.3       | A.Nowak       | Replace 2nd level subregions with comments (5.3)
+	24/07/2019  | 2.0       | L.Klar        | 2.0 MHS library release TIA 15.1
+	22/08/2019  | 2.1       | K.Pokorski    | Comments adjusted
+	12/09/2019  | 2.2       | A.Nowak       | Delete buffer size variable 
+	20/09/2019  | 2.3       | J.Krawczuk    | Replacing UDT_HeartbeatStatus structure to internal structure  
+	01/10/2019  | 2.4       | A.Nowak       | Implementation of the new FIFO block
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	23/03/2021  | 3.1       | L.Klar        | Static variables data types changed form uint to int
+	14/08/2021  | 3.2       | S. Deulkar    | In region 5.3, conveted variable to ULINT because it was giving warning
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 – Update FIFO header status bits
+	    
+	    // Mode 'S' - FIFO register status update
+	    "FC_Fifo"(ic_Mode := 'S',
+	              qUDT_Status => #sa_Status.FIFORcvStatus,
+	              qx_Error => #sa_Status.FIFORcvError,
+	              qx_Warning => #sa_Status.FIFORcvWarning,
+	              iqv_Data := #sUDT_MsgArray,
+	              iqUDT_FifoHeader := #iqUDT_FifoHeader,
+	              iqv_DataBuffer := #iqa_FifoData);
+	    
+	    
+	END_REGION
+	
+	REGION 2 – Maximum number of message arrays elements
+	    
+	    #si_MaxMsgLen := "FC_GetNrOfArrayEl"(iv_Array := #sUDT_MsgArray.Character);
+	    
+	END_REGION
+	
+	REGION 3 – Receive enable
+	    
+	    // Allow receiving if the connection is established and there are no fifo errors
+	    #sa_TRCV.Enable :=
+	    #ix_EnableReceive
+	    AND NOT #sa_Status.FIFORcvError;
+	    
+	END_REGION
+	
+	REGION 4 – Receive data
+	    
+	    // Data received in an ADHOC mode - data available immediately
+	    #sFB_TRCV(EN_R := #sa_TRCV.Enable,
+	              ID := #iUDT_Connection.ID,
+	              LEN := 0,
+	              ADHOC := TRUE,
+	              NDR => #sa_TRCV.NDR,
+	              BUSY => #sa_TRCV.Busy,
+	              ERROR => #sa_TRCV.Error,
+	              STATUS => #sa_TRCV.Status,
+	              RCVD_LEN => #sa_TRCV.RcvLen,
+	              DATA := #sa_TRCV.Data);
+	    
+	END_REGION
+	
+	IF #sa_TRCV.RcvLen > 1000 THEN
+	    #sa_TRCV.RcvLen := 1000;
+	END_IF;
+	
+	REGION 5 – Received data handling
+	    
+	    // Receiving data was successful
+	    IF (#sa_TRCV.NDR                    // New data received without error
+	        AND NOT #sa_TRCV.Busy           // Job not yet started or already completed
+	        AND NOT #sa_TRCV.Error          // No errors during receiving messages
+	        AND #sa_TRCV.RcvLen > 0)        // Length greater than zero
+	    THEN
+	        
+	        REGION 5.1 – Initialization
+	            
+	            #si_RcvMsgLen := 0;
+	            #si_RcvMsgOffset := 0;
+	            #si_NrOfRcvMsg := 0;
+	            
+	        END_REGION
+	        
+	        REGION 5.2 – Received part of the message
+	            
+	            // Move part of the messages to a buffer if available
+	            IF (#sx_RcvMsgPart)                             // Message part available
+	            THEN
+	                
+	                #sUDT_MsgArray := #sUDT_MsgPartArray;
+	                #sx_RcvMsgPart := FALSE;
+	                
+	            END_IF;
+	            
+	        END_REGION
+	        
+	        REGION 5.3 – Message handling
+	            
+	            FOR #si_LoopCounter := 0 TO UDINT_TO_INT(#sa_TRCV.RcvLen) - 1 DO
+	                
+	                // Message length validation
+	                IF (#si_RcvMsgLen + #si_RcvMsgPartLen < #si_MaxMsgLen)
+	                THEN
+	                    
+	                    // Termination sign found
+	                    IF (#sa_TRCV.Data[#si_LoopCounter] = #cc_CRLF_L)
+	                    THEN
+	                        
+	                        // Move received message to the message array
+	                        MOVE_BLK(IN := #sa_TRCV.Data[#si_RcvMsgOffset],
+	                                 COUNT := INT_TO_ULINT(#si_RcvMsgLen),
+	                                 OUT => #sUDT_MsgArray.Character[#si_RcvMsgPartLen]);
+	                        
+	                        // Clear NOT used message array characters
+	                        FILL_BLK(IN := #cc_NULL,
+	                                 COUNT := INT_TO_ULINT(#si_MaxMsgLen - #si_RcvMsgLen + #si_RcvMsgPartLen),
+	                                 OUT => #sUDT_MsgArray.Character[#si_RcvMsgLen + #si_RcvMsgPartLen]);
+	                        
+	                        // Check and clear termination sign                                                       
+	                        IF (#si_RcvMsgLen + #si_RcvMsgPartLen - 1) >= 0 AND (#si_RcvMsgLen + #si_RcvMsgPartLen - 1) < #si_MaxMsgLen THEN
+	                            IF (#sUDT_MsgArray.Character[#si_RcvMsgLen + #si_RcvMsgPartLen - 1] = #cc_CRLF_R)        // Character is a termination sign
+	                            THEN
+	                                
+	                                #sUDT_MsgArray.Character[#si_RcvMsgLen + #si_RcvMsgPartLen - 1] := #cc_NULL;
+	                                
+	                                // Termination sign invalid - error generated, statistics increased    
+	                            ELSE
+	                                
+	                                #sx_InvalidTermination := TRUE;
+	                                #iqUDT_Statistics.InvalidMsg += 1;
+	                                
+	                            END_IF;
+	                        ELSE
+	                            #iqUDT_Statistics.InvalidMsg += 1;
+	                        END_IF;
+	                        
+	                        
+	                        // Move message into the FIFO data block
+	                        IF (NOT #sx_InvalidTermination)                                         // No termination sign error 
+	                        THEN
+	                            
+	                            // Mode 'W' - Write FIFO record
+	                            "FC_Fifo"(ic_Mode := 'W',
+	                                      qUDT_Status => #sa_Status.FIFORcvStatus,
+	                                      qx_Error => #sa_Status.FIFORcvError,
+	                                      qx_Warning => #sa_Status.FIFORcvWarning,
+	                                      iqv_Data := #sUDT_MsgArray,
+	                                      iqUDT_FifoHeader := #iqUDT_FifoHeader,
+	                                      iqv_DataBuffer := #iqa_FifoData);
+	                            
+	                            
+	                        END_IF;
+	                        
+	                        #sx_InvalidTermination := FALSE;                                    // Reset the invalid termination bit
+	                        
+	                        // Update lengths and counters
+	                        #si_RcvMsgPartLen := 0;
+	                        #si_RcvMsgOffset += #si_RcvMsgLen + 1;
+	                        #si_RcvMsgLen := 0;
+	                        #si_NrOfRcvMsg += 1;
+	                        #sdi_RcvMsgCounter += 1;
+	                        
+	                        // Termination sign not found        
+	                    ELSE
+	                        
+	                        #si_RcvMsgLen := #si_RcvMsgLen + 1;                               // Increment received message length
+	                        
+	                    END_IF;
+	                    
+	                    // Message length invalid - reset message length and increase statistics
+	                ELSE
+	                    
+	                    #si_RcvMsgLen := 0;
+	                    #iqUDT_Statistics.InvalidMsg += 1;
+	                    
+	                END_IF;
+	                
+	            END_FOR;
+	            
+	        END_REGION
+	        
+	        REGION 5.4 – Part of the message preparation
+	            
+	            
+	            // Move part of the message to buffer when last received sign is not a termination signs
+	            IF (#sa_TRCV.Data[UDINT_TO_INT(#sa_TRCV.RcvLen - 1)] <> #cc_CRLF_L            // Last received sign is not a termination sing
+	                AND #si_RcvMsgLen < #si_MaxMsgLen)                         // Message length valid
+	            THEN
+	                
+	                // Fill not used message char array elements with '$00' 
+	                FILL_BLK(IN := '$00',
+	                         COUNT := INT_TO_ULINT(#si_MaxMsgLen) -
+	                         INT_TO_ULINT(#si_RcvMsgLen),
+	                         OUT => #sUDT_MsgPartArray.Character[#si_RcvMsgLen]);
+	                
+	                // Move part of the message to a buffer
+	                MOVE_BLK(IN := #sa_TRCV.Data[#si_RcvMsgOffset],
+	                         COUNT := INT_TO_ULINT(#si_RcvMsgLen),
+	                         OUT => #sUDT_MsgPartArray.Character[0]);
+	                
+	                // Set the part of the message received bit and move length of the received message into the length of the part of the message variable
+	                #sx_RcvMsgPart := TRUE;
+	                #si_RcvMsgPartLen := #si_RcvMsgLen;
+	                
+	            END_IF;
+	            
+	        END_REGION
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 6 – Status
+	    
+	    REGION 6.1 - Block status
+	        
+	        // Receive error
+	        #sa_Status.ReceiveError := #sa_TRCV.Error;
+	        
+	        // Parametrization collective error output
+	        #qx_Error :=
+	        #sa_Status.FIFORcvError                          // FIFO error
+	        OR #sa_Status.ReceiveError;                      // Receive error
+	        
+	        // Parametrization collective warning output
+	        #qx_Warning := #sa_Status.FIFORcvWarning;        // FIFO warning
+	        
+	    END_REGION
+	    
+	    REGION 6.2 - Error code preparation
+	        
+	        IF (#sa_TRCV.#Status > 16#8000
+	            OR #sa_TRCV.#Status = 16#0)
+	        THEN
+	            
+	            #sa_Status.ErrorCode.TRCV := #sa_TRCV.#Status;
+	            
+	        END_IF;
+	        
+	    END_REGION
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+
+FUNCTION_BLOCK "FB_TCPIPSend"
+TITLE = FB_TCPIPSend
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : Communication
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 31
+// END_ATTRIBUTES
+//Function block to send data from TCPIP.
+   VAR_INPUT 
+      iUDT_Connection : "UDT_Connection";   // Connection parameters
+      ix_EnableSend { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Enable send
+   END_VAR
+
+   VAR_OUTPUT 
+      qx_Error { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Collective error output
+      qx_Warning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Collective warning output
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_FifoLowHeader : "UDT_FifoHeader";   // Low priority FIFO header
+      iqs_FifoLowData : Array[*] of "UDT_Message";   // Low priority FIFO data
+      iqUDT_FifoMedHeader : "UDT_FifoHeader";   // Medium priority FIFO header
+      iqs_FifoMedData : Array[*] of "UDT_Message";   // Medium priority FIFO data
+      iqUDT_FifoHighHeader : "UDT_FifoHeader";   // High priority FIFO header
+      iqs_FifoHighData : Array[*] of "UDT_Message";   // High priority FIFO data
+   END_VAR
+
+   VAR 
+      sFB_TSEND {InstructionName := 'TSEND'; LibVersion := '4.0'} : TSEND;   // Siemens "TSEND" block - to send the data over TCPIP socket
+      sUDT_MsgArray : "UDT_Message";   // Message character array
+      sa_TSEND : Struct   // TSEND block structure
+         Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Word;   // TSEND - Status
+         Request { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TSEND - Request
+         Busy { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TSEND - Busy
+         Done { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TSEND - Done
+         Error { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TSEND - Error
+      END_STRUCT;
+      sa_Status : Struct   // Status structure
+         FIFOLowPrioStatus : "UDT_FifoStatus";
+         FIFOMedPrioStatus : "UDT_FifoStatus";
+         FIFOHighPrioStatus : "UDT_FifoStatus";
+         FIFOLowPrioError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // FIFO low priority error
+         FIFOLowPrioWarning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // FIFO low priority warning
+         FIFOMedPrioError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // FIFO medium priority error
+         FIFOMedPrioWarning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // FIFO medium priority warning
+         FIFOHighPrioError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // FIFO high priority error
+         FIFOHighPrioWarning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // FIFO high priority warning
+         SendError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Send operation error
+      END_STRUCT;
+      si_MaxMsgLen : Int;   // Maximum message length
+      si_MsgLen : Int;   // Message length
+      sx_MsgReady { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Message is ready to send
+      sx_MsgRead { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Message has been read
+      sx_MsgReadReq { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Request to read message
+      sx_FIFOError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Summary FIFO error
+   END_VAR
+
+   VAR CONSTANT 
+      cc_NULL : Char := '$00';   // NULL sign
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	24/05/2019  | 0.1       | L.Klar        | first release MHS TIA 15.1
+	13/06/2019  | 0.2       | A.Nowak       | Replacement of instruction if for direct write into variable - Region 7  
+	25/06/2019  | 0.5       | L.Klar        | Comments corrected
+	18/07/2019  | 0.6       | L.Klar        | Status handling changed
+	24/07/2019  | 2.0       | L.Klar        | 2.0 MHS library release TIA 15.1
+	22/08/2019  | 2.1       | K.Pokorski    | Comments adjusted
+	20/09/2019  | 2.2       | K.Pokorski    | "UDT_Status" deleted
+	26/09/2019  | 2.3       | A.Nowak       | Delete NoDataTOSend and TSEND status code from status structure. Delete region 7.
+	02/10/2019  | 2.4       | A.Nowak       | Implementation of the new FIFO block
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 – Update FIFO header status bits
+	    
+	    // Mode 'S' - High priority FIFO register status update
+	    "FC_Fifo"(ic_Mode := 'S',
+	              qUDT_Status => #sa_Status.FIFOHighPrioStatus,
+	              qx_Error => #sa_Status.FIFOHighPrioError,
+	              qx_Warning => #sa_Status.FIFOHighPrioWarning,
+	              iqv_Data := #sUDT_MsgArray,
+	              iqUDT_FifoHeader := #iqUDT_FifoHighHeader,
+	              iqv_DataBuffer := #iqs_FifoHighData);
+	    
+	    
+	    // Mode 'S' - Medium priority FIFO register status update
+	    "FC_Fifo"(ic_Mode := 'S',
+	              qUDT_Status => #sa_Status.FIFOMedPrioStatus,
+	              qx_Error => #sa_Status.FIFOMedPrioError,
+	              qx_Warning => #sa_Status.FIFOMedPrioWarning,
+	              iqv_Data := #sUDT_MsgArray,
+	              iqUDT_FifoHeader := #iqUDT_FifoMedHeader,
+	              iqv_DataBuffer := #iqs_FifoMedData);
+	    
+	    // Mode 'S' - Low priority FIFO register status update
+	    "FC_Fifo"(ic_Mode := 'S',
+	              qUDT_Status => #sa_Status.FIFOLowPrioStatus,
+	              qx_Error => #sa_Status.FIFOLowPrioError,
+	              qx_Warning => #sa_Status.FIFOLowPrioWarning,
+	              iqv_Data := #sUDT_MsgArray,
+	              iqUDT_FifoHeader := #iqUDT_FifoLowHeader,
+	              iqv_DataBuffer := #iqs_FifoLowData);
+	    
+	END_REGION
+	
+	REGION 2 – FIFO header summary error 
+	    
+	    #sx_FIFOError :=
+	    #sa_Status.FIFOHighPrioError         // High priority FIFO error 
+	    OR #sa_Status.FIFOMedPrioError       // Medium priority FIFO error
+	    OR #sa_Status.FIFOLowPrioError;      // Low priority FIFO error
+	    
+	END_REGION
+	
+	REGION 3 – FIFO Read request
+	    
+	    #sx_MsgReadReq :=
+	    #ix_EnableSend                      // Connection is established 
+	    AND NOT #sx_FIFOError               // No FIFO errors
+	    AND NOT #sa_TSEND.Error             // No TSEND errors 
+	    AND #sa_TSEND.Status = 16#7000;     // TSEND block status equal to 16#7000 - no job
+	    
+	END_REGION
+	
+	REGION 4 – Read the message from high priority FIFO data buffer
+	    
+	    IF (#sx_MsgReadReq                                                          // Read request
+	        AND NOT #iqUDT_FifoHighHeader.Status.Empty                             // High priority FIFO data buffer is not empty
+	        AND NOT #sx_MsgRead)                                                    // Message isn't read
+	    THEN
+	        
+	        // Mode 'R' - Read high priority FIFO record
+	        "FC_Fifo"(ic_Mode := 'R',
+	                  qUDT_Status => #sa_Status.FIFOHighPrioStatus,
+	                  qx_Error => #sa_Status.FIFOHighPrioError,
+	                  qx_Warning => #sa_Status.FIFOHighPrioWarning,
+	                  iqv_Data := #sUDT_MsgArray,
+	                  iqUDT_FifoHeader := #iqUDT_FifoHighHeader,
+	                  iqv_DataBuffer := #iqs_FifoHighData);
+	        
+	        #sx_MsgRead := TRUE;                                                        // Message read bit
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 5 – Read the message from medium priority FIFO data buffer
+	    
+	    IF (#sx_MsgReadReq                                                              // Read request, 
+	        AND #iqUDT_FifoHighHeader.Status.Empty                                     // High priority FIFO data buffer empty
+	        AND NOT #iqUDT_FifoMedHeader.Status.Empty                                  // Medium priority FIFO data buffer not empty
+	        AND NOT #sx_MsgRead)                                                        // Message not read
+	    THEN
+	        
+	        // Mode 'R' - Read medium priority FIFO record
+	        "FC_Fifo"(ic_Mode := 'R',
+	                  qUDT_Status => #sa_Status.FIFOMedPrioStatus,
+	                  qx_Error => #sa_Status.FIFOMedPrioError,
+	                  qx_Warning => #sa_Status.FIFOMedPrioWarning,
+	                  iqv_Data := #sUDT_MsgArray,
+	                  iqUDT_FifoHeader := #iqUDT_FifoMedHeader,
+	                  iqv_DataBuffer := #iqs_FifoMedData);
+	        
+	        #sx_MsgRead := TRUE;                                                        // Message read bit
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 6 – Read the message from low priority FIFO data buffer
+	    
+	    IF (#sx_MsgReadReq                                                          // Read request
+	        AND #iqUDT_FifoHighHeader.Status.Empty                                 // High priority FIFO data buffer empty
+	        AND #iqUDT_FifoMedHeader.Status.Empty                                  // Medium priority FIFO data buffer empty
+	        AND NOT #iqUDT_FifoLowHeader.Status.Empty                              // Low priority FIFO data buffer not empty
+	        AND NOT #sx_MsgRead)                                                    // Message not read
+	    THEN
+	        
+	        #sx_MsgRead := TRUE;                                                    // Message read bit
+	        
+	        // Mode 'R' - Read low priority FIFO record
+	        "FC_Fifo"(ic_Mode := 'R',
+	                  qUDT_Status => #sa_Status.FIFOLowPrioStatus,
+	                  qx_Error => #sa_Status.FIFOLowPrioError,
+	                  qx_Warning => #sa_Status.FIFOLowPrioWarning,
+	                  iqv_Data := #sUDT_MsgArray,
+	                  iqUDT_FifoHeader := #iqUDT_FifoLowHeader,
+	                  iqv_DataBuffer := #iqs_FifoLowData);
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 7 – Maximum number of message array elements
+	    
+	    #si_MaxMsgLen := "FC_GetNrOfArrayEl"(iv_Array := #sUDT_MsgArray.Character);
+	    
+	END_REGION
+	
+	REGION 8 – Message length
+	    
+	    // Measuring the length of a read message
+	    IF (#sx_MsgRead                                                 // The message is read
+	        AND NOT #sx_MsgReady)                                       // The message is not ready
+	    THEN
+	        
+	        // Initialize the message length 
+	        #si_MsgLen := 0;
+	        
+	        // Message character counting loop  
+	        WHILE #sUDT_MsgArray.Character[#si_MsgLen] <> #cc_NULL     // Message array character is diffrent then NULL sign
+	            AND #si_MsgLen < #si_MaxMsgLen - 1                      // Message length is lower then maximum message length minus 1
+	        DO
+	            
+	            #si_MsgLen += 1;
+	            
+	        END_WHILE;
+	        
+	        #sx_MsgReady := TRUE;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 9 – Send request
+	    
+	    IF (#sx_MsgRead                     // The message is read
+	        AND #sx_MsgReady)               // The message is ready
+	        
+	    THEN
+	        
+	        #sa_TSEND.Request := TRUE;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 10 – Send data
+	    
+	    #sFB_TSEND(REQ := #sa_TSEND.Request,
+	               ID := #iUDT_Connection.ID,
+	               LEN := INT_TO_UDINT(#si_MsgLen),
+	               DONE => #sa_TSEND.Done,
+	               BUSY => #sa_TSEND.Busy,
+	               ERROR => #sa_TSEND.Error,
+	               STATUS => #sa_TSEND.Status,
+	               DATA := #sUDT_MsgArray);
+	    
+	    // Reset send request, message read and ready bits
+	    IF (#sa_TSEND.Request                                       // Send request
+	        AND NOT #sa_TSEND.Busy                                  // TSEND block not busy
+	        AND (#sa_TSEND.Done                                     // Send operation done 
+	        OR #sa_TSEND.Status = 16#7000))                     // Communication is not established
+	    THEN
+	        
+	        #sa_TSEND.Request := FALSE;
+	        #sx_MsgRead := FALSE;
+	        #sx_MsgReady := FALSE;
+	        
+	    END_IF;
+	    
+	    // Reset send error and TSEND status after correctly sent message
+	    IF (#sa_TSEND.Done)                                                 // Send operation done 
+	    THEN
+	        
+	        #sa_Status.SendError := FALSE;
+	        
+	    END_IF;
+	    
+	    // Set send error and TSEND status if error occured
+	    IF (#sa_TSEND.Error)                                                // TSEND error
+	    THEN
+	        
+	        #sa_Status.SendError := TRUE;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 11 – Status
+	    
+	    // Parametrization collective error output
+	    #qx_Error :=
+	    #sx_FIFOError                           // FIFO errors and
+	    OR #sa_Status.SendError;                // TSEND block operation error
+	    
+	    // Parametrization collective warning output
+	    #qx_Warning :=
+	    #sa_Status.FIFOHighPrioWarning          // High priority FIFO warning bit 
+	    OR #sa_Status.FIFOMedPrioWarning        // Medium priority FIFO warning bit 
+	    OR #sa_Status.FIFOLowPrioWarning;       // Low priority FIFO warning bit 
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+
+FUNCTION_BLOCK "FB_TCPIPConnect"
+TITLE = FB_TCPIPConnect
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : Communication
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 231
+// END_ATTRIBUTES
+//Function block to establish and terminateTCPIP connection.
+   VAR_INPUT 
+      iUDT_Connection : "UDT_Connection";   // Connection parameters
+   END_VAR
+
+   VAR_OUTPUT 
+      qUDT_HMIStatus : "UDT_TCPIPConnectStatus";   // HMI status structure
+      qUDT_Status : "UDT_CommonStatus";   // Common status structure
+      qx_Connected { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Connected status
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_EquipmentControl : "UDT_EquipmentControl";   // Equipment control structure
+      iqUDT_Statistics : "UDT_TCPIPConnectStatistics";   // Statistic structure
+      iqx_Reconnect { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reconnect command
+   END_VAR
+
+   VAR 
+      sUDT_CommonStatus : "UDT_CommonStatus";   // Common status structure
+      sFB_TCON {InstructionName := 'TCON'; LibVersion := '4.0'} : TCON;   // Siemens "TCON" block - to establish the connection
+      sFB_TDISCON {InstructionName := 'TDISCON'; LibVersion := '2.1'} : TDISCON;   // Siemens "TDISCON" block - to terminate the connection
+      sFB_DIAG {InstructionName := 'T_DIAG'; LibVersion := '1.2'} : T_DIAG;   // Siemens "T_DIAG" block - to diagnose the connection
+      sFB_TimerConTimeout : "FB_TimerOnOffDelay";   // MHS "FB_TimerOnOffDelay" block - to measure the connection timeout
+      sFB_TimerFilter : "FB_TimerOnOffDelay";   // MHS "FB_TimerOnOffDelay" block - to filter the connection established signal
+      sv_InterfaceData {InstructionName := 'TCON_IP_v4'; LibVersion := '1.0'} : TCON_IP_v4;   // TCON Interface configuration data
+      sR_TRIG_ConnectionLost {InstructionName := 'R_TRIG'; LibVersion := '1.0'} : R_TRIG;   // Siemens "R_TRIG" - to prepare rising edge signal on Connection lost signal
+      sR_TRIG_Reset {InstructionName := 'R_TRIG'; LibVersion := '1.0'} : R_TRIG;   // Siemens "R_TRIG" - to prepare rising edge signal on reset data signal
+      sa_Connect : Struct   // TCON interface structure
+         Request { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TCON - Request
+         Done { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TCON - Done
+         Busy { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TCON - Busy
+         Error { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TCON - Error
+         Active { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TCON - Active
+         Status : Word;   //  TCON - Status
+      END_STRUCT;
+      sa_Disconnect : Struct   // TDISCON interface structure
+         Request { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TDISCON - Request
+         Done { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TDISCON - Done
+         Busy { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TDISCON - Busy
+         Error { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TDISCON - Error
+         Active { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TDISCON - Active
+         Status : Word;   //  TDISCON - Status
+      END_STRUCT;
+      sa_Diag : Struct   // T_DIAG block diagnostic variables
+         Request { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TDIAG - Request
+         Done { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TDIAG - Done
+         Busy { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TDIAG - Busy
+         Error { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TDIAG - Error
+         Active { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TDIAG - Active
+         Status : Word;   //  TDIAG - Status
+         Result {InstructionName := 'TDiag_Status'; LibVersion := '1.0'} : TDiag_Status;   //  TDIAG - Result
+      END_STRUCT;
+      sx_Connected { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Connection established memory
+      sx_ConnectedFiltred { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Connection established memory (filtred)
+      sx_CommunicationFault { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Communication fault
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	24/05/2019  | 0.1       | L.Klar        | first release MHS TIA 15.1
+	13/06/2019  | 0.2       | A.Nowak       | Delete writing to variable - S_FB_Timer_ConTimeout
+	24/06/2019  | 0.3       | L.Klar        | Status running added
+	25/06/2019  | 0.5       | L.Klar        | Statistics changed to InOut
+	24/07/2019  | 2.0       | L.Klar        | 2.0 MHS library release TIA 15.1
+	21/08/2019  | 2.1       | K.Pokorski    | Comments adjusted
+	26/09/2019  | 2.2       | A.Nowak       | Delete static status structure and change region 9. Create new static sx_CommunicationFault.
+	09/10/2019  | 2.3       | M.Kurc        | System equipment control added
+	04/11/2019  | 2.4       | L.Klar        | 10 Hz clock and first scan changed from memory bit to DB variable
+	19/11/2019  | 2.5       | L.Klar        | Status outputs corrected
+	20/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 – Initialization
+	    
+	    // Reset connected status bit and reconnect command bit during first PLC scan
+	    IF ("DB_Memory".FirstScan)             // First PLC scan occured
+	    THEN
+	        
+	        #sx_Connected := FALSE;
+	        #iqx_Reconnect := TRUE;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 2 – Connection error reset
+	    
+	    // Reset errors and blocks statuses when no connection state available and communication fault reset received 
+	    #sR_TRIG_Reset(CLK := #iqUDT_EquipmentControl.Command.Reset);
+	    
+	    IF (#sx_CommunicationFault                                      // Communication fault 
+	        AND #sR_TRIG_Reset.Q)                                      // Reset signal trigger
+	    THEN
+	        
+	        #sa_Connect.Status := 16#0;
+	        #sa_Disconnect.Status := 16#0;
+	        #sa_Diag.Status := 16#0;
+	        #sx_CommunicationFault := FALSE;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 3 – Communication Interface preparation
+	    
+	    #sv_InterfaceData.InterfaceId := #iUDT_Connection.Interface_ID;                       // HW-identifier of IE-interface submodule 
+	    #sv_InterfaceData.ID := #iUDT_Connection.ID;                                          // Connection reference / identifier
+	    #sv_InterfaceData.ConnectionType := 16#0B;                                             // Type OF connection: 11=TCP/IP, 19=UDP 17=TCP/IP
+	    #sv_InterfaceData.ActiveEstablished := #iUDT_Connection.ActiveEstablished;            // Active/passive connection establishment
+	    #sv_InterfaceData.RemoteAddress.ADDR[1] := INT_TO_BYTE(#iUDT_Connection.IP[1]);       // Remote IP address (IPv4) - x.0.0.0
+	    #sv_InterfaceData.RemoteAddress.ADDR[2] := INT_TO_BYTE(#iUDT_Connection.IP[2]);       // Remote IP address (IPv4) - 0.x.0.0
+	    #sv_InterfaceData.RemoteAddress.ADDR[3] := INT_TO_BYTE(#iUDT_Connection.IP[3]);       // Remote IP address (IPv4) - 0.0.x.0
+	    #sv_InterfaceData.RemoteAddress.ADDR[4] := INT_TO_BYTE(#iUDT_Connection.IP[4]);       // Remote IP address (IPv4) - 0.0.0.x 
+	    
+	    // Set local or remote port depending on whether the PLC is active or passive device in connection 
+	    IF (#sv_InterfaceData.ActiveEstablished)                                               // Active connection
+	    THEN
+	        
+	        #sv_InterfaceData.LocalPort := 0;
+	        #sv_InterfaceData.RemotePort := #iUDT_Connection."Port";
+	        
+	        // Passive connection
+	    ELSE
+	        
+	        #sv_InterfaceData.LocalPort := #iUDT_Connection."Port";
+	        #sv_InterfaceData.RemotePort := 0;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 4 – Connection establishment and termination
+	    
+	    IF (#iqx_Reconnect)                                                     // Reconnect request          
+	    THEN
+	        
+	        // Terminate a TCPIP connection if reconnect command available and connection established
+	        IF (#sx_Connected)                                                  // Connection established
+	        THEN
+	            
+	            // Disconnect request 
+	            #sa_Disconnect.Request :=
+	            #iqx_Reconnect                                                  // Reconnect command
+	            AND #sa_Disconnect.Status = 16#7000;                            // TDISCON block status is equal to 16#7000 (No job processing active)
+	            
+	            // Terminate a TCPIP connection when request available
+	            #sFB_TDISCON(REQ := #sa_Disconnect.Request,
+	                         ID := #sv_InterfaceData.ID,
+	                         DONE => #sa_Disconnect.Done,
+	                         BUSY => #sa_Disconnect.Busy,
+	                         ERROR => #sa_Disconnect.Error,
+	                         STATUS => #sa_Disconnect.Status);
+	            
+	            // In case of connection broken, connected bit and disconnect block active bit are reset
+	            IF (#sa_Disconnect.Done)                                        // Disconnect was successful
+	            THEN
+	                
+	                #sx_Connected := FALSE;
+	                #sa_Disconnect.Active := FALSE;
+	                
+	                // Connection termination in progress
+	            ELSE
+	                
+	                #sa_Disconnect.Active := TRUE;                              // Set the disconnecting active status bit 
+	                
+	            END_IF;
+	            
+	            // Try to establish connection if reconnect command active and there is no connection
+	        ELSE                                                                // Connection is terminated 
+	            
+	            // Connect request
+	            #sa_Connect.Request := #iqx_Reconnect AND                       // Reconnect command 
+	            #sa_Connect.Status = 16#7000;            // TCON block status is equal to 16#7000 (No job processing active)
+	            
+	            // Establishing a TCPIP connection when request available
+	            #sFB_TCON(REQ := #sa_Connect.Request,
+	                      ID := #sv_InterfaceData.ID,
+	                      DONE => #sa_Connect.Done,
+	                      BUSY => #sa_Connect.Busy,
+	                      ERROR => #sa_Connect.Error,
+	                      STATUS => #sa_Connect.Status,
+	                      CONNECT := #sv_InterfaceData);
+	            
+	            // In case of connection established, connected bit is set, connect block active bit and reconnect command are reset
+	            IF (#sa_Connect.Done)                                           // Connect successful 
+	            THEN
+	                
+	                #sx_Connected := TRUE;
+	                #sa_Connect.Active := FALSE;
+	                #iqx_Reconnect := FALSE;
+	                
+	                // Connection establishing in progress
+	            ELSE
+	                
+	                #sa_Connect.Active := TRUE;                                 // Set the connecting active status
+	                
+	            END_IF;
+	            
+	        END_IF;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 5 – Connection establishment and termination error handling
+	    
+	    // Measure the maximum connect or disconnect time
+	    #sFB_TimerConTimeout(ix_SignalToDelay := #sa_Connect.Active
+	                         OR #sa_Disconnect.Active,
+	                         iudi_OnDelayTime := DINT_TO_UDINT(#iUDT_Connection.ConTimeout),
+	                         iudi_OffDelayTime := 0);
+	    
+	    IF (#sFB_TimerConTimeout.qx_DelayedSignal)                                                 // Connecting / disconnecting time error from connection timeout timer
+	    THEN
+	        
+	        IF (#sa_Connect.Active)                                                                  // Connecting is active
+	        THEN
+	            
+	            // If connection already exist and block try establish connection, connected bit is set, connect block active bit and reconnect command are reset
+	            IF (#sa_Connect.Status = 16#80A3)                                                    // Connecting status equal to 16#80A3 - The connection already exist
+	            THEN
+	                
+	                #sx_Connected := TRUE;
+	                #sa_Connect.Active := FALSE;
+	                #iqx_Reconnect := FALSE;
+	                
+	                // Connection time has expired - error generated
+	            ELSE
+	                
+	                #sx_CommunicationFault := TRUE;
+	                
+	            END_IF;
+	            
+	            // Disconnect operation failed - error generated 
+	        ELSIF (#sa_Disconnect.Active)
+	        THEN
+	            
+	            #sx_CommunicationFault := TRUE;
+	            
+	        END_IF;
+	        
+	    END_IF;
+	    
+	    // The connection terminated by partner - error generated, connected bit reset and reconnect command request set
+	    IF (#sa_Diag.Result.State <> 16#04)                         // The connection terminated by partner                                                    
+	    THEN
+	        
+	        #sx_CommunicationFault := TRUE;
+	        #sx_Connected := FALSE;
+	        #iqx_Reconnect := TRUE;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 6 – Connection diagnostic
+	    
+	    // Check connection condition ten times per second
+	    IF (NOT #sa_Connect.Active AND NOT #sa_Disconnect.Active)        // Connecting and disconnecting procedure are not active
+	    THEN
+	        
+	        #sFB_DIAG(REQ := "DB_Memory".Clock_10Hz,
+	                  ID := #sv_InterfaceData.ID,
+	                  DONE => #sa_Diag.Done,
+	                  BUSY => #sa_Diag.Busy,
+	                  ERROR => #sa_Diag.Error,
+	                  STATUS => #sa_Diag.Status,
+	                  RESULT := #sa_Diag.Result);
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 7 – Connection established filter
+	    
+	    // Connected status bit filtering
+	    #sFB_TimerFilter(ix_SignalToDelay := #sx_Connected,
+	                     iudi_OnDelayTime := 50,
+	                     qx_DelayedSignal => #sx_ConnectedFiltred);
+	    
+	END_REGION
+	
+	REGION 8 – Statistics
+	    
+	    // Prepare rising edge of connected status signal 
+	    #sR_TRIG_ConnectionLost(CLK := NOT #sx_ConnectedFiltred);
+	    
+	    // Conditions to call "FC_Statistics" 
+	    IF (NOT #sx_ConnectedFiltred                                                        // No connection 
+	        OR #iqUDT_EquipmentControl.Command.ResetData)                                  // Reset data
+	    THEN
+	        
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := NOT #sx_ConnectedFiltred,
+	                        ix_RTrigActivate := #sR_TRIG_ConnectionLost.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.ConnectionLost);
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 9 – Status
+	    
+	    #sUDT_CommonStatus.Error := #sx_CommunicationFault;                        // Error
+	    
+	    #sUDT_CommonStatus.AutoON := #sx_ConnectedFiltred;                         // Auto ON
+	    
+	    #qUDT_HMIStatus.Specific.CommunicationFault := #sx_CommunicationFault;     // Communication faults
+	    
+	    #qUDT_HMIStatus.Specific.Connected := #sx_ConnectedFiltred;                // Connected
+	    
+	    IF #sUDT_CommonStatus.AutoON                                               // Auto ON
+	    THEN
+	        
+	        #qUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".AutoON;
+	        
+	    END_IF;
+	    
+	    IF #sUDT_CommonStatus.Error                                                // Error
+	    THEN
+	        
+	        #qUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Error;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 10 Report to control block
+	    
+	    // Function to manage report between control block and conveyor block
+	    
+	    "FC_EquipmentReport"(iUDT_Status := #sUDT_CommonStatus,
+	                         iqUDT_Control := #iqUDT_EquipmentControl);
+	    
+	END_REGION
+	
+	REGION 11 – Write outputs
+	    
+	    #qx_Connected := #sx_Connected;
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+
+TYPE "UDT_MainControlPanelStatus"
+TITLE = Cabinet MCP Status
+VERSION : 0.1
+   STRUCT
+      Status : Int;   //  Status number
+      Specific : Struct
+         PN_PN_MSP_PNSlaveNotOnline { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  PNPN coupler is not online
+         PN_PN_MSP_PNSlaveError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  PNPN coupler has an error
+         PN_PN_MSP_PNSlaveWarning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  PNPN coupler has a warning
+         IOModule_PNSlaveNotOnline { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // I/O Module is not online
+         IOModule_PNSlaveError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // I/O Module has an error
+         IOModule_PNSlaveWarning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // I/O Module has a warning
+         ScalanceSwitchPNSlaveNotOnline { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Scalance switch is not online
+         ScalanceSwitchPNSlaveError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Scalance switch has an error
+         ScalanceSwitchPNSlaveWarning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Scalance switch has a warning
+         ScalanceSwitchStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when Scalance switch is not healthy
+         Singulator_PNSlaveNotOnline { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Singulator coupler is not online
+         Singulator_PNSlaveError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Singulator coupler has an error
+         Singulator_PNSlaveWarning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Singulator coupler has a warning
+         UPSSwitchTripped { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Unit Power Supply switch tripped
+         FireAlarmActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Fire alarm active when the signal is true
+         PS_201T1_Tripped { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE if power supply 201T1 tripped
+         "230VAC_CB201F4Tripped" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE if MCP circuit breaker 201F4 tripped
+         "230VAC_CB101F1Tripped" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE if MCP circuit breaker 101F1 tripped
+         "230VAC_CB101F4Tripped" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE if MCP circuit breaker 101F4 tripped
+         "230VAC_CB102F1Tripped" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE if MCU circuit breaker 102F1 tripped
+         "230VAC_CB102F3Tripped" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE if MCU circuit breaker 102F3 tripped
+         "24VDC_CB201F1Tripped" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE if MCU circuit breaker 205F1 tripped
+         "24VDC_CB205F5Tripped" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE if MCU circuit breaker 205F5 tripped
+         "24VDC_CB205F9Tripped" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE if MCU circuit breaker 205F9 tripped
+         Spare_1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Spare
+         Spare_2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Spare
+         Spare_3 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Spare
+         RackSlotError : Array[0..31] of Bool;   //  One of the main rack slots has an error
+         IOModuleSlotError : Array[0..31] of Bool;   //  Module error
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_ControlPowerGroupStatus"
+VERSION : 0.1
+   STRUCT
+      Status : Int;   // Status number
+      Specific : Struct
+         Fail_PowerSupply_1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Power supply 1 fail
+         Fail_PowerSupply_2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Power supply 2 fail
+         Fail_PowerSupply_3 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Power supply 3 fail
+         Fail_PowerSupply_4 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Power supply 4 fail
+         Fail_PowerSupply_5 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Power supply 5 fail
+         Fail_PowerSupply_6 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Power supply 6 fail
+         Fail_PowerSupply_7 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Power supply 7 fail
+         Fail_PowerSupply_8 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Power supply 8 fail
+         Fail_PowerSupply_9 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Power supply 9 fail
+         Fail_PowerSupply_10 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Power supply 10 fail
+         PowerSuppliesWarning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Power supplies warning
+         PowerSuppliesError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Power supplies error
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_SystemControlStatus"
+TITLE = UDT_SystemControlStatus
+VERSION : 0.1
+//User-defined structure of FB_SystemControl function block status.
+   STRUCT
+      Status : Int;   // Status number
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_ControlPowerGroupStatistics"
+VERSION : 0.1
+   STRUCT
+      PowerSupplyGroupWarnning : "UDT_EventStatistic";   // Warning Power Supply Group Statistics
+      PowerSupplyGroupError : "UDT_EventStatistic";   // Error Power Supply Group Statistics
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_MainControlPanelStatistics"
+TITLE = Cabinet MCP Statistics
+VERSION : 0.1
+   STRUCT
+      UPSFault : "UDT_EventStatistic";   // Unit Power Supply fault statistics
+      FireAlarm : "UDT_EventStatistic";   // Fire Alarm active statistics
+      "230VAC_CB101F1Tripped" : "UDT_EventStatistic";   // Circuit braker 101F1 tripped  statistics
+      "230VAC_CB101F4Tripped" : "UDT_EventStatistic";   // Circuit braker 101F4 tripped statistics
+      "230VAC_CB102F1Tripped" : "UDT_EventStatistic";   // Circuit braker 102F1 tripped statistics
+      "230VAC_CB102F3Tripped" : "UDT_EventStatistic";   // Circuit braker 102F3 tripped statistics
+      "230VAC_CB201F4Tripped" : "UDT_EventStatistic";   // Circuit braker 201F4 tripped statistics
+      "24VDC_CB201F1Tripped" : "UDT_EventStatistic";   // Circuit braker 201F1 tripped statistics
+      "24VDC_CB205F5Tripped" : "UDT_EventStatistic";   // Circuit braker 205F5 tripped statistics
+      "24VDC_CB205F9Tripped" : "UDT_EventStatistic";   // Circuit braker 205F9 tripped statistics
+      ScalanceSwitchStatus : "UDT_EventStatistic";   // Scalance switch status statistics
+      Spare_1 : "UDT_EventStatistic";   // Spare
+      Spare_2 : "UDT_EventStatistic";   // Spare
+      Spare_3 : "UDT_EventStatistic";   // Spare
+      PS_201T1_Tripped { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Circuit braker 201T1 tripped statistics
+      "PN/PNCouplerFault" : "UDT_EventStatistic";   // PN/PN coupler fault statistics
+      SingulatorCouplerFault : "UDT_EventStatistic";   // ProSoft coupler fault statistics
+      ScalanceSwitchFault : "UDT_EventStatistic";   // Scalance switch fault statistics
+      IOModuleCouplerFault : "UDT_EventStatistic";   // IO Module fault statistics
+      RackModuleFault : "UDT_EventStatistic";   // A module fault occurred in the mainrack
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_ProfiDiagStatistics"
+TITLE = UDT_ProfiDiagStatistics
+VERSION : 0.1
+//User-defined structure of FB_ProfiDiag function block statistics.
+   STRUCT
+      DeviceError { S7_SetPoint := 'False'} : Array[0..512] of "UDT_EventStatistic";   // Device error statistics
+   END_STRUCT;
+
+END_TYPE
+
+DATA_BLOCK "DB_ProfinetDiagnostic"
+TITLE = DB_ProfinetDiagnostic
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 3.0
+NON_RETAIN
+//Data block to store profinet network diagnostic data.
+   VAR 
+      ProfinetNetworks { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : Array[1..10] of "UDT_ProfinetNetwork";
+   END_VAR
+
+
+BEGIN
+
+END_DATA_BLOCK
+
+DATA_BLOCK "DI_OnOffDevices"
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 2.0
+NON_RETAIN
+"FB_OnOffDevices"
+
+BEGIN
+
+END_DATA_BLOCK
+
+DATA_BLOCK "DB_Statistics"
+TITLE = DB_Statistics
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 3.0
+NON_RETAIN
+//Data block to store statistical data.
+   VAR 
+      Communication : Struct   // Communication statistic
+         TCPIPConnect : "UDT_TCPIPConnectStatistics";   // TCPIP Connect statistics
+         TCPIPReceive : "UDT_TCPIPReceiveStatistics";   // TCPIP Receive statistics
+      END_STRUCT;
+      System : Struct   // System statistic
+         MCP { S7_SetPoint := 'False'} : "UDT_MainControlPanelStatistics";   // Statistics of Main Control Panel
+         CPG01 : "UDT_ControlPowerGroupStatistics";   // Statistics of  Control Power Group 01
+         CPG02 : "UDT_ControlPowerGroupStatistics";   // Statistics of  Control Power Group 02
+         CPG03 : "UDT_ControlPowerGroupStatistics";   // Statistics of  Control Power Group 03
+         CPG04 : "UDT_ControlPowerGroupStatistics";   // Statistics of  Control Power Group 04
+         CPG05 : "UDT_ControlPowerGroupStatistics";   // Statistics of  Control Power Group 05
+         Profinet { S7_SetPoint := 'False'} : "UDT_ProfiDiagStatistics";
+      END_STRUCT;
+   END_VAR
+
+
+BEGIN
+
+END_DATA_BLOCK
+
+DATA_BLOCK "DB_FIFOMedPrioMsg"
+TITLE = DB_FIFO
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 3.0
+NON_RETAIN
+//Data block to store FIFO registers.
+   VAR RETAIN
+      Header { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_FifoHeader";   // FIFO Header
+      Data { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : Array[0..199] of "UDT_Message";   // FIFO data buffer
+   END_VAR
+
+
+BEGIN
+
+END_DATA_BLOCK
+
+DATA_BLOCK "DB_FIFOLowPrioMsg"
+TITLE = DB_FIFO
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 3.0
+NON_RETAIN
+//Data block to store FIFO registers.
+   VAR RETAIN
+      Header { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_FifoHeader";   // FIFO Header
+      Data { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : Array[0..199] of "UDT_Message";   // FIFO data buffer
+   END_VAR
+
+
+BEGIN
+
+END_DATA_BLOCK
+
+DATA_BLOCK "DB_FIFORcvMsg"
+TITLE = DB_FIFO
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 3.0
+NON_RETAIN
+//Data block to store FIFO registers.
+   VAR RETAIN
+      Header { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_FifoHeader";   // FIFO Header
+      Data { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : Array[0..199] of "UDT_Message";   // FIFO data buffer
+   END_VAR
+
+
+BEGIN
+
+END_DATA_BLOCK
+
+DATA_BLOCK "DB_ParametrizationErrors"
+TITLE = DB_ParametrizationErrors
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 3.0
+NON_RETAIN
+//Data block to store parametrization errors.
+   VAR 
+      System { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct
+         Communication { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct
+            TCPIPSendError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TCPIP send error
+            TCPIPSendWarning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TCPIP send warning
+            TCPIPReceiveError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TCPIP receive error
+            TCPIPReceiveWarning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TCPIP receive warning
+         END_STRUCT;
+      END_STRUCT;
+   END_VAR
+
+
+BEGIN
+
+END_DATA_BLOCK
+
+DATA_BLOCK "DB_CommonStatus"
+TITLE = DB_Status
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 3.0
+NON_RETAIN
+//Data block to store status data.
+   VAR 
+      Communication : Struct   // Communication status
+         TCPIPConnect : "UDT_CommonStatus";   // FB_TCPIPConnect status
+      END_STRUCT;
+      System : Struct   // System statuses
+         System1 { S7_SetPoint := 'False'} : "UDT_CommonStatus";
+         MCP { S7_SetPoint := 'False'} : "UDT_CommonStatus";
+         CPG01 : "UDT_CommonStatus";
+         CPG02 : "UDT_CommonStatus";
+         CPG03 : "UDT_CommonStatus";
+         CPG04 : "UDT_CommonStatus";
+         CPG05 : "UDT_CommonStatus";
+         test { S7_SetPoint := 'True'} : Int;
+      END_STRUCT;
+   END_VAR
+
+
+BEGIN
+
+END_DATA_BLOCK
+
+DATA_BLOCK "DB_Status"
+TITLE = DB_Status
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 3.0
+NON_RETAIN
+//Data block to store status data.
+   VAR 
+      Communication : Struct   // Communication status
+         TCPIPConnect : "UDT_TCPIPConnectStatus";   // FB_TCPIPConnect status
+      END_STRUCT;
+      System : Struct   // System status
+         MCP { S7_SetPoint := 'False'} : "UDT_MainControlPanelStatus";   // Status of Main Control Panel
+         CPG01 : "UDT_ControlPowerGroupStatus";   // Status of  Control Power Group 01
+         CPG02 : "UDT_ControlPowerGroupStatus";   // Status of  Control Power Group 02
+         CPG03 : "UDT_ControlPowerGroupStatus";   // Status of  Control Power Group 03
+         CPG04 : "UDT_ControlPowerGroupStatus";   // Status of  Control Power Group 04
+         CPG05 : "UDT_ControlPowerGroupStatus";   // Status of  Control Power Group 05
+         System1 : "UDT_SystemControlStatus";
+      END_STRUCT;
+   END_VAR
+
+
+BEGIN
+
+END_DATA_BLOCK
+
+FUNCTION_BLOCK "FB_SoftVersion"
+TITLE = FB_SoftVersion
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 28
+// END_ATTRIBUTES
+//Function block to get the program checksums.
+   VAR_INPUT 
+      is_ActualDateTime : String;   // Actual date and time
+   END_VAR
+
+   VAR_OUTPUT 
+      qs_SoftVersion : String[8];   // Software version
+      qa_StandardCRC : Array[0..7] of Byte;   // Standard program checksum output
+      qa_SafetyCRC : Array[0..7] of Byte;   // Safety program checksum output
+   END_VAR
+
+   VAR 
+      sFB_GetChecksum_Safety {InstructionName := 'GetChecksum'; LibVersion := '1.0'} : GetChecksum;   // Safety checksum read block
+      sFB_GetChecksum_Standard {InstructionName := 'GetChecksum'; LibVersion := '1.0'} : GetChecksum;   // Standard checksum read block
+   END_VAR
+   VAR RETAIN
+      sa_StandardCRC : Array[0..7] of Byte;   // Standard program checksum
+      sa_SafetyCRC : Array[0..7] of Byte;   // Safety program checksum
+   END_VAR
+   VAR 
+      sa_NewStandardCRC { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[0..7] of Byte;   // New standard program checksum
+      sa_NewSafetyCRC { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[0..7] of Byte;   // New safety program checksum
+   END_VAR
+   VAR RETAIN
+      ss_Date { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[8];   // Date charater string
+   END_VAR
+
+   VAR_TEMP 
+      ta_StandardCRC : Struct   // GetChecksum
+         tx_Done : Bool;   // GetChecksum - Done
+         tx_Busy : Bool;   // GetChecksum - Busy
+         tx_Error : Bool;   // GetChecksum - Error
+         tw_Status : Word;   // GetChecksum - Status
+      END_STRUCT;
+      ta_SafetyCRC : Struct   // GetChecksum
+         tx_Done : Bool;   // GetChecksum - Done
+         tx_Busy : Bool;   // GetChecksum - Busy
+         tx_Error : Bool;   // GetChecksum - Error
+         tw_Status : Word;   // GetChecksum - Status
+      END_STRUCT;
+      tx_CRCValid : Bool;   // Checksums valid
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	24/05/2019  | 0.1       | K.Pokorski    | first release MHS TIA 15.1
+	14/06/2019  | 0.2       | A.Nowak       | Replacement of instruction if for direct write into variable - Region 2  
+	24/07/2019  | 2.0       | L.Klar        | 2.0 MHS library release TIA 15.1
+	27/08/2019  | 2.2       | K.Pokorski    | Comments adjusted
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 - Standard and safety program checksums
+	    
+	    // Scope - 1 - Standard program CRC
+	    #sFB_GetChecksum_Standard(Scope := 1,
+	                              Done => #ta_StandardCRC.tx_Done,
+	                              Busy => #ta_StandardCRC.tx_Busy,
+	                              Error => #ta_StandardCRC.tx_Error,
+	                              Status => #ta_StandardCRC.tw_Status,
+	                              Checksum := #sa_NewStandardCRC);
+	    
+	    // Scope - 2 - Safety program CRC
+	    #sFB_GetChecksum_Safety(Scope := 2,
+	                            Done => #ta_SafetyCRC.tx_Done,
+	                            Busy => #ta_SafetyCRC.tx_Busy,
+	                            Error => #ta_SafetyCRC.tx_Error,
+	                            Status => #ta_SafetyCRC.tw_Status,
+	                            Checksum := #sa_NewSafetyCRC);
+	    
+	END_REGION
+	
+	REGION 2 - Checksums comparison
+	    
+	    #tx_CRCValid := (#sa_NewStandardCRC = #sa_StandardCRC)
+	    AND (#sa_SafetyCRC = #sa_NewSafetyCRC);
+	    
+	END_REGION
+	
+	REGION 3 - New software version 
+	    
+	    // Separate the year, mounth and day from actual date and time and connect it to one string
+	    IF (NOT #tx_CRCValid)                                           // Checksums not valid
+	    THEN
+	        
+	        #ss_Date := CONCAT(IN1 := MID(IN := #is_ActualDateTime,
+	                                                         L := 4,
+	                                                         P := 1),
+	                           
+	                           IN2 := MID(IN := #is_ActualDateTime,
+	                                      L := 2,
+	                                      P := 6),
+	                           
+	                           IN3 := MID(IN := #is_ActualDateTime,
+	                                      L := 2,
+	                                      P := 9));
+	        
+	        // Standard progrm checksum update
+	        #sa_StandardCRC := #sa_NewStandardCRC;
+	        
+	        // Safety program checksum update
+	        #sa_SafetyCRC := #sa_NewSafetyCRC;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 4 - Write outputs 
+	    
+	    // New program date
+	    #qs_SoftVersion := #ss_Date;
+	    
+	    // Actual standard program checksum
+	    #qa_StandardCRC := #sa_StandardCRC;
+	    
+	    // Actual safety program checksum
+	    #qa_SafetyCRC := #sa_SafetyCRC;
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+
+DATA_BLOCK "DB_Configuration"
+TITLE = DB_Configuration
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 3.0
+NON_RETAIN
+//Data block to store configuration data.
+   VAR RETAIN
+      System { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // System configuration
+         Connection { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_Connection";   // Connection configuration
+      END_STRUCT;
+   END_VAR
+
+
+BEGIN
+   System.Connection.ActiveEstablished := TRUE;
+   System.Connection.Interface_ID := 64;
+   System.Connection.ID := 16#0001;
+   System.Connection.IP[1] := 192;
+   System.Connection.IP[2] := 168;
+   System.Connection.IP[3] := 3;
+   System.Connection.IP[4] := 53;
+   System.Connection.Port := 42300;
+   System.Connection.ConTimeout := 5000;
+
+END_DATA_BLOCK
+
+FUNCTION_BLOCK "FB_ProfiDiag"
+TITLE = FB_ProfiDiag
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 25
+// END_ATTRIBUTES
+//Function block to diagnose Profinet network.
+   VAR_INPUT 
+      iui_LADDR : HW_IOSYSTEM;   // Hardware identifier of the PROFINET IO
+      ix_ExternalScan { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // External scan
+   END_VAR
+
+   VAR_OUTPUT 
+      qx_ProfinetOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet ok
+      qx_Error { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Collective error output
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_EquipmentControl : "UDT_EquipmentControl";   // Equipment control structure
+      iqUDT_PNDiagArray : "UDT_ProfinetNetwork";   // Profinet devices status array
+      iqUDT_Statistics : "UDT_ProfiDiagStatistics";   // Statistics structure
+   END_VAR
+
+   VAR 
+      s_GetProjectName {InstructionName := 'Get_Name'; LibVersion := '1.3'} : Get_Name;   // Get name function
+      sa_Status : Struct   // Status structure
+         ErrorCode : Struct   // Error code structure
+            DeviceState : Int;   // Siemens "DeviceState" error code
+            GEO2LOG : Int;   // Siemens "GEO2LOG" error code
+            LOG2GEO : Int;   // Siemens "LOG2GEO" error code
+            GetName : Word;   // Siemens "GetName" error code
+         END_STRUCT;
+      END_STRUCT;
+      sx_PNOK : Bool := FALSE;   // Profinet OK
+      sx_NewEvent { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // New event
+   END_VAR
+
+   VAR_TEMP 
+      tv_ProfinetGeoAdr {InstructionName := 'GEOADDR'; LibVersion := '1.0'} : GEOADDR;   // Profinet network geo structure
+      tv_DeviceGeoAdr {InstructionName := 'GEOADDR'; LibVersion := '1.0'} : GEOADDR;   // Profinet device geo structure
+      ta_Configured : Array[0..1024] of Bool;   // Configured devices array
+      ta_Exist : Array[0..1024] of Bool;   // Existing devices array
+      ta_Error : Array[0..1024] of Bool;   // Devices errors array
+      ti_DeviceNr : Int;   // Device number
+      ti_NrOfDevicesError : Int;   // Number of devices error
+      ti_DiagArraySize : Int;   // Diagnostic array size
+   END_VAR
+
+   VAR CONSTANT 
+      cui_ConfiguredDevicesMode : UInt := 1;   // Scan mode of configured devices
+      cui_ExistingDevicesMode : UInt := 4;   // Scan mode of existing devices
+      cui_DevicesErrorMode : UInt := 2;   // Scan mode of devices error
+      cui_HWType : UInt := 2;   // IO device hardware type
+      cui_Area : UInt := 1;   // IO device area
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	24/05/2019  | 0.1       | K.Pokorski    | first release MHS TIA 15.1
+	13/06/2019  | 0.2       | A.Nowak       | Replacement of instruction if for direct write into variable - Region 3
+	24/06/2019  | 0.3       | L.Klar        | Status running added
+	19/07/2019  | 0.5       | L.Klar        | Status handling changed, output qx_ProfinetOk added
+	24/07/2019  | 2.0       | L.Klar        | 2.0 MHS library release TIA 15.1
+	14/08/2019  | 2.1       | K.Pokorski    | HW_ID and TIA device project name handling added 
+	26/08/2019  | 2.2       | K.Pokorski    | Comments adjusted
+	20/09/2019  | 2.3       | K.Pokorski    | "UDT_Status" deleted
+	04/11/2019  | 2.4       | L.Klar        | Scan profinet and first scan changed from memory bit to DB variable
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 – Scan request
+	    
+	    IF ("DB_Memory".ScanProfinet    // Scan request from diagnostic OB 
+	        OR "DB_Memory".FirstScan    // First PLC cycle
+	        OR #ix_ExternalScan)        // External scan available
+	    THEN
+	        
+	        #sx_PNOK := FALSE;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 2 – Devices states update 
+	    
+	    // Scan devices, extract device status: configured, exists, error when profinet network not ok
+	    IF (NOT #sx_PNOK)       // Profinet needs a scan
+	    THEN
+	        
+	        #sa_Status.ErrorCode.DeviceState := DeviceStates(LADDR := #iui_LADDR,
+	                                                         MODE := #cui_ConfiguredDevicesMode,
+	                                                         STATE := #ta_Configured);
+	        
+	        #sa_Status.ErrorCode.DeviceState := DeviceStates(LADDR := #iui_LADDR,
+	                                                         MODE := #cui_ExistingDevicesMode,
+	                                                         STATE := #ta_Exist);
+	        
+	        #sa_Status.ErrorCode.DeviceState := DeviceStates(LADDR := #iui_LADDR,
+	                                                         MODE := #cui_DevicesErrorMode,
+	                                                         STATE := #ta_Error);
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 3 – Devices Statuses update
+	    
+	    // Move device state to diagnostic structure if network required scan and no error occured during scan 
+	    IF (NOT #sx_PNOK                                                                                                    // Profinet not ok 
+	        AND #sa_Status.ErrorCode.DeviceState = 0)                                                                       // "DeviceStates" error free                                      
+	    THEN
+	        
+	        // Initialise reset device errors counter
+	        #ti_NrOfDevicesError := 0;
+	        
+	        // Maximum number of Profinet devices
+	        #ti_DiagArraySize := "FC_GetNrOfArrayEl"(iv_Array := #iqUDT_PNDiagArray.DeviceStatus);
+	        
+	        // A loop operating on Profinet devices
+	        FOR #ti_DeviceNr := 0 TO (#ti_DiagArraySize - 1)
+	        DO
+	            
+	            // The device is configured in TIA Portal 
+	            IF (#ta_Configured[#ti_DeviceNr])                                                                           // Devices configured
+	            THEN
+	                
+	                // Set the device configured status bit in diagnostic structure
+	                #iqUDT_PNDiagArray.DeviceStatus[#ti_DeviceNr].DeviceState.Configure := TRUE;
+	                
+	                // Move device profinet number to diagnostic structure
+	                #iqUDT_PNDiagArray.DeviceStatus[#ti_DeviceNr].DeviceState.ProfinetNumber := INT_TO_UINT(#ti_DeviceNr);
+	                
+	                // Get the Profinet network IOSystem address 
+	                #sa_Status.ErrorCode.LOG2GEO := LOG2GEO(LADDR := #iui_LADDR, GEOADDR := #tv_ProfinetGeoAdr);
+	                
+	                // Configuring parameters for extracting the device's HW_ID
+	                #tv_DeviceGeoAdr.HWTYPE := #cui_HWType;
+	                #tv_DeviceGeoAdr.AREA := #cui_Area;
+	                #tv_DeviceGeoAdr.STATION := INT_TO_UINT(#ti_DeviceNr);
+	                #tv_DeviceGeoAdr.IOSYSTEM := #tv_ProfinetGeoAdr.IOSYSTEM;
+	                
+	                // Extracting the device's HW_ID 
+	                #sa_Status.ErrorCode.GEO2LOG := GEO2LOG(GEOADDR := #tv_DeviceGeoAdr,
+	                                                        LADDR => #iqUDT_PNDiagArray.DeviceStatus[#ti_DeviceNr].DeviceState.HW_ID);
+	                
+	                // Move device's project name to diagnostic structure
+	                #s_GetProjectName(LADDR := #iui_LADDR,
+	                                  STATION_NR := INT_TO_UINT(#ti_DeviceNr),
+	                                  STATUS => #sa_Status.ErrorCode.GetName,
+	                                  DATA := #iqUDT_PNDiagArray.DeviceStatus[#ti_DeviceNr].DeviceState.PNDeviceName);
+	                
+	                // Move device exist state to the Profinet diagnostic structure 
+	                IF (#ta_Exist[#ti_DeviceNr])                                                                                // Device exist
+	                THEN
+	                    
+	                    #iqUDT_PNDiagArray.DeviceStatus[#ti_DeviceNr].DeviceState.Exist := TRUE;
+	                    
+	                ELSE
+	                    
+	                    #iqUDT_PNDiagArray.DeviceStatus[#ti_DeviceNr].DeviceState.Exist := FALSE;
+	                    
+	                    // Increment the number of devices error
+	                    #ti_NrOfDevicesError += 1;
+	                    
+	                END_IF;
+	                // Move device error state to the Profinet diagnostic structure 
+	                IF (NOT #ta_Error[#ti_DeviceNr])                                                                            // Device is error free
+	                THEN
+	                    
+	                    #iqUDT_PNDiagArray.DeviceStatus[#ti_DeviceNr].DeviceState.Error := FALSE;
+	                    
+	                ELSE
+	                    
+	                    // New error detected
+	                    #sx_NewEvent := NOT #iqUDT_PNDiagArray.DeviceStatus[#ti_DeviceNr].DeviceState.Error;
+	                    
+	                    // Statistics handling
+	                    IF (#ta_Error[#ti_DeviceNr]                                                                             // Device has error
+	                        OR #iqUDT_EquipmentControl.Command.ResetData)                                                      // Reset statistics available
+	                    THEN
+	                        
+	                        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                                        ix_Activate := #ta_Error[#ti_DeviceNr],
+	                                        ix_RTrigActivate := #sx_NewEvent,
+	                                        iqUDT_Statistics := #iqUDT_Statistics.DeviceError[#ti_DeviceNr]);
+	                        
+	                    END_IF;
+	                    
+	                    #iqUDT_PNDiagArray.DeviceStatus[#ti_DeviceNr].DeviceState.Error := TRUE;
+	                    
+	                    // Increment number of devices error
+	                    #ti_NrOfDevicesError += 1;
+	                    
+	                END_IF;
+	                
+	                // Reset all diagnostic information if the device is not configured in TIA Portal 
+	            ELSE
+	                
+	                #iqUDT_PNDiagArray.DeviceStatus[#ti_DeviceNr].DeviceState.Configure := FALSE;
+	                #iqUDT_PNDiagArray.DeviceStatus[#ti_DeviceNr].DeviceState.Exist := FALSE;
+	                #iqUDT_PNDiagArray.DeviceStatus[#ti_DeviceNr].DeviceState.Error := FALSE;
+	                #iqUDT_PNDiagArray.DeviceStatus[#ti_DeviceNr].DeviceState.HW_ID := 0;
+	                #iqUDT_PNDiagArray.DeviceStatus[#ti_DeviceNr].DeviceState.ProfinetNumber := 0;
+	                #iqUDT_PNDiagArray.DeviceStatus[#ti_DeviceNr].DeviceState.PNDeviceName := '';
+	                
+	            END_IF;
+	            
+	        END_FOR;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 4 – Profinet OK
+	    
+	    // Reset profinet error
+	    IF (#ti_NrOfDevicesError = 0                        // Number of devices error equal to zero 
+	        AND (#iqUDT_EquipmentControl.Command.Reset     // Error reset required 
+	        OR #ix_ExternalScan))                           // External scan active
+	    THEN
+	        
+	        #sx_PNOK := TRUE;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 5 – Status
+	    
+	    // Update Profinet ok output status
+	    #qx_ProfinetOk := #sx_PNOK;
+	    
+	    // Create the collective block error bit
+	    #qx_Error := #sa_Status.ErrorCode.DeviceState <> 0       // Profinet network error  
+	    OR #sa_Status.ErrorCode.GEO2LOG <> 0                     // "Geo2Log" standard Siemens block error
+	    OR #sa_Status.ErrorCode.LOG2GEO <> 0                     // "Log2Geo" standard Siemens block error
+	    OR #sa_Status.ErrorCode.GetName > 16#8000;               // "GetName" standard Siemens block error
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+
+FUNCTION "FC_Simulation" : Void
+TITLE = FC_Simulation
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 13
+// END_ATTRIBUTES
+//Function to enable simulation mode.
+   VAR_TEMP 
+      tx_Done : Bool;
+      tx_Error : Bool;
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	24/05/2019  | 0.1       | L.Klar        | first release MHS TIA 15.1
+	24/07/2019  | 2.0       | L.Klar        | 2.0 MHS library release TIA 15.1
+	04/11/2019  | 2.1       | L.Klar        | Simulation bit changed from memory to DB variable
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 - Disabling and Enabling devices
+	    
+	    "DI_OnOffDevices"(ix_Simulation := "DB_Memory".Simulation,
+	                      qx_Done => #tx_Done,
+	                      qx_Error => #tx_Error,
+	                      iqa_ProfinetNetworks := "DB_ProfinetDiagnostic".ProfinetNetworks);
+	    
+	END_REGION
+	
+	
+	
+END_FUNCTION
+
+FUNCTION "FC_TimeToString" : Void
+TITLE = FC_TimeToString
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 29
+// END_ATTRIBUTES
+//Function to convert date in DTL to the string format.
+   VAR_INPUT 
+      ia_Date {InstructionName := 'DTL'; LibVersion := '1.0'} : DTL;   // DTL format date
+   END_VAR
+
+   VAR_OUTPUT 
+      qs_Date : String;   // String format date
+   END_VAR
+
+   VAR_TEMP 
+      ta_StringDate : Struct   // String format date
+         Year : String;   //   Year
+         Month : String[2];   //   Month
+         Day : String[2];   //   Day
+         Hour : String[2];   //   Hour
+         Minute : String[2];   //   Minunte
+         Second : String[2];   //   Second
+         Millisecond : String[4];   //   Millisecond
+      END_STRUCT;
+      ta_HTAReturn : Struct   // HTA operation status
+         Year : Word;   //   Year
+         Month : Word;   //   Month
+         Day : Word;   //   Day
+         Hour : Word;   //   Hour
+         Minute : Word;   //   Minunte
+         Second : Word;   //   Second
+         Millisecond : Word;   //   Millisecond
+      END_STRUCT;
+   END_VAR
+
+   VAR CONSTANT 
+      ci_Positions4 : USInt := 4;   // Number of character positions
+      ci_DecimalPlaces0 : USInt := 0;   // Number of decimal places
+      ci_Format0 : USInt := 0;   // Output format of the characters
+      ci_Position1 : USInt := 1;   // Character starting at which the result is written
+      cc_Colon : Char := ':';   // Colon sign
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	24/05/2019  | 0.1       | K.Pokorski    | first release MHS TIA 15.1
+	24/07/2019  | 2.0       | L.Klar        | 2.0 MHS library release TIA 15.1
+	27/08/2019  | 2.1       | M.Kurpiers    | Comments adjusted
+	05/09/2019  | 2.2       | K.Pokorski    | FC changed from unoptimized to optimized
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	16/02/2023  | 3.1       | F.Baten       | Added constants
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 - Date and time separation
+	    
+	    // Convert the year into a character string
+	    VAL_STRG(IN := #ia_Date.YEAR,
+	             SIZE := #ci_Positions4,
+	             PREC := #ci_DecimalPlaces0,
+	             FORMAT := USINT_TO_WORD(#ci_Format0),
+	             P := #ci_Position1,
+	             OUT => #ta_StringDate.Year);
+	    
+	    // Using the HTA function, convert date into a string format
+	    #ta_HTAReturn.Month := HTA(IN := WORD_TO_BYTE(INT_TO_BCD16((USINT_TO_INT(#ia_Date.MONTH)))), N := 1, OUT => #ta_StringDate.Month);                          // Convert the month  
+	    #ta_HTAReturn.Day := HTA(IN := WORD_TO_BYTE(INT_TO_BCD16((USINT_TO_INT(#ia_Date.DAY)))), N := 1, OUT => #ta_StringDate.Day);                                // Convert the day  
+	    #ta_HTAReturn.Hour := HTA(IN := WORD_TO_BYTE(INT_TO_BCD16((USINT_TO_INT(#ia_Date.HOUR)))), N := 1, OUT => #ta_StringDate.Hour);                             // Convert the hour  
+	    #ta_HTAReturn.Minute := HTA(IN := WORD_TO_BYTE(INT_TO_BCD16((USINT_TO_INT(#ia_Date.MINUTE)))), N := 1, OUT => #ta_StringDate.Minute);                       // Convert the minute  
+	    #ta_HTAReturn.Second := HTA(IN := WORD_TO_BYTE(INT_TO_BCD16((USINT_TO_INT(#ia_Date.SECOND)))), N := 1, OUT => #ta_StringDate.Second);                       // Convert the second  
+	    #ta_HTAReturn.Millisecond := HTA(IN := INT_TO_BCD16((UDINT_TO_INT(#ia_Date.NANOSECOND / 1000000))), N := 2, OUT => #ta_StringDate.Millisecond);              // Convert the millisecond  
+	    
+	END_REGION
+	
+	REGION 2 - Timestamp preparation
+	    
+	    // Combine several input strings into one long output string
+	    #qs_Date := (CONCAT(IN1 := #ta_StringDate.Year,
+	                        IN2 := #cc_Colon,
+	                        IN3 := #ta_StringDate.Month,
+	                        IN4 := #cc_Colon,
+	                        IN5 := #ta_StringDate.Day,
+	                        IN6 := #cc_Colon,
+	                        IN7 := #ta_StringDate.Hour,
+	                        IN8 := #cc_Colon,
+	                        IN9 := #ta_StringDate.Minute,
+	                        IN10 := #cc_Colon,
+	                        IN11 := #ta_StringDate.Second,
+	                        IN12 := #cc_Colon,
+	                        IN13 := RIGHT(IN := #ta_StringDate.Millisecond, L := 3)));
+	    
+	END_REGION
+END_FUNCTION
+
+DATA_BLOCK "DI_TCPIPReceive"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+NON_RETAIN
+"FB_TCPIPReceive"
+
+BEGIN
+
+END_DATA_BLOCK
+
+DATA_BLOCK "DB_Time"
+TITLE = DB_Time
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 3.0
+NON_RETAIN
+//Data block to store date and time data.
+   VAR 
+      ActualTimeDTL {InstructionName := 'DTL'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DTL;   // Actual date and time in DTL
+      ActualTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;   // Actual date and time in String
+      Timestamp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[17];   // Actual date and time in String
+      DaylightSaving { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;
+   END_VAR
+
+
+BEGIN
+
+END_DATA_BLOCK
+
+DATA_BLOCK "DI_TCPIPSend"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+NON_RETAIN
+"FB_TCPIPSend"
+
+BEGIN
+
+END_DATA_BLOCK
+
+DATA_BLOCK "DB_SoftwareVersion"
+TITLE = DB_SoftwareVersion
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 3.0
+NON_RETAIN
+//Data block to store software version data.
+   VAR 
+      "Version" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[8];   // Software version
+      StandardChecksum { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[0..7] of Byte;   // Standard program checksum
+      SafetyChecksum { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[0..7] of Byte;   // Safety program checksum
+   END_VAR
+
+
+BEGIN
+
+END_DATA_BLOCK
+
+DATA_BLOCK "DB_Control"
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : Equimpent
+VERSION : 0.1
+NON_RETAIN
+   VAR 
+      System1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_EquipmentControl";
+   END_VAR
+
+
+BEGIN
+
+END_DATA_BLOCK
+
+DATA_BLOCK "DB_FIFOHighPrioMsg"
+TITLE = DB_FIFO
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 3.0
+NON_RETAIN
+//Data block to store FIFO registers.
+   VAR 
+      Header { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_FifoHeader";   // FIFO Header
+      Data { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : Array[0..199] of "UDT_Message";   // FIFO data buffer
+   END_VAR
+
+
+BEGIN
+
+END_DATA_BLOCK
+
+DATA_BLOCK "DI_TCPIPConnect"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+NON_RETAIN
+"FB_TCPIPConnect"
+
+BEGIN
+
+END_DATA_BLOCK
+
+FUNCTION_BLOCK "FB_SystemFunctions"
+TITLE = FB_SystemFunctions
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 200
+// END_ATTRIBUTES
+//Function to execute system functions.
+   VAR 
+      sFB_SoftVersion { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_SoftVersion";   // Software version block instance
+      sFB_ProfiDiag_Net1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_ProfiDiag";   // Profinet diagnostic block instance
+      sFB_ProfiDiag_Net2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_ProfiDiag";   // Profinet diagnostic block instance
+      sFB_ProfiDiag_Net3 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_ProfiDiag";   // Profinet diagnostic block instance
+      sFB_ProfiDiag_Net4 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_ProfiDiag";   // Profinet diagnostic block instance
+      sFB_ProfiDiag_Net5 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_ProfiDiag";   // Profinet diagnostic block instance
+      sFB_ProfiDiag_Net6 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_ProfiDiag";   // Profinet diagnostic block instance
+      sFB_ProfiDiag_Net7 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_ProfiDiag";   // Profinet diagnostic block instance
+      sFB_ProfiDiag_Net8 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_ProfiDiag";   // Profinet diagnostic block instance
+      sFB_ProfiDiag_Net9 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_ProfiDiag";   // Profinet diagnostic block instance
+      sFB_ProfiDiag_Net10 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_ProfiDiag";   // Profinet diagnostic block instance
+      sR_TRIG0_1Sec {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rise trigger to detect edge each 0.1 second
+      sR_TRIG0_2Sec {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rise trigger to detect edge each 0.2 second
+      sR_TRIG0_4Sec {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rise trigger to detect edge each 0.4 second
+      sR_TRIG0_5Sec {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rise trigger to detect edge each 0.5 second
+      sR_TRIG0_8Sec {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rise trigger to detect edge each 0.8 second
+      sR_TRIG_1Sec {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rise trigger to detect edge each 1 second
+      sR_TRIG1_6Sec {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rise trigger to detect edge each 1.6 second
+      sR_TRIG_2Sec {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rise trigger to detect edge each 2 second
+   END_VAR
+   VAR DB_SPECIFIC
+      sx_Reset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet fault reset
+      sx_ResetData { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet statistic data reset
+   END_VAR
+   VAR 
+      sx_Error { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      sx_ProfiDiag_Net1_OK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet network 1 Ok
+      sx_ProfiDiag_Net2_OK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet network 2 Ok
+      sx_ProfiDiag_Net3_OK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet network 3 Ok
+      sx_ProfiDiag_Net4_OK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet network 4 Ok
+      sx_ProfiDiag_Net5_OK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet network 5 Ok
+      sx_ProfiDiag_Net6_OK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet network 6 Ok
+      sx_ProfiDiag_Net7_OK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet network 7 Ok
+      sx_ProfiDiag_Net8_OK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet network 8 Ok
+      sx_ProfiDiag_Net9_OK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet network 9 Ok
+      sx_ProfiDiag_Net10_OK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet network 10 Ok
+   END_VAR
+
+   VAR_TEMP 
+      tui_LADDR : HW_IOSYSTEM;
+      tUDT_EquipmentControl : "UDT_EquipmentControl";
+      ti_RD_LOC_T_Status : Int;   // RD_LOC_T - Read actual date and time function status
+      tx_replace : Bool;
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	|                                                                                      |
+	|  Copyright  2019             MHS                                                     |
+	|  All Rights Reserved         Larenweg 90                                             |
+	|                              5234 KC 's-Hertogenbosch,                               |
+	|                              Netherlands                                             |
+	|                                                                                      |     
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	24/05/2019  | 0.1       | L.Klar        | first release MHS TIA 15.1
+	24/07/2019  | 2.0       | L.Klar        | 2.0 MHS library release TIA 15.1
+	03/10/2019  | 2.1       | L.Klar        | Comments adjusted
+	04/10/2019  | 2.2       | L.Klar        | profinet scan marker reset added
+	30/10/2019  | 2.3       | S.Theocharis  | Update the PN calls 
+	04/11/2019  | 2.4       | L.Klar        | Memory bits changed to DB variables
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	11/12/2019  | 3.1       | S. Deulkar    | Called FC simulation in region 2
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 – PLC scan cycle measurement
+	    
+	    "DB_Memory".PrevCycleTime := RUNTIME("DB_Memory".RuntimeMem) * 1000;
+	    
+	END_REGION
+	
+	REGION 2 – Simulation
+	    
+	    "FC_Simulation"();
+	    
+	END_REGION
+	
+	REGION 3 – One shot of PLC clock pulse
+	    
+	    // One shot every 0.1 sec of 10 Hz clock memory
+	    #sR_TRIG0_1Sec(CLK := "DB_Memory".Clock_10Hz,
+	                   Q => "DB_Memory"."OS_0.1sec");
+	    
+	    // One shot every 0.2 sec of 5 Hz clock memory
+	    #sR_TRIG0_2Sec(CLK := "DB_Memory".Clock_5Hz,
+	                   Q => "DB_Memory"."OS_0.2sec");
+	    
+	    // One shot every 0.4 sec of 2.5 Hz clock memory
+	    #sR_TRIG0_4Sec(CLK := "DB_Memory"."Clock_2.5Hz",
+	                   Q => "DB_Memory"."OS_0.4sec");
+	    
+	    // One shot every 0.5 sec of 2 Hz clock memory
+	    #sR_TRIG0_5Sec(CLK := "DB_Memory".Clock_2Hz,
+	                   Q => "DB_Memory"."OS_0.5sec");
+	    
+	    // One shot every 0.8 sec of 1.25 Hz clock memory
+	    #sR_TRIG0_8Sec(CLK := "DB_Memory"."Clock_1.25Hz",
+	                   Q => "DB_Memory"."OS_0.8sec");
+	    
+	    // One shot every 1 sec of 1 Hz clock memory
+	    #sR_TRIG_1Sec(CLK := "DB_Memory".Clock_1Hz,
+	                  Q => "DB_Memory".OS_1sec);
+	    
+	    // One shot every 1.6 sec of 0.625 Hz clock memory
+	    #sR_TRIG1_6Sec(CLK := "DB_Memory"."Clock_0.625Hz",
+	                   Q => "DB_Memory"."OS_1.6sec");
+	    
+	    // One shot every 2 sec of 0.5 Hz clock memory
+	    #sR_TRIG_2Sec(CLK := "DB_Memory"."Clock_0.5Hz",
+	                  Q => "DB_Memory".OS_2sec);
+	    
+	    
+	END_REGION
+	
+	REGION 4 – Actual time
+	    
+	    // Read actual PLC date and time 
+	    #ti_RD_LOC_T_Status := RD_LOC_T("DB_Time".ActualTimeDTL);
+	    
+	    // Convert actual time from DTL format to string 
+	    "FC_TimeToString"(ia_Date := "DB_Time".ActualTimeDTL,
+	                      qs_Date => "DB_Time".ActualTime);
+	    
+	END_REGION
+	
+	REGION 5 – Software version
+	    //Function to detect changes in the software and retun software version 
+	    
+	    #sFB_SoftVersion(is_ActualDateTime := "DB_Time".ActualTime,
+	                     qs_SoftVersion => "DB_SoftwareVersion".Version,
+	                     qa_StandardCRC => "DB_SoftwareVersion".StandardChecksum,
+	                     qa_SafetyCRC => "DB_SoftwareVersion".SafetyChecksum);
+	    
+	END_REGION
+	
+	REGION 6 – Profinet diagnostic
+	    
+	    // CPU Interface 1 HW ID = 262 
+	    #sFB_ProfiDiag_Net1(iui_LADDR := "DB_Memory"."Local~PROFINET_IO-System",
+	                        ix_ExternalScan := FALSE,
+	                        qx_ProfinetOk => #sx_ProfiDiag_Net1_OK,
+	                        qx_Error => #sx_Error,
+	                        iqUDT_EquipmentControl := "DB_Control".System1,
+	                        iqUDT_PNDiagArray := "DB_ProfinetDiagnostic".ProfinetNetworks[1],
+	                        iqUDT_Statistics := "DB_Statistics".System.Profinet);
+	    
+	    //Keep only the in use ones. 
+	    
+	    //Network 2 - CM Card 1542-1_1 HW ID = xxxx 
+	    #sFB_ProfiDiag_Net2(iui_LADDR := #tui_LADDR,
+	                        ix_ExternalScan := FALSE,
+	                        qx_ProfinetOk => #sx_ProfiDiag_Net2_OK,
+	                        qx_Error => #sx_Error,
+	                        iqUDT_EquipmentControl := "DB_Control".System1,
+	                        iqUDT_PNDiagArray := "DB_ProfinetDiagnostic".ProfinetNetworks[2],
+	                        iqUDT_Statistics := "DB_Statistics".System.Profinet);
+	    
+	    //Network 3 - CM Card 1542-1_2 HW ID = xxxx 
+	    #sFB_ProfiDiag_Net3(iui_LADDR := #tui_LADDR,
+	                        ix_ExternalScan := FALSE,
+	                        qx_ProfinetOk => #sx_ProfiDiag_Net3_OK,
+	                        qx_Error => #sx_Error,
+	                        iqUDT_EquipmentControl := "DB_Control".System1,
+	                        iqUDT_PNDiagArray := "DB_ProfinetDiagnostic".ProfinetNetworks[3],
+	                        iqUDT_Statistics := "DB_Statistics".System.Profinet);
+	    
+	    //Network 4 - CM Card 1542-1_3 HW ID = xxxx
+	    #sFB_ProfiDiag_Net4(iui_LADDR := #tui_LADDR,
+	                        ix_ExternalScan := FALSE,
+	                        qx_ProfinetOk => #sx_ProfiDiag_Net4_OK,
+	                        qx_Error => #sx_Error,
+	                        iqUDT_EquipmentControl := "DB_Control".System1,
+	                        iqUDT_PNDiagArray := "DB_ProfinetDiagnostic".ProfinetNetworks[4],
+	                        iqUDT_Statistics := "DB_Statistics".System.Profinet);
+	    
+	    //Network 5 - CM Card 1542-1_4 HW ID = xxxx
+	    #sFB_ProfiDiag_Net5(iui_LADDR := #tui_LADDR,
+	                        ix_ExternalScan := FALSE,
+	                        qx_ProfinetOk => #sx_ProfiDiag_Net5_OK,
+	                        qx_Error => #sx_Error,
+	                        iqUDT_EquipmentControl := "DB_Control".System1,
+	                        iqUDT_PNDiagArray := "DB_ProfinetDiagnostic".ProfinetNetworks[5],
+	                        iqUDT_Statistics := "DB_Statistics".System.Profinet);
+	    
+	    //Network 6 - CM Card 1542-1_5 HW ID = xxxx
+	    #sFB_ProfiDiag_Net6(iui_LADDR := #tui_LADDR,
+	                        ix_ExternalScan := FALSE,
+	                        qx_ProfinetOk => #sx_ProfiDiag_Net6_OK,
+	                        qx_Error => #sx_Error,
+	                        iqUDT_EquipmentControl := "DB_Control".System1,
+	                        iqUDT_PNDiagArray := "DB_ProfinetDiagnostic".ProfinetNetworks[6],
+	                        iqUDT_Statistics := "DB_Statistics".System.Profinet);
+	    
+	    //Network 7 - CM Card 1542-1_6 HW ID = xxxx
+	    #sFB_ProfiDiag_Net7(iui_LADDR := #tui_LADDR,
+	                        ix_ExternalScan := FALSE,
+	                        qx_ProfinetOk => #sx_ProfiDiag_Net7_OK,
+	                        qx_Error => #sx_Error,
+	                        iqUDT_EquipmentControl := "DB_Control".System1,
+	                        iqUDT_PNDiagArray := "DB_ProfinetDiagnostic".ProfinetNetworks[7],
+	                        iqUDT_Statistics := "DB_Statistics".System.Profinet);
+	    
+	    //Network 8 - CM Card 1542-1_7 HW ID = xxxx
+	    #sFB_ProfiDiag_Net8(iui_LADDR := #tui_LADDR,
+	                        ix_ExternalScan := FALSE,
+	                        qx_ProfinetOk => #sx_ProfiDiag_Net8_OK,
+	                        qx_Error => #sx_Error,
+	                        iqUDT_EquipmentControl := "DB_Control".System1,
+	                        iqUDT_PNDiagArray := "DB_ProfinetDiagnostic".ProfinetNetworks[8],
+	                        iqUDT_Statistics := "DB_Statistics".System.Profinet);
+	    
+	    //Network 9 - CM Card 1542-1_8 HW ID = xxxx
+	    #sFB_ProfiDiag_Net9(iui_LADDR := #tui_LADDR,
+	                        ix_ExternalScan := FALSE,
+	                        qx_ProfinetOk => #sx_ProfiDiag_Net9_OK,
+	                        qx_Error => #sx_Error,
+	                        iqUDT_EquipmentControl := "DB_Control".System1,
+	                        iqUDT_PNDiagArray := "DB_ProfinetDiagnostic".ProfinetNetworks[9],
+	                        iqUDT_Statistics := "DB_Statistics".System.Profinet);
+	    
+	    //Network 10 - CM Card 1542-1_9 HW ID = xxxx
+	    #sFB_ProfiDiag_Net10(iui_LADDR := #tui_LADDR,
+	                         ix_ExternalScan := FALSE,
+	                         qx_ProfinetOk => #sx_ProfiDiag_Net10_OK,
+	                         qx_Error => #sx_Error,
+	                         iqUDT_EquipmentControl := "DB_Control".System1,
+	                         iqUDT_PNDiagArray := "DB_ProfinetDiagnostic".ProfinetNetworks[10],
+	                         iqUDT_Statistics := "DB_Statistics".System.Profinet);
+	    
+	    
+	END_REGION
+	
+	REGION 7 – Profinet OK detection 
+	    
+	    IF #sx_ProfiDiag_Net1_OK
+	        AND #sx_ProfiDiag_Net2_OK   //delete if not in use
+	        AND #sx_ProfiDiag_Net3_OK   //delete if not in use
+	        AND #sx_ProfiDiag_Net4_OK   //delete if not in use
+	        AND #sx_ProfiDiag_Net5_OK   //delete if not in use
+	        AND #sx_ProfiDiag_Net6_OK   //delete if not in use
+	        AND #sx_ProfiDiag_Net7_OK   //delete if not in use
+	        AND #sx_ProfiDiag_Net8_OK   //delete if not in use
+	        AND #sx_ProfiDiag_Net9_OK   //delete if not in use
+	        AND #sx_ProfiDiag_Net10_OK  //delete if not in use
+	    THEN
+	        
+	        "DB_Memory".ScanProfinet := FALSE;
+	        
+	    END_IF;
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+
+FUNCTION_BLOCK "FB_Communication"
+TITLE = FB_Communication
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : Communication
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 2
+// END_ATTRIBUTES
+//Function block to handle communication.
+   VAR 
+      sx_Connected { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TCPIP connection established
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	|                                                                                      |
+	|  Copyright  2019             MHS                                                     |
+	|  All Rights Reserved         Larenweg 90                                             |
+	|                              5234 KC 's-Hertogenbosch,                               |
+	|                              Netherlands                                             |
+	|                                                                                      |     
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	24/05/2019  | 0.1       | L.Klar        | first release MHS TIA 15.1
+	24/07/2019  | 2.0       | L.Klar        | 2.0 MHS library release TIA 15.1
+	23/10/2019  | 2.1       | L.Klar        | FIFO access changed
+	23/10/2019  | 2.2       | S.Theocharis  | System number 1 added
+	04/11/2019  | 2.3       | L.Klar        | Reconnect command bit changed from memory to DB variable
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION Step 1 – Connection initialization
+	    
+	    "DI_TCPIPConnect"(iUDT_Connection := "DB_Configuration".System.Connection,
+	                      qUDT_HMIStatus => "DB_Status".Communication.TCPIPConnect,
+	                      qUDT_Status => "DB_CommonStatus".Communication.TCPIPConnect,
+	                      iqUDT_EquipmentControl := "DB_Control".System1,
+	                      iqUDT_Statistics := "DB_Statistics".Communication.TCPIPConnect,
+	                      qx_Connected => #sx_Connected,
+	                      iqx_Reconnect := "DB_Memory".ReconnectCommand);
+	    
+	END_REGION
+	
+	REGION Step 2 – Receive data
+	    
+	    "DI_TCPIPReceive"(iUDT_Connection := "DB_Configuration".System.Connection,
+	                      ix_EnableReceive := #sx_Connected,
+	                      qx_Error => "DB_ParametrizationErrors".System.Communication.TCPIPReceiveError,
+	                      qx_Warning => "DB_ParametrizationErrors".System.Communication.TCPIPReceiveWarning,
+	                      iqUDT_FifoHeader := "DB_FIFORcvMsg".Header,
+	                      iqa_FifoData := "DB_FIFORcvMsg".Data,
+	                      iqUDT_Statistics := "DB_Statistics".Communication.TCPIPReceive);
+	    
+	    
+	END_REGION
+	
+	REGION Step 3 – Send data
+	    
+	    "DI_TCPIPSend"(iUDT_Connection := "DB_Configuration".System.Connection,
+	                   ix_EnableSend := #sx_Connected,
+	                   qx_Error => "DB_ParametrizationErrors".System.Communication.TCPIPSendError,
+	                   qx_Warning => "DB_ParametrizationErrors".System.Communication.TCPIPSendWarning,
+	                   iqUDT_FifoLowHeader := "DB_FIFOLowPrioMsg".Header,
+	                   iqs_FifoLowData := "DB_FIFOLowPrioMsg".Data,
+	                   iqUDT_FifoMedHeader := "DB_FIFOMedPrioMsg".Header,
+	                   iqs_FifoMedData := "DB_FIFOMedPrioMsg".Data,
+	                   iqUDT_FifoHighHeader := "DB_FIFOHighPrioMsg".Header,
+	                   iqs_FifoHighData := "DB_FIFOHighPrioMsg".Data);
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

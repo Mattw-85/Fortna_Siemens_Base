@@ -1,0 +1,407 @@
+﻿FUNCTION_BLOCK "FB_Valve"
+TITLE = Single ended Valve Control and monitor
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : 'I.Ajram'
+VERSION : 0.1
+   VAR_INPUT 
+      iUDT_Configuration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ValveConfiguration";   // Valve configuration
+      ix_Open { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Open command (Hold if ControlMode = 1, pulse if ControlMode = 2)
+      ix_Close { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Close command (Not used if ControlMode = 1, pulse if ControlMode = 2)
+      ix_IsOpened { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Feedback Signal ( Not used if #iqUDT_SEVConfiguration.IsOpenFeedBackExist is FALSE)
+      ix_IsClosed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Feedback Signal ( Not used if #iqUDT_SEVConfiguration.IsCloseFeedBackExist is FALSE)
+      ix_AirPressureOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Air pressure is healthy
+   END_VAR
+
+   VAR_OUTPUT 
+      qUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ValveStatus";   // Detailed valve status overview
+      qx_Open { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Open command
+      qx_Close { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Close command
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_HMICommand : "UDT_ValveCommand";   // Interafce for HMI commands
+      iqUDT_Interface : "UDT_ValveInterface";   // Interface with external modules
+      iqUDT_EquipmentControl : "UDT_EquipmentControl";   // Equipment control structure
+      iqUDT_Statistics : "UDT_ValveStatistics";   // Statistics structure
+   END_VAR
+
+   VAR 
+      sFB_TimerOnOffDelayClosing { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // Valve closing timer
+      sFB_TimerOnOffDelayOpening { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // Valve opening timer
+      sUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ValveStatus";   // Detailed valve status overview
+      sR_TRIG_Open {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Raising edge to detect that the valve is open
+      sR_TRIG_Close {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Raising edge to detect that the valve is close
+      sR_TRIG_FaultActive {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Raising edge to detect that the fault is active
+      sR_TRIG_Opened {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Raising edge to detect that the valve is opened
+      si_TimeClosing { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Time to delay closing
+      si_TimeOpening { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Time to delay opening
+      sx_ManualModeSelected { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Manual mode is selected
+      sx_AutoModeSelected { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Automatic mode is selected
+      sx_OpenActivated { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Valve is opening
+      sx_CloseActivated { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Valve is closing
+      sx_FaultActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Fault is active
+   END_VAR
+
+   VAR CONSTANT 
+      ci_ControlModeHold : Int := 1;   // Energize to hold
+      ci_ControlModePulse : Int := 2;   // Pulse energized to change state
+      ci_ValveTypeSEV : Int := 1;   // Single coil valve
+      ci_ValveTypeDEV : Int := 2;   // Double coil valve, bi-stable, latching
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                      
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	08/07/2024  | 0.1       | I. Ajram      | first release TIA 18
+	16/07/2024  | 0.2       | I. Ajram      | Changed block name from FB_SEV to FB_Valve
+	                                        |  +    Added Configuration to allow for SEV and DEV
+	                                        |  +    Added qx_Close Output
+	                                        |  +    Added logic to accomodate for DEV
+	30/08/2024  | 0.3       | J. Majer      | Added comments, number regions, added iq_UDT_EquipmentInterface, iqUDT_EquipmentControl                      
+	19/11/2024  | 0.4       | K.Pokorski    | Fix warnings, move HMI Status to static 
+	10/01/2025  | 0.5       | Z.Kunikowska  | Rename variables, change TON to FB_TimerOnOffDelay according to the standard.
+	----------------------------------------------------------------------------------------
+	
+	*)
+	
+	REGION 1 - Edge detection
+	    // Trigger rising edge detection for different signals: Open, Close, FaultActive, and Opened.
+	    #sR_TRIG_Open(CLK := #ix_Open OR #iqUDT_Interface.Open);
+	    #sR_TRIG_Close(CLK := #ix_Close OR #iqUDT_Interface.Close);
+	    #sR_TRIG_FaultActive(CLK := #sx_FaultActive);
+	    #sR_TRIG_Opened(CLK := #sUDT_HMIStatus.Specific.Opened);
+	    
+	END_REGION
+	
+	REGION 2 - Auto / Manual
+	    
+	    // Handle auto mode command.
+	    IF #iqUDT_EquipmentControl.Command.Start AND #iqUDT_EquipmentControl.Command.AutomaticOn
+	    THEN
+	        #sx_AutoModeSelected := TRUE;
+	        #sx_ManualModeSelected := FALSE;
+	        #iqUDT_HMICommand.AutoMode := FALSE;
+	    END_IF;
+	    
+	    // Manual mode bits inputs can be reset in case of malfunction
+	    IF #iqUDT_EquipmentControl.Command.DisableManualMode
+	    THEN
+	        #iqUDT_HMICommand.ManualMode := FALSE;
+	        #iqUDT_EquipmentControl.Command.ManualMode := FALSE;
+	    END_IF;
+	    
+	    // Handle manual mode command.
+	    IF (#iqUDT_EquipmentControl.Command.ManualMode OR #iqUDT_HMICommand.ManualMode)
+	        AND NOT #iqUDT_EquipmentControl.Command.DisableManualMode
+	    THEN
+	        #sx_AutoModeSelected := FALSE;
+	        #sx_ManualModeSelected := TRUE;
+	        #iqUDT_HMICommand.ManualMode := FALSE;
+	    END_IF;
+	    
+	    REGION 2.1 - Restart request
+	        
+	        // Indicating need for system restart if no mode is selected
+	        #iqUDT_EquipmentControl.Request.RestartRequired := NOT #sx_AutoModeSelected
+	        AND NOT #sx_AutoModeSelected;
+	        
+	    END_REGION
+	END_REGION
+	
+	REGION 3 - Faults
+	    
+	    REGION 3.1 - Configuration Error
+	        // Check for configuration errors by validating the ControlMode and ValveType values.
+	        IF #iUDT_Configuration.ControlMode < #ci_ControlModeHold
+	            OR #iUDT_Configuration.ControlMode > #ci_ControlModePulse
+	            OR #iUDT_Configuration.ValveType < #ci_ValveTypeSEV
+	            OR #iUDT_Configuration.ValveType > #ci_ValveTypeDEV
+	        THEN
+	            #sUDT_HMIStatus.Specific.ConfigurationError := TRUE;
+	        ELSE
+	            #sUDT_HMIStatus.Specific.ConfigurationError := FALSE;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 3.2 - Low Pressure
+	        // Set AirPressureLost flag if air pressure is not okay.
+	        IF NOT #ix_AirPressureOk THEN
+	            #sUDT_HMIStatus.Specific.AirPressureLost := TRUE;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 3.3 - Fail to Open
+	        // Set FailToOpen flag if the valve failed to open within the expected time.
+	        IF #sFB_TimerOnOffDelayOpening.qx_DelayedSignal AND #iUDT_Configuration.OpenFeedBackExist THEN
+	            #sUDT_HMIStatus.Specific.FailToOpen := TRUE;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 3.4 - Fail to Close
+	        // Set FailToClose flag if the valve failed to close within the expected time.
+	        IF #sFB_TimerOnOffDelayClosing.qx_DelayedSignal AND #iUDT_Configuration.CloseFeedBackExist THEN
+	            #sUDT_HMIStatus.Specific.FailToClose := TRUE;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 3.4 - Collective fault
+	        // Set FaultActive flag if any specific fault is detected (fail to open/close, air pressure lost, or configuration error).
+	        #sx_FaultActive := #sUDT_HMIStatus.Specific.FailToClose OR
+	        #sUDT_HMIStatus.Specific.FailToOpen OR
+	        #sUDT_HMIStatus.Specific.AirPressureLost OR
+	        #sUDT_HMIStatus.Specific.ConfigurationError;
+	        
+	        // forward error to the interface with other modules
+	        #iqUDT_Interface.Error := #sx_FaultActive;
+	        
+	        // If FaultActive is set, deactivate open and close commands.
+	        IF #sx_FaultActive THEN
+	            #sx_OpenActivated := FALSE;
+	            #sx_CloseActivated := FALSE;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 3.5 - Reset
+	        // Reset fault flags and set air pressure flag based on the state of AirPressureOk.
+	        IF #iqUDT_EquipmentControl.Command.Reset THEN
+	            #sUDT_HMIStatus.Specific.FailToOpen := FALSE;
+	            #sUDT_HMIStatus.Specific.FailToClose := FALSE;
+	            #sUDT_HMIStatus.Specific.AirPressureLost := NOT #ix_AirPressureOk;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 4 - Command
+	    // Process commands based on the current mode (Auto/Manual) and fault state.
+	    IF NOT #sx_FaultActive THEN
+	        
+	        REGION 4.1 - Auto
+	            // Handle command logic in Auto mode based on control mode (Hold or Pulse).
+	            IF #sx_AutoModeSelected THEN
+	                CASE #iUDT_Configuration.ControlMode OF
+	                        
+	                        // ControlModeHold: Open/close based on the ix_Open signal.
+	                    #ci_ControlModeHold:
+	                        #sx_OpenActivated := #ix_Open;
+	                        #sx_CloseActivated := NOT #ix_Open;
+	                        
+	                        // ControlModePulse: Open/close based on rising edge detection.
+	                    #ci_ControlModePulse:
+	                        IF #sR_TRIG_Open.Q AND NOT #ix_IsOpened THEN
+	                            #sx_OpenActivated := TRUE;
+	                            #sx_CloseActivated := FALSE;
+	                        END_IF;
+	                        
+	                        IF #sR_TRIG_Close.Q AND NOT #ix_IsClosed THEN
+	                            #sx_OpenActivated := FALSE;
+	                            #sx_CloseActivated := TRUE;
+	                        END_IF;
+	                        
+	                END_CASE;
+	            END_IF;
+	            
+	        END_REGION
+	        
+	        REGION 4.2 - Manual
+	            // Handle command logic in Manual mode based on control mode (Hold or Pulse).
+	            IF #sx_ManualModeSelected THEN
+	                CASE #iUDT_Configuration.ControlMode OF
+	                        
+	                        // ControlModeHold: Open/close based on manual commands.
+	                    #ci_ControlModeHold:
+	                        #sx_OpenActivated := #iqUDT_HMICommand.ManualOpen;
+	                        #sx_CloseActivated := #iqUDT_HMICommand.ManualClose;
+	                        
+	                        // ControlModePulse: Open/close based on manual commands with feedback checks.
+	                    #ci_ControlModePulse:
+	                        IF #iqUDT_HMICommand.ManualOpen AND NOT #ix_IsOpened THEN
+	                            #sx_OpenActivated := TRUE;
+	                            #sx_CloseActivated := FALSE;
+	                            #iqUDT_HMICommand.ManualOpen := FALSE;
+	                        END_IF;
+	                        
+	                        IF #iqUDT_HMICommand.ManualClose AND NOT #ix_IsClosed THEN
+	                            #sx_OpenActivated := FALSE;
+	                            #sx_CloseActivated := TRUE;
+	                            #iqUDT_HMICommand.ManualClose := FALSE;
+	                        END_IF;
+	                        
+	                END_CASE;
+	            END_IF;
+	            
+	        END_REGION
+	    ELSE
+	        // On fault, clear all open/close commands.
+	        #sx_OpenActivated := FALSE;
+	        #sx_CloseActivated := FALSE;
+	        #iqUDT_HMICommand.ManualClose := FALSE;
+	        #iqUDT_HMICommand.ManualOpen := FALSE;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 5 - Statistics
+	    // Update statistical data when reset or fault occurs.
+	    IF #iqUDT_EquipmentControl.Command.ResetData OR #sx_FaultActive THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #sx_FaultActive,
+	                        ix_RTrigActivate := #sR_TRIG_FaultActive.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.Fail);
+	    END_IF;
+	    
+	    // Update open statistics when reset or opened.
+	    IF #iqUDT_EquipmentControl.Command.ResetData OR #sUDT_HMIStatus.Specific.Opened THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #sUDT_HMIStatus.Specific.Opened,
+	                        ix_RTrigActivate := #sR_TRIG_Opened.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.Open);
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 6 - Status
+	    
+	    REGION 6.1 - Opened / Closed
+	        // Handle open/close status based on feedback or timers.
+	        IF #iUDT_Configuration.OpenFeedBackExist THEN
+	            // Set opened status based on feedback.
+	            #sUDT_HMIStatus.Specific.Opened := #ix_IsOpened;
+	        ELSE
+	            // Use opening timer as an indicator if feedback is not available.
+	            IF #sFB_TimerOnOffDelayOpening.qx_DelayedSignal THEN
+	                #sUDT_HMIStatus.Specific.Opened := TRUE;
+	            END_IF;
+	            IF #sx_CloseActivated THEN
+	                #sUDT_HMIStatus.Specific.Opened := FALSE;
+	            END_IF;
+	        END_IF;
+	        
+	        // Module interface valve feedback opened 
+	        #iqUDT_Interface.IsOpened := #sUDT_HMIStatus.Specific.Opened;
+	        
+	        IF #iUDT_Configuration.CloseFeedBackExist THEN
+	            // Set closed status based on feedback.
+	            #sUDT_HMIStatus.Specific.Closed := #ix_IsClosed;
+	        ELSE
+	            // Use closing timer as an indicator if feedback is not available.
+	            IF #sFB_TimerOnOffDelayClosing.qx_DelayedSignal THEN
+	                #sUDT_HMIStatus.Specific.Closed := TRUE;
+	            END_IF;
+	            IF #sx_OpenActivated THEN
+	                #sUDT_HMIStatus.Specific.Closed := FALSE;
+	            END_IF;
+	        END_IF;
+	        
+	        // Module interface valve feedback closed 
+	        #iqUDT_Interface.IsClosed := #sUDT_HMIStatus.Specific.Closed;
+	        
+	    END_REGION
+	    
+	    REGION 6.2 - Opening
+	        // Handle the logic for the valve opening, including timer initialization and status updates.
+	        IF #iUDT_Configuration.OpenTime = 0 THEN
+	            #si_TimeOpening := 1000;  // Default to 1 second if not configured.
+	        ELSE
+	            #si_TimeOpening := INT_TO_UDINT(#iUDT_Configuration.OpenTime);  // Use configured open time.
+	        END_IF;
+	        
+	        IF #sx_OpenActivated AND NOT #sUDT_HMIStatus.Specific.Opened THEN
+	            #sUDT_HMIStatus.Specific.Opening := TRUE;
+	        ELSE
+	            #sUDT_HMIStatus.Specific.Opening := FALSE;
+	        END_IF;
+	        
+	        // Start the opening timer.
+	        
+	        #sFB_TimerOnOffDelayOpening(iudi_OnDelayTime := #si_TimeOpening,
+	                                    ix_SignalToDelay := #sUDT_HMIStatus.Specific.Opening);
+	        
+	    END_REGION
+	    
+	    REGION 6.3 - Closing
+	        // Handle the logic for the valve closing, including timer initialization and status updates.
+	        IF #iUDT_Configuration.CloseTime = 0 THEN
+	            #si_TimeClosing := 1000;  // Default to 1 second if not configured.
+	        ELSE
+	            #si_TimeClosing := INT_TO_UDINT(#iUDT_Configuration.CloseTime);  // Use configured close time.
+	        END_IF;
+	        
+	        IF #sx_CloseActivated AND NOT #sUDT_HMIStatus.Specific.Closed THEN
+	            #sUDT_HMIStatus.Specific.Closing := TRUE;
+	        ELSE
+	            #sUDT_HMIStatus.Specific.Closing := FALSE;
+	        END_IF;
+	        
+	        // Start the closing timer.
+	        
+	        #sFB_TimerOnOffDelayClosing(iudi_OnDelayTime := #si_TimeClosing,
+	                                    ix_SignalToDelay := #sUDT_HMIStatus.Specific.Closing);
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 7 - Output
+	    
+	    // Select the action based on the valve type configuration
+	    CASE #iUDT_Configuration.ValveType OF
+	            
+	            // SEV Valve Type
+	        #ci_ValveTypeSEV:
+	            // The valve opens if Open is activated, Close is not activated, and no fault is active
+	            #qx_Open :=
+	            #sx_OpenActivated AND
+	            NOT #sx_CloseActivated AND
+	            NOT #sx_FaultActive;
+	            
+	            // Reset the open signal, SEV logic requires manual reset after operation
+	            #qx_Open := FALSE;
+	            
+	            // DEV Valve Type
+	        #ci_ValveTypeDEV:
+	            // The valve opens if there are no faults, Open is activated, and the valve is not yet opened
+	            #qx_Open :=
+	            NOT #sx_FaultActive AND
+	            #sx_OpenActivated AND NOT #sUDT_HMIStatus.Specific.Opened;
+	            
+	            // The valve closes if there are no faults, Close is activated, and the valve is not yet closed
+	            #qx_Close :=
+	            NOT #sx_FaultActive AND
+	            #sx_CloseActivated AND NOT #sUDT_HMIStatus.Specific.Closed;
+	            
+	            // If the valve is opened, a fault occurs, or the valve is in the closing state, deactivate Open
+	            IF #sUDT_HMIStatus.Specific.Opened OR
+	                #sx_FaultActive OR
+	                #sUDT_HMIStatus.Specific.Closing
+	            THEN
+	                #sx_OpenActivated := FALSE;
+	            END_IF;
+	            
+	            // If the valve is closed, a fault occurs, or the valve is in the opening state, deactivate Close
+	            IF #sUDT_HMIStatus.Specific.Closed OR
+	                #sx_FaultActive OR
+	                #sUDT_HMIStatus.Specific.Opening
+	            THEN
+	                #sx_CloseActivated := FALSE;
+	            END_IF;
+	            
+	    END_CASE;
+	    
+	    #qUDT_HMIStatus := #sUDT_HMIStatus;
+	    
+	END_REGION
+	
+END_FUNCTION_BLOCK
+

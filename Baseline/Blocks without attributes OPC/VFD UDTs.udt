@@ -1,0 +1,415 @@
+﻿TYPE "UDT_VfdNordParameter"
+TITLE = UDT_VfdNordParameter
+VERSION : 0.1
+//Parameter structure to read and write
+   STRUCT
+      WriteValue { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Parameter value to write
+      ActualValue { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Actual value read from VFD
+      ParaNumber { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Parameter number to access
+      Index { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Parameter index number to access
+      ParaSet { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Parameter set to acces
+      Format32 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1 = Write the parameter in DWord format. 0 = Write the parameter in Word format
+      WriteAccess { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1 = Write the parameter. 0 = Read the parameter
+      InUse { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1 = Parameter is to be processed
+      RamOnly { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1 = Save parameter in RAM, 0 = Save parameter in RAM and EEPROM
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_VfdStatistics"
+TITLE = UDT_VFDStatistics_SEW
+VERSION : 0.1
+//User-defined structure of FB_VFD_SEW_MOVI-C function block statistics.
+   STRUCT
+      PNSlaveNotOnline { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Statistics of Profinet slave not online
+      PNSlaveError { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Statistics of a Profinet slave error
+      VFDInternalError { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Statistics of an internal VFD error
+      CommunicationErrorMovikit { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Statistics of a communication error
+      Running { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Statistics for running time
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_VfdSEWPositioningPO"
+TITLE = UDT_VFD_SEW_PO
+VERSION : 0.1
+//User-defined structure of VFD SEW output telegram.
+   STRUCT
+      Control_Word_1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Control Word 1
+         ResetError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reset error "1"
+         BIT_09_Reserved { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reserved
+         ActivateDriveTrain2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Activate drive train 2 "1"
+         BIT_11_Reserved { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reserved
+         DeactivateSW_LimitSwitch { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Deactivate software limit switch "1"
+         ActivateInhibit { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Activate inhibit "1"
+         ActivateStandby { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Activate standby "1"
+         MovikitHandshakeIn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // If the MOVIKIT works the value will be copied into "MovikitHandshakeOut"
+         EnableRapidStop { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Enable “1” / Rapid stop “0”
+         EnableApplicationStop { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Enable “1” / Application stop “0”
+         BIT_02_Reserved { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reserved
+         ReleaseBrake { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Release brake "1"
+         JogPos { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Jog in positive direction "1"
+         JogNeg { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Jog in negative direction "1"
+         ApplyRelativePositioning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Take the relative position from the FCB09 "1"
+         StartStop { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Start "1" / Stop "0"
+      END_STRUCT;
+      SetpointSpeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Speed (Int) [mm/s]
+      SetpointAcceleration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Acceleration (Int) [mm/s²]
+      SetpointDeceleration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Decceleration (Int) [mm/s²]
+      DigitalOutputs { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Word;   // Digital Outputs
+      SetpointMode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Set the application mode (Int)
+      SetpointPosition_hW { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Word;   // Setpoint Position - High Word
+      SetpointPosition_lW { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Word;   // Setpoint Position - Low Word
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_VfdConfiguration"
+TITLE = UDT_VFD_Configuration
+VERSION : 0.1
+//User-defined structure oparameters.
+   STRUCT
+      GearRatio { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Gear box value X = turns at input to get 1 turn at output
+      ReferenceRPM { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // VFD speed max - reference [rpm]
+      WheelEndPerimeter { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Perimeter of wheel at the end of gear [mm]
+      VFDRampUpTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // VFD ramp up time for monitoring starting [ms]
+      VFDRampDownTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // VFD ramp up time for monitoring stopping [ms]
+      SpeedSetpointWindow { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int := 5;   // VFD speed setpoint window (tolerance) [mm/s]
+      VFDPNDeviceName { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;   // VFD's Profinet device name
+      DirectionReversal { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // If true, direction will be swapped
+      InterlockFwd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // False when turning in forward direction is not possible / allowed
+      InterlockRvs { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // False when turning in reverse direction is not possible / allowed
+      VFDStartupTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt := 2000;   // Time when the motor should start [ms]
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_VfdNordPI"
+TITLE = UDT_VfdNordPI
+VERSION : 0.1
+//User-defined structure of VFD Nord input telegram.
+   STRUCT
+      ZSW { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Status word
+         SetpointReached { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 0 = Actual value does not corresponf to setpoint. 1 = Actual value matches the setpoint
+         BusControlActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 0 = Control on local device active. 1 = The master has beed requestd to take over control
+         "StartFunction481.9" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1 = Bus bit 10 of status word is set P481
+         RotationRightIsOn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1 = The FI output voltage has a RH rotation field
+         RotationLeftIsOn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1 = The FI output voltage has a LH rotation field
+         "StartFunction481.10" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1 = Bus bit 13 of status word is set P481
+         ParameterSetBit0ON { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Parameter set bit 0 status
+         ParameterSetBit1ON { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Parameter set bit 0 status
+         ReadyToStart { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1 = Initialisation completed, charging relay switched on, output voltage disabled
+         ReadyForOperation { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 0 = No switch-on command present or fault. 1 = The inverted can start with the command "Enable operation"
+         OperationEnabled { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1 = The output voltage is enabled; ramp of the frequency inverter up to the existing setpoint
+         Fault { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool := FALSE;   // 1 = Drive unit defective, not ready for operation
+         VoltageEnabled { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 0 = "Disable voltage" command present
+         EmergencyStop { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 0 = "Emergency stop" command present
+         StartingDisabled { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1 = With the command "Standby" the FI goes into status "Ready to switch on"
+         WarningActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1 = Drive operation continues, no acknowledgement necessary
+      END_STRUCT;
+      ActualSpeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Actual calculated speed [rpm]. [Range  -200% ..200%][100%=4000HEX/ 16384DEC = P202 nominal speed]
+      FaultCode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Actual fault code
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_VfdNordPO"
+TITLE = UDT_VfdNordPO
+VERSION : 0.1
+//User-defined structure of VFD Nord output telegram.
+   STRUCT
+      STW { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Control Word
+         "StartFunction408.11" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1 = Bus bit 8 of control word is set. P480
+         "StartFunction408.12" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1 = Bus bit 8 of control word is set. P480
+         ControlDataValid { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1 = The bus master trasnfers valid process data. 0 = The transmitted process data are invalid
+         RotationRightOn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1 = Switch on rotation right
+         RotationLeftOn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1 = Switch on rotation left
+         Reserved { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reserved from NORD
+         ParameterSetBit0 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Activates parameter set
+         ParameterSetBit1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Activates parameter set
+         ReadyForOperation { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1 = Set the frequency inverter to standby. 0=Reverse with brake ramp
+         DisableVoltage { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 0 = Switch off the frequency inverter output voltage. 1 = Cancel "Disable voltage"
+         EmergencyStop { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 0 = Emergency stop with programmed estop time. Not Fail Safe Estop. 1 = Cancel condition "Emergency stop"
+         EnableOperation { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1 = Enable output voltage acceleration to setpoint. 0 = Block voltage, switch off output voltage
+         EnablePulsles { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1 = Enable acceleration encoder. 0 = Acceleraton encoder is set to zero
+         EnableRamp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1 = Enable setpoint on acceleration encoder. 0 = Freeze the setpoint provided by the acceleration encoder
+         EnableSetpoint { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1 = Activate the selected setpoint on the acceleration encoder. 0= Set the selected setpoint on the acceleration encoder to 0
+         Acknowledge { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 0-->1 = Inactive errors are acknowledged
+      END_STRUCT;
+      FrequencySetPoint { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Frequency HZ SetPoint to VFD 100%=4000HEX /16384 DEC . 0% = 0000HEX / 0 DEC Normalization with P105
+      RampTimeSetPoint { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Ramp time to VFD [Range 0..200%][100% = 4000HEX /16384DEC = 10sec]
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_VfdPositioningConfiguration"
+TITLE = UDT_VfdPositioningConfiguration
+VERSION : 0.1
+//User defined stucture for configuring positioning device
+   STRUCT
+      TorqueMax { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // VFD torque max - reference [Nm] as set up in SEW project
+      SupplyFdbckOnDelayTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // On delay time for supply feedback [ms]
+      PositionWindow { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Position window (tolerance) [mm]
+      PositionMax { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Maximum allowed position [mm]
+      PositionMin { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Minimum allowed position [mm]
+      VFDSpeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Speed to run in automatic mode [mm/s]
+      VFDAccDecel { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Acceleration and deceleration [mm/s2]
+      VFDPNDeviceName { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;   // VFD's device name
+      Position { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[0..10] of DInt;   // Positions in mm to move to as requested
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_VfdPositioningStatus"
+TITLE = UDT_VfdPositioningStatus
+VERSION : 0.1
+//User-defined structure of VFD SEW positioning status.
+   STRUCT
+      ErrorCode : Int;   // Error code
+      SubErrorCode : Int;   // Sub error code
+      PNSlaveNotOnline : Bool := FALSE;   // Profinet slave is not on line
+      PNSlaveError : Bool := FALSE;   // Profinet slave has an error
+      InternalError : Bool := FALSE;   // A VFD internal error is active, see error code
+      InternalWarning : Bool := FALSE;   // A VFD internal warning is active, see error code
+      CommunicationErrorMovikit : Bool := FALSE;   // Communication error with MoviKit
+      PositioningTimeOutError : Bool := FALSE;   // Exceeded time to reach position
+      PNSlaveWarning : Bool;   // Profinet slave has a warning
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_VfdSEWPositioningPI"
+TITLE = UDT_VfdSEWPositioningPI
+VERSION : 0.1
+//User-defined structure of VFD SEW input telegram.
+   STRUCT
+      Status_Word_1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Status Word 1
+         Error { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // An error is active "1"
+         Warning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // A warning is active "1"
+         DriveTrain2Active { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Drive train 2 is active "1"
+         VelocityTargetActualComparison { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // The notification "Velocity target-actual-comparison" is on "1"
+         SW_LimitSwitchInactive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // he software limit switch is inactive "1"
+         BIT_13_Reserved { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reserved
+         StandbyActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Standby mode is active "1"
+         MovikitHandshakeOut { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Copied value of "MovikitHandshakeIn"
+         InverterReady { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // There's no error and the inverter is ready "1"
+         STO_Inactive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // STO is not active "1"
+         OutputStageEnabled { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // The output stage is released "1"
+         BrakeReleased { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // The brake is released "1"
+         DriveActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // The drive is active and the shaft turning "1"
+         Referenced { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // The drive is referenced "1"
+         RelativePositionApplied { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // The relative position is applied "1"
+         InPosition { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // The notification "in position" is on "1"
+      END_STRUCT;
+      ActualSpeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Actual drive speed (Int) [mm/s]
+      StatusErrorNo { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Word;   // Current status of the drive
+      ActualTorque { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Actual torque in percent od the rated unit torque
+      DigitalInput { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Word;   // Digital inputs
+      Mode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Actual application mode (Int)
+      ActualPosition_hW { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Word;   // Actual position - High Word
+      ActualPosition_lW { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Word;   // Actual position - Low Word
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_VfdStatus"
+TITLE = UDT_VfdStatus
+VERSION : 0.1
+//User-defined structure of VFD status.
+   STRUCT
+      ErrorCode : Int;   // Error code
+      SubErrorCode : Int;   // Sub error code
+      PNSlaveNotonline : Bool := FALSE;   // Profinet slave is not on line
+      PNSlaveError : Bool := FALSE;   // Profinet slave has an error
+      InternalError : Bool := FALSE;   // A VFD internal error is active, see error code
+      InternalWarning : Bool := FALSE;   // A VFD internal warning is active, see error code
+      CommunicationErrorMovikit : Bool := FALSE;   // Communication error with MoviKit
+      VFDRunningFeedbackError : Bool := FALSE;   // Motor is not running
+      PNSlaveWarning : Bool;   // Profinet slave has a warning
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_VfdSEWSpeedPI"
+TITLE = UDT_VFD_SEW_PI
+VERSION : 0.1
+//User-defined structure of VFD SEW input telegram.
+   STRUCT
+      Status_Word_1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Status Word 1
+         Error { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // An error is active "1"
+         Warning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // A warning is active "1"
+         DriveTrain2Active { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Drive train 2 is active "1"
+         VelocityTargetActualComparison { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // The notification "Velocity target-actual-comparison" is on "1"
+         SW_LimitSwitchInactive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // he software limit switch is inactive "1"
+         BIT_13_Reserved { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reserved
+         StandbyActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Standby mode is active "1"
+         MovikitHandshakeOut { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Copied value of "MovikitHandshakeIn"
+         InverterReady { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // There's no error and the inverter is ready "1"
+         STO_Inactive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // STO is not active "1"
+         OutputStageEnabled { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // The output stage is released "1"
+         BrakeReleased { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // The brake is released "1"
+         DriveActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // The drive is active and the shaft turning "1"
+         Referenced { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // The drive is referenced "1"
+         RelativePositionApplied { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // The relative position is applied "1"
+         InPosition { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // The notification "in position" is on "1"
+      END_STRUCT;
+      ActualSpeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Actual drive speed (Int) in rpm
+      StatusErrorNo { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Word;   // Current status of the drive
+      ActualTorque { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Actual torque in percent od the rated unit torque
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_VfdSEWSpeedPO"
+TITLE = UDT_VFD_SEW_PO
+VERSION : 0.1
+//User-defined structure of VFD SEW output telegram.
+   STRUCT
+      Control_Word_1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Control Word 1
+         ResetError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reset error "1"
+         BIT_09_Reserved { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reserved
+         ActivateDriveTrain2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Activate drive train 2 "1"
+         BIT_11_Reserved { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reserved
+         DeactivateSW_LimitSwitch { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Deactivate software limit switch "1"
+         ActivateInhibit { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Activate inhibit "1"
+         ActivateStandby { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Activate standby "1"
+         MovikitHandshakeIn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // If the MOVIKIT works the value will be copied into "MovikitHandshakeOut"
+         EnableRapidStop { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Enable “1” / Rapid stop “0”
+         EnableApplicationStop { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Enable “1” / Application stop “0”
+         BIT_02_Reserved { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reserved
+         ReleaseBrake { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Release brake "1"
+         JogPos { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Jog in positive direction "1"
+         JogNeg { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Jog in negative direction "1"
+         ApplyRelativePositioning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Take the relative position from the FCB09 "1"
+         StartStop { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Start "1" / Stop "0"
+      END_STRUCT;
+      SetpointSpeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Speed (Int) in rpm
+      SetpointAcceleration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Acceleration (Int) in rpm/s
+      SetpointDeceleration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Decceleration (Int) in rpm/s
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_VfdSinaParameterUser"
+TITLE = UDT_VFD_SinaParameterUser
+VERSION : 0.1
+//User-defined structure of Siemens parameter.
+   STRUCT
+      siParaNo { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UInt;   // Number of parameter (Number 1..65535)
+      siIndex { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Subindex (Number 1..65535)
+      srValue { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Value of parameter
+      sdValue { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Value of parameter
+      syFormat { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte := BYTE#16#00;   // Format of value (Format 0x40..0x44)
+      swErrorNo { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Word := WORD#16#0000;   // Error number (see table below)
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_VfdSiemensPI"
+TITLE = UDT_VFD_Siemens_PI
+VERSION : 0.1
+//User-defined structure of VFD Siemens input telegram.
+   STRUCT
+      ZSW_1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Status Word Interconnection 1
+         SpareBit8 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Spare bit 8
+         MasterControlRequested { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1 = Master_control_requested (The automation system is requested to accept the inverter control) p 2080[9] = r0899.9
+         SafetyTestRequired { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Only applicable in G120 with safety motion monitoring
+         SpareBit11 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Spare bit 11
+         HoldingBrakeOpen { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1 = Holding brake open (Signal open and close a motor holding brake) p 2080[12] = r 0899.12
+         AlarmMotorOvertemp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 0 = Alarm, motor overtemperature p2080[13] = r 2135.14
+         MotorRotatesClockwise { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1 = Motor rotates clockwise (Internal inverter actual value > 0), 0 = Motor rotates counterclockwise (Invertal inverter actual value < 0) p 2080[14] = 2197.3
+         AlarmInverterThermalOverload { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 0 = Alarm, inverter thermal overload p 2080[15] = r0836.0 / r2135.15
+         ReadyToStart { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1 = Ready_to_start (Power supply switched in; electronics initialized; pulses locked) p 2080[0] = r 0899.0
+         Ready { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1 = Ready (Motor is switched on (ON/OFF1 = 1), no fault is active. With the command "Enable operation" (STW1.3), the inverterswitches on the motor) p 2080[1] = r 0899.1
+         OperationEnabled { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1 = Operation enabled (Motor follows setpoint. See control word 1 bit 3) p 2080[2] = r 0899.2
+         FaultActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1 = Fault_active (The inverter has a fault. Acknowledge fault using STW1.7) p 2080[3] = r 2139.3
+         OFF2Inactive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1 = OFF2_inactive (Coast down to standstill is not active) p 2080[4] = r 0899.4
+         OFF3Inactive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1 = OFF3_inactive (Quick stop is not active) p 2080[5] = r 0899.5
+         SpareBit6 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Spare bit 6
+         AlarmActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1 = Alarm_active (Motor remains switched on; no acknowledgement is necessary.) p 2080[7] = r 2139.7
+      END_STRUCT;
+      ActualSpeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Actual Speed 100%=4000 HEX = 16384 DEZ normalisation with p 2000 of the inverter
+      ActualCurrent { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Actual Current 100%=4000 HEX = 16384 DEZ normalisation with p 2002 of the inverter
+      ActualTorque { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Actual Torque 100%=4000 HEX = 16384 DEZ normalisation with p 2003 of the inverter
+      AlarmCode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UInt;   // Actual alarm Code
+      FaultCode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UInt;   // Actual fault Code
+      XIST_A { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Actual position value [LU]
+      SpareWord9 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Spare Word 9
+      SpareWord10 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Spare Word 10
+      SpareWord11 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Spare Word 11
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_VfdSiemensPO"
+TITLE = UDT_VFD_Siemens_PO
+VERSION : 0.1
+//User-defined structure of VFD Siemens output telegram.
+   STRUCT
+      STW_1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Control Word Interconnection 1
+         ForceDormantErrorTest { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Only applicable in G120 with safety motion monitoring
+         SpareBit9 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Spare bit 9
+         ControlViaPLC { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1 = Control via PLC (Control via fieldbus, inverter accepts the process data from the fieldbus), 0 = No control via PLC (Inverter ignores the process data from the fieldbus) p 0854[0] = r 2090.10
+         DirectionReversal { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 0 = Direction reversal (Invert setpoint of the inverter) p1113[0] = r 2090.11
+         SpareBit12 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Spare bit 12
+         SpareBit13 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Spare bit 13
+         SpareBit14 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Spare bit 14
+         SpareBit15 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Spare bit 15
+         ONOFF1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 0 --> 1 = ON (The inverter goes to "ready "state. If, in addition bit 3 = 1 then the inverter switches on the motor), 0 = OFF1 (The motor brakes with ramp-down time p1121 of the ramp-function generator. The inverter switches off the motor an standstill) p0840[0] = r 2090.0
+         OFF2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1 = No OFF2 (The motor can be switched on (ON command)), 0 = OFF2 (Switch off the motor immediately, the motor then coasts down to a standstill) p0844[0] = r 2090.1
+         OFF3 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1 = No OFF3 (The motor can be switched on (ON command)), 0 = OFF3 (Quick stop: The motor brakes with the OFF3 ramp-down time p 1135 down to a standstill.) p0848[0] = r 2090.2
+         EnableOperation { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1 = Enable operation (Switch on motor (pulses can be enabled)), 0 = Inhibit operation (Immediately switch off motor (cancel pulses)) p 0852[0] = r 2090.3
+         DoNotDisableRFG { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1 = Do not disable RFG (The ramp-function generator can be enabled), 0 = Disable RFG (The inverter immedeately sets its ramp-function generator output to 0) p 1140[0] = r 2090.4
+         EnableRFG { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1 = Enable RFG (The output of the ramp-function generator follows the setpoint), 0 = Stop RFG (The output of the ramp-function generator stops at the actual value) p1141[0] = r 2090.5
+         EnableSetpoint { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1 = Enable setpoint (Motor accelerates with the ramp-up time p1120 to the setpoint), 0 = Inhibit setpoint (The inverter brakes the motor with the ramp-down time p1121 of the ramp-function generator) p 1142[0] = r 2090.6
+         Acknowledge { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 0 --> 1 = Acknowledge faults (Acknowledge fault. If the ON command is still active, the inverter switches to "closing lockout" state) p 2103[0] = r 2090.7
+      END_STRUCT;
+      SpeedSetpoint { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Speed Setpoint 100%=4000 HEX = 16384 DEZnormalisation with p 2000 of the inverter
+      SetpointAcceleration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Acceleration time, defalut time scale in VFD in the rage 0...200%=0...7FFF HEX= 0...32767
+      SetpointDeceleration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Decceleration time, defalut time scale in VFD in the rage 0...200%=0...7FFF HEX= 0...32767
+      SpareWord5 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Spare Word 5
+      SpareWord6 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Spare Word 6
+      SpareWord7 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Spare Word 7
+      SpareWord8 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Spare Word 8
+      SpareWord9 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Spare Word 9
+      SpareWord10 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Spare Word 10
+      SpareWord11 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Spare Word 11
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_VfdCommissioningStatus"
+VERSION : 0.1
+   STRUCT
+      SinaParaDiagId : Word;   // Expanded communication error
+      SinaParaErrorId : DWord;   // Error Id: 1st word (binary) coded as to which parameter access is faulted
+      SinaParaError : Bool;   // Main error signal from SINA_PARA instruction
+      StepNrError : Int;   // The number of the step in witch the error occurred
+      ParameterNrError : Int;   // The number of the parameter in witch the error occurred
+      StepNr : Int := 1;   // Current step number
+      ResponseValueError : Bool;   // Response value error
+      WrongFormat : Bool;   // Wrong parameter format
+      TimeExceeded : Bool;   // Time has been exceeded
+      NeedAck : Bool;   // Need acknowledge signal (to cintinue parametrization)
+      StepDone : Bool;   // Step done
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_VfdStepParameterization"
+TITLE = UDT_VFD_Step_Parameterization
+VERSION : 0.1
+//User-defined structure of step parametrization.
+   STRUCT
+      Step_config { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Step configuration
+         Used { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool := FALSE;   // Used in parametrization
+         Read { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool := FALSE;   // Read mode
+         Write { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool := FALSE;   // Write mode
+         ParaNo { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int := 0;   // Number of used parameters
+         Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Status of step
+      END_STRUCT;
+      Parameter { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : Array[1..16] of "UDT_VfdSinaParameterUser";   // Parameters
+   END_STRUCT;
+
+END_TYPE
+

@@ -1,0 +1,253 @@
+﻿FUNCTION_BLOCK "FB_ProfiDiag"
+TITLE = FB_ProfiDiag
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 25
+// END_ATTRIBUTES
+//Function block to diagnose Profinet network.
+   VAR_INPUT 
+      iui_LADDR { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : HW_IOSYSTEM;   // Hardware identifier of the PROFINET IO
+      ix_ExternalScan { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // External scan
+   END_VAR
+
+   VAR_OUTPUT 
+      qx_ProfinetOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet ok
+      qx_Error { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Collective error output
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_EquipmentControl : "UDT_EquipmentControl";   // Equipment control structure
+      iqUDT_PNDiagArray : "UDT_ProfinetNetwork";   // Profinet devices status array
+      iqUDT_Statistics : "UDT_ProfiDiagStatistics";   // Statistics structure
+   END_VAR
+
+   VAR 
+      s_GetProjectName {InstructionName := 'Get_Name'; LibVersion := '1.3'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : Get_Name;   // Get name function
+      sa_Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Status structure
+         ErrorCode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Error code structure
+            DeviceState { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Siemens "DeviceState" error code
+            GEO2LOG { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Siemens "GEO2LOG" error code
+            LOG2GEO { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Siemens "LOG2GEO" error code
+            GetName { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Word;   // Siemens "GetName" error code
+         END_STRUCT;
+      END_STRUCT;
+      sx_PNOK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool := FALSE;   // Profinet OK
+      sx_NewEvent { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // New event
+   END_VAR
+
+   VAR_TEMP 
+      tv_ProfinetGeoAdr {InstructionName := 'GEOADDR'; LibVersion := '1.0'} : GEOADDR;   // Profinet network geo structure
+      tv_DeviceGeoAdr {InstructionName := 'GEOADDR'; LibVersion := '1.0'} : GEOADDR;   // Profinet device geo structure
+      ta_Configured : Array[0..1024] of Bool;   // Configured devices array
+      ta_Exist : Array[0..1024] of Bool;   // Existing devices array
+      ta_Error : Array[0..1024] of Bool;   // Devices errors array
+      ti_DeviceNr : Int;   // Device number
+      ti_NrOfDevicesError : Int;   // Number of devices error
+      ti_DiagArraySize : Int;   // Diagnostic array size
+   END_VAR
+
+   VAR CONSTANT 
+      cui_ConfiguredDevicesMode : UInt := 1;   // Scan mode of configured devices
+      cui_ExistingDevicesMode : UInt := 4;   // Scan mode of existing devices
+      cui_DevicesErrorMode : UInt := 2;   // Scan mode of devices error
+      cui_HWType : UInt := 2;   // IO device hardware type
+      cui_Area : UInt := 1;   // IO device area
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	24/05/2019  | 0.1       | K.Pokorski    | first release MHS TIA 15.1
+	13/06/2019  | 0.2       | A.Nowak       | Replacement of instruction if for direct write into variable - Region 3
+	24/06/2019  | 0.3       | L.Klar        | Status running added
+	19/07/2019  | 0.5       | L.Klar        | Status handling changed, output qx_ProfinetOk added
+	24/07/2019  | 2.0       | L.Klar        | 2.0 MHS library release TIA 15.1
+	14/08/2019  | 2.1       | K.Pokorski    | HW_ID and TIA device project name handling added 
+	26/08/2019  | 2.2       | K.Pokorski    | Comments adjusted
+	20/09/2019  | 2.3       | K.Pokorski    | "UDT_Status" deleted
+	04/11/2019  | 2.4       | L.Klar        | Scan profinet and first scan changed from memory bit to DB variable
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	04/04/2025  | 4.1       | K.Pokorski    | Remove error when device is not existing
+	*)
+	
+	REGION 1 – Scan request
+	    
+	    IF ("DB_Memory".ScanProfinet    // Scan request from diagnostic OB 
+	        OR "DB_Memory".FirstScan    // First PLC cycle
+	        OR #ix_ExternalScan)        // External scan available
+	    THEN
+	        
+	        #sx_PNOK := FALSE;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 2 – Devices states update 
+	    
+	    // Scan devices, extract device status: configured, exists, error when profinet network not ok
+	    IF (NOT #sx_PNOK)       // Profinet needs a scan
+	    THEN
+	        
+	        #sa_Status.ErrorCode.DeviceState := DeviceStates(LADDR := #iui_LADDR,
+	                                                         MODE := #cui_ConfiguredDevicesMode,
+	                                                         STATE := #ta_Configured);
+	        
+	        #sa_Status.ErrorCode.DeviceState := DeviceStates(LADDR := #iui_LADDR,
+	                                                         MODE := #cui_ExistingDevicesMode,
+	                                                         STATE := #ta_Exist);
+	        
+	        #sa_Status.ErrorCode.DeviceState := DeviceStates(LADDR := #iui_LADDR,
+	                                                         MODE := #cui_DevicesErrorMode,
+	                                                         STATE := #ta_Error);
+	        
+	    END_IF;
+	   
+	END_REGION
+	
+	REGION 3 – Devices Statuses update
+	    
+	    // Move device state to diagnostic structure if network required scan and no error occured during scan 
+	    IF (NOT #sx_PNOK                                                                                                    // Profinet not ok 
+	        AND #sa_Status.ErrorCode.DeviceState = 0)                                                                       // "DeviceStates" error free                                      
+	    THEN
+	        
+	        // Initialise reset device errors counter
+	        #ti_NrOfDevicesError := 0;
+	        
+	        // Maximum number of Profinet devices
+	        #ti_DiagArraySize := "FC_GetNrOfArrayEl"(iv_Array := #iqUDT_PNDiagArray.DeviceStatus);
+	        
+	        // A loop operating on Profinet devices
+	        FOR #ti_DeviceNr := 0 TO (#ti_DiagArraySize - 1)
+	        DO
+	            
+	            // The device is configured in TIA Portal 
+	            IF (#ta_Configured[#ti_DeviceNr])                                                                           // Devices configured
+	            THEN
+	                
+	                // Set the device configured status bit in diagnostic structure
+	                #iqUDT_PNDiagArray.DeviceStatus[#ti_DeviceNr].DeviceState.Configure := TRUE;
+	                
+	                // Move device profinet number to diagnostic structure
+	                #iqUDT_PNDiagArray.DeviceStatus[#ti_DeviceNr].DeviceState.ProfinetNumber := INT_TO_UINT(#ti_DeviceNr);
+	                
+	                // Get the Profinet network IOSystem address 
+	                #sa_Status.ErrorCode.LOG2GEO := LOG2GEO(LADDR := #iui_LADDR, GEOADDR := #tv_ProfinetGeoAdr);
+	                
+	                // Configuring parameters for extracting the device's HW_ID
+	                #tv_DeviceGeoAdr.HWTYPE := #cui_HWType;
+	                #tv_DeviceGeoAdr.AREA := #cui_Area;
+	                #tv_DeviceGeoAdr.STATION := INT_TO_UINT(#ti_DeviceNr);
+	                #tv_DeviceGeoAdr.IOSYSTEM := #tv_ProfinetGeoAdr.IOSYSTEM;
+	                
+	                // Extracting the device's HW_ID 
+	                #sa_Status.ErrorCode.GEO2LOG := GEO2LOG(GEOADDR := #tv_DeviceGeoAdr,
+	                                                        LADDR => #iqUDT_PNDiagArray.DeviceStatus[#ti_DeviceNr].DeviceState.HW_ID);
+	                
+	                // Move device's project name to diagnostic structure
+	                #s_GetProjectName(LADDR := #iui_LADDR,
+	                                  STATION_NR := INT_TO_UINT(#ti_DeviceNr),
+	                                  STATUS => #sa_Status.ErrorCode.GetName,
+	                                  DATA := #iqUDT_PNDiagArray.DeviceStatus[#ti_DeviceNr].DeviceState.PNDeviceName);
+	                
+	                // Move device exist state to the Profinet diagnostic structure 
+	                IF (#ta_Exist[#ti_DeviceNr])                                                                                // Device exist
+	                THEN
+	                    
+	                    #iqUDT_PNDiagArray.DeviceStatus[#ti_DeviceNr].DeviceState.Exist := TRUE;
+	                    
+	                ELSE
+	                    
+	                    #iqUDT_PNDiagArray.DeviceStatus[#ti_DeviceNr].DeviceState.Exist := FALSE;
+	                    
+	                    // Increment the number of devices error
+	                    #ti_NrOfDevicesError += 1;
+	                    
+	                END_IF;
+	                // Move device error state to the Profinet diagnostic structure 
+	                IF (NOT #ta_Error[#ti_DeviceNr])                                                                            // Device is error free
+	                THEN
+	                    
+	                    #iqUDT_PNDiagArray.DeviceStatus[#ti_DeviceNr].DeviceState.Error := FALSE;
+	                    
+	                ELSE
+	                    
+	                    // New error detected
+	                    #sx_NewEvent := NOT #iqUDT_PNDiagArray.DeviceStatus[#ti_DeviceNr].DeviceState.Error;
+	                    
+	                    // Statistics handling
+	                    IF (#ta_Error[#ti_DeviceNr]                                                                             // Device has error
+	                        OR #iqUDT_EquipmentControl.Command.ResetData)                                                      // Reset statistics available
+	                    THEN
+	                        
+	                        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                                        ix_Activate := #ta_Error[#ti_DeviceNr],
+	                                        ix_RTrigActivate := #sx_NewEvent,
+	                                        iqUDT_Statistics := #iqUDT_Statistics.DeviceError[#ti_DeviceNr]);
+	                        
+	                    END_IF;
+	                    
+	                  //  #iqUDT_PNDiagArray.DeviceStatus[#ti_DeviceNr].DeviceState.Error := TRUE;
+	                    #iqUDT_PNDiagArray.DeviceStatus[#ti_DeviceNr].DeviceState.Error := #iqUDT_PNDiagArray.DeviceStatus[#ti_DeviceNr].DeviceState.Exist;
+	                    // Increment number of devices error
+	                    #ti_NrOfDevicesError += 1;
+	                    
+	                END_IF;
+	                
+	                // Reset all diagnostic information if the device is not configured in TIA Portal 
+	            ELSE
+	                
+	                #iqUDT_PNDiagArray.DeviceStatus[#ti_DeviceNr].DeviceState.Configure := FALSE;
+	                #iqUDT_PNDiagArray.DeviceStatus[#ti_DeviceNr].DeviceState.Exist := FALSE;
+	                #iqUDT_PNDiagArray.DeviceStatus[#ti_DeviceNr].DeviceState.Error := FALSE;
+	                #iqUDT_PNDiagArray.DeviceStatus[#ti_DeviceNr].DeviceState.HW_ID := 0;
+	                #iqUDT_PNDiagArray.DeviceStatus[#ti_DeviceNr].DeviceState.ProfinetNumber := 0;
+	                #iqUDT_PNDiagArray.DeviceStatus[#ti_DeviceNr].DeviceState.PNDeviceName := '';
+	                
+	            END_IF;
+	            
+	        END_FOR;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 4 – Profinet OK
+	    
+	    // Reset profinet error
+	    IF (#ti_NrOfDevicesError = 0                        // Number of devices error equal to zero 
+	        AND (#iqUDT_EquipmentControl.Command.Reset     // Error reset required 
+	        OR #ix_ExternalScan))                           // External scan active
+	    THEN
+	        
+	        #sx_PNOK := TRUE;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 5 – Status
+	    
+	    // Update Profinet ok output status
+	    #qx_ProfinetOk := #sx_PNOK;
+	    
+	    // Create the collective block error bit
+	    #qx_Error := #sa_Status.ErrorCode.DeviceState <> 0       // Profinet network error  
+	    OR #sa_Status.ErrorCode.GEO2LOG <> 0                     // "Geo2Log" standard Siemens block error
+	    OR #sa_Status.ErrorCode.LOG2GEO <> 0                     // "Log2Geo" standard Siemens block error
+	    OR #sa_Status.ErrorCode.GetName > 16#8000;               // "GetName" standard Siemens block error
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

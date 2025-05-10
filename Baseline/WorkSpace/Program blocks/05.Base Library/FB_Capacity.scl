@@ -1,0 +1,136 @@
+﻿FUNCTION_BLOCK "FB_Capacity"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      ix_Sensor : Bool;   // Measurement PEC (direct input)
+      ir_NominalLength { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real := 50.8;   // Nominal length for capacity recalculation
+      ii_Speed : Int;   // Belt speed [mm/s]
+      ii_CalculationTime : Int;   // Time interval for capacity calculation [s]
+      ix_EnableZeroFlowCount : Bool;   // True -> Flow counting for no flow, False->Capacity counting only when flow is >0
+   END_VAR
+
+   VAR_IN_OUT 
+      iqs_Capacity : Array[*] of "UDT_Capacity";   // Capacity log
+      iqs_GapsLog : Array[*] of Int;   // Gap log
+      iq_interface : "UDT_ConveyorInterface";   // Conveyor interface structure
+   END_VAR
+
+   VAR 
+      suli_GapLogLength : ULInt;   // Gap log length
+      suli_CapacityLogLength : ULInt;   // Capacity log length
+      si_Gap : Int;   // Gap
+      si_Length : Int;   // Length
+      si_1minLength : Int;   // 1 minute parcels length
+      si_1MinParcelCounter : Int;   // Number of parcels detected in 1 minute
+      sdi_TotalDistanceTraveled : DInt;   // Total distance traveled during the time period [mm]
+      sr_WindowPerParcel : Real;   // Total place occupied by the average pacels [mm]
+      sr_GapBetweenParcels : Real;   // Total gap beetween parcels [mm]
+      sr_TotalNumberOfNominalParcels : Real;   // Number of parcels traveled if parcel length would be equal to nominal parcels [mm]
+      sr_AverageParcelLength : Real;   // Average parcel length traveled in the time period [mm]
+      s_R_TRIG_PEC {InstructionName := 'R_TRIG'; LibVersion := '1.0'} : R_TRIG;   // PEC rising edge
+      s_F_TRIG_PEC {InstructionName := 'F_TRIG'; LibVersion := '1.0'} : F_TRIG;   // PEC falling edge
+      s_FB_1MinPulse : "FB_Pulse";   // 1 minute pulse
+   END_VAR
+
+   VAR_TEMP 
+      ti_Status : Int;   // Status
+      ti_Gap_Between_Parcel : Int;
+      ti_Total_NO_Parcel : Int;
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	|                                                                                      |
+	|  Copyright  2019             MHS                                                     |
+	|  All Rights Reserved         Larenweg 90                                             |
+	|                              5234 KC 's-Hertogenbosch,                               |
+	|                              Netherlands                                             |
+	|                                                                                      |     
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author       | Remark
+	----------------------------------------------------------------------------------------
+	02/04/2021  | 3.0       | L.Klar       | first release MHS TIA 15.1
+	14/11/2023  | 3.1       | M.Pluskota   | Capcity calcualtion alghoritm updated
+	*)
+	
+	REGION 1 - Array's size check
+	    #suli_GapLogLength := INT_TO_ULINT("FC_GetNrOfArrayEl"(#iqs_GapsLog));
+	    #suli_CapacityLogLength := INT_TO_ULINT("FC_GetNrOfArrayEl"(#iqs_Capacity));
+	END_REGION
+	
+	REGION 2 - Gap and length measurement
+	    IF #ix_Sensor THEN
+	        #si_Gap += #iq_interface.Displacement;
+	    ELSE
+	        #si_Length += #iq_interface.Displacement;
+	    END_IF;
+	END_REGION
+	
+	REGION 3 - Measurement evaluation triggers
+	    #s_R_TRIG_PEC(CLK := NOT #ix_Sensor);
+	    #s_F_TRIG_PEC(CLK := NOT #ix_Sensor);
+	END_REGION
+	
+	REGION 4 - Gap log
+	    IF #s_R_TRIG_PEC.Q THEN
+	        #ti_Status := MOVE_BLK_VARIANT(SRC := #iqs_GapsLog, COUNT := ULINT_TO_UDINT(#suli_GapLogLength) - 1, SRC_INDEX := 0, DEST_INDEX := 1, DEST => #iqs_GapsLog);
+	        #iqs_GapsLog[0] := #si_Gap;
+	        #si_Gap := 0;
+	    END_IF;
+	END_REGION
+	
+	REGION 5 - Average parcel length
+	    IF #s_F_TRIG_PEC.Q THEN
+	        #si_1minLength += #si_Length;
+	        #si_1MinParcelCounter += 1;
+	        #si_Length := 0;
+	    END_IF;
+	END_REGION
+	
+	REGION 6 - Capacity calculations
+	    
+	    
+	    // 1 minute pulse
+	    
+	    #s_FB_1MinPulse(iudi_PulseTime := INT_TO_UDINT(#ii_CalculationTime) * 1000);
+	    
+	    IF #s_FB_1MinPulse.qx_Pulse
+	        AND (#si_1MinParcelCounter > 0 OR #ix_EnableZeroFlowCount)
+	    THEN
+	        
+	        #ti_Status := MOVE_BLK_VARIANT(SRC := #iqs_Capacity, COUNT := ULINT_TO_UDINT(#suli_CapacityLogLength) - 1, SRC_INDEX := 0, DEST_INDEX := 1, DEST => #iqs_Capacity);
+	        
+	        #sr_AverageParcelLength := (#si_1minLength / #si_1MinParcelCounter) * 10;
+	        #sdi_TotalDistanceTraveled := INT_TO_DINT(#ii_Speed) * INT_TO_DINT((#ii_CalculationTime));
+	        #sr_WindowPerParcel := DINT_TO_REAL(#sdi_TotalDistanceTraveled / #si_1MinParcelCounter);
+	        IF #sr_WindowPerParcel > #sr_AverageParcelLength
+	        THEN
+	            #sr_GapBetweenParcels := #sr_WindowPerParcel - #sr_AverageParcelLength;
+	        ELSE
+	            #sr_GapBetweenParcels := 0;
+	        END_IF;
+	        
+	        IF #si_1MinParcelCounter > 0
+	        THEN
+	            #sr_TotalNumberOfNominalParcels := DINT_TO_REAL(#sdi_TotalDistanceTraveled) / (#sr_GapBetweenParcels + (#ir_NominalLength * 10));
+	        ELSE
+	            #sr_TotalNumberOfNominalParcels := 0;
+	        END_IF;
+	        
+	        #iqs_Capacity[0].AverageLength1min := REAL_TO_INT(#sr_AverageParcelLength);
+	        #iqs_Capacity[0].NrOfParcels := #si_1MinParcelCounter;
+	        #iqs_Capacity[0].Capacity1minH := #si_1MinParcelCounter * (60 * (60 / #ii_CalculationTime));
+	        #iqs_Capacity[0].Capacity1minNominalH := REAL_TO_INT((#sr_TotalNumberOfNominalParcels / 60) * (3600 * (60 / #ii_CalculationTime)));
+	        
+	        #si_1minLength := 0;
+	        #si_1MinParcelCounter := 0;
+	        
+	    END_IF;
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

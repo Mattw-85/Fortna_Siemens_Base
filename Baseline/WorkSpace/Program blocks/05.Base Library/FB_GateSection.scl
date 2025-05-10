@@ -1,0 +1,83 @@
+﻿FUNCTION_BLOCK "FB_GateSection"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 213
+// END_ATTRIBUTES
+   VAR_INPUT 
+      ix_GateOpen { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // When TRUE gate is open, when FALSE gate is close
+      ix_OperatorButton { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // When TRUE then operator button is pressed
+      iudi_TimeOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Time on delay to enable the horn when the gate is closed
+   END_VAR
+
+   VAR_OUTPUT 
+      qx_Horn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // When TRUE enable horn sound
+      qUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_GateStatus";   // HMI status structure
+   END_VAR
+
+   VAR 
+      sFB_GateIsClosed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // Timer on delay to enable the horn signal when the gate is closed
+      sR_TRIG_OperatorButton {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge trigger operator button
+      sx_GateClosedAndNoOperatorPresent { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Auxiliary variable TRUE when the gare is closed and no operator is present
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	26/01/2022  | 0.0       | M. Piela      | first release TIA 15.1
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	 *)
+	
+	REGION 1 - Push button trigger
+	    
+	    #sR_TRIG_OperatorButton(CLK := #ix_OperatorButton);  //Operator button
+	    
+	END_REGION
+	
+	REGION 2 - Gate open time counting
+	    
+	    //Enable the horn signal when the gate is closed for 10 minutes
+	    #sFB_GateIsClosed(iudi_OnDelayTime := #iudi_TimeOnDelay,
+	                      ix_SignalToDelay := NOT #ix_GateOpen AND NOT #sR_TRIG_OperatorButton.Q,
+	                      ix_Enable := TRUE,
+	                      qx_DelayedSignal => #sx_GateClosedAndNoOperatorPresent);
+	    
+	END_REGION
+	
+	REGION 3 - Status
+	    
+	    #qUDT_HMIStatus.Specific.GateClosed := NOT #ix_GateOpen;
+	    #qUDT_HMIStatus.Specific.GateClosedAndNoOperatorPresent := #sx_GateClosedAndNoOperatorPresent;
+	    
+	    IF NOT #qUDT_HMIStatus.Specific.GateClosed
+	    THEN
+	        #qUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".GateOpen;
+	    END_IF;
+	    
+	    IF #qUDT_HMIStatus.Specific.GateClosed
+	    THEN
+	        #qUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".GateClosed;
+	    END_IF;
+	    
+	    IF #qUDT_HMIStatus.Specific.GateClosedAndNoOperatorPresent
+	    THEN
+	        #qUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".GateClosedAndNoOperatorPresent;
+	    END_IF;
+	    
+	    
+	END_REGION
+	
+	
+	REGION 4 - Output enable
+	    
+	    #qx_Horn := #sx_GateClosedAndNoOperatorPresent;
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

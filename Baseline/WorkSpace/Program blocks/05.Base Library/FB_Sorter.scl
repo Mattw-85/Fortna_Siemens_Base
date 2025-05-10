@@ -1,0 +1,754 @@
+﻿FUNCTION_BLOCK "FB_Sorter"
+TITLE = FB_Sorter
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : Sorter
+VERSION : 3.1
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 227
+// END_ATTRIBUTES
+//Function block to control shoe sorter conveyor
+   VAR_INPUT 
+      iUDT_ConveyorConfiguration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_SorterConveyorConfiguration";   //  Conveyor configuration structure
+      ix_SafetyOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE when safety is ok
+      ix_SS1Active { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when SS1 is active
+      ix_24vOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE when 24VDC is healthy
+      ix_400vOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE when 400VAC is healthy
+      ix_ProfinetOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE when the PN node(s) of conveyor are OK
+      ix_PECEoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE when the end of section photoeye in forward direction is not blocked
+      ix_PECBoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE when the end of section photoeye in reverse direction is not blocked
+      ix_ExternalRequestHold { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  External input to request conveyor hold
+      ix_ResetEnergySave { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Reset energy save mode timer
+      ix_SorterInterlockError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE sorter mechanical interlock error
+      ix_HardwareOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE when  hardware is Ok
+   END_VAR
+
+   VAR_OUTPUT 
+      qUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ConveyorStatus";   //  HMI status structure
+      qUDT_Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_CommonStatus";   //  Common status structure
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_PendantInerface : "UDT_PendantVT100Interface";   //  Pendant VT100 Interface
+      iqUDT_EquipmentControl : "UDT_EquipmentControl";   //  Equipment control structure
+      iqUDT_ConveyorCommand : "UDT_ConveyorCommand";   //  Conveyor command stucture
+      iqUDT_ConveyorInterface : "UDT_ConveyorInterface";   //  Interface structure
+      iqUDT_HandShakeUp : "UDT_ConveyorHandshake";   //  Upstream handshake structure in forward direction
+      iqUDT_HandShake : "UDT_ConveyorHandshake";   //  Handshake structure in forward direction
+      iqUDT_Statistics : "UDT_ConveyorStatistics";   //  Statistics structure
+   END_VAR
+
+   VAR 
+      sUDT_CommonStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   //  Common status structure
+      sUDT_CommonStatusOld { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   //  Auxiliary status structure
+      sUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorStatus";   //  HMI status structure
+      sFB_CascadeModeTimer { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   //  Timer to cascade start
+      sR_TRIG_ManualMode {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge trigger manual mode
+      sR_TRIG_Jog {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge trigger manual jog
+      sF_TRIG_ManualMode {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   //  Falling edge trigger manual mode
+      sF_TRIG_Jog {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   //  Falling edge trigger manual mode jog
+      sR_TRIG_ConveyorUp {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge trigger conveyor up time
+      sR_TRIG_EnergySave {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge trigger energy save
+      sR_TRIG_VFDRunning {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge trigger VFD running
+      sR_TRIG_ConveyorDownTime {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge trigger conveyor down
+      sR_TRIG_RunManual {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge run conveyor in manual mode
+      sR_TRIG_StopRunManual {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Falling edge run conveyor in manual mode
+      sR_TRIG_ServiceMode {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge service mode is enabled
+      sF_TRIG_ServiceMode {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   //  Falling edge service mode is enabled
+      sR_TRIG_ConveyorStopped {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge of stop
+      sR_TRIG_PreStartrManual {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;
+   END_VAR
+   VAR RETAIN
+      sdi_AuxEnergySaveFwd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //  Auxiliary variable to calculate energy save displacement
+   END_VAR
+   VAR 
+      sx_Ready { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Conveyor Ready to operate in Automatic mode
+      sx_Safetyok { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Safety is ok
+   END_VAR
+   VAR RETAIN
+      sx_StartReceived { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Save start trigger from the system
+      sx_EnergySaveActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Active energy save mode
+   END_VAR
+   VAR 
+      sx_AutomaticActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Automatic active
+      sx_ManualModeActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Manual mode active
+      sx_PreStartManual { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Pre conditions to run conveyor in manual mode
+      sx_CascadeStartUp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Cascade startup auxiliary bit
+      sx_ManualRunning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Conveyor running in manual mode
+      sx_Up { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Conveyor is up
+      sx_Down { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Conveyor is down
+      sx_Stopped { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Conveyor is stopped
+   END_VAR
+
+   VAR_TEMP 
+      tx_Up : Bool;
+      tx_Down : Bool;
+      tx_Stop : Bool;
+   END_VAR
+
+   VAR CONSTANT 
+      ci_OverflowLimit : Int := 32000;   //  Limit int overflow
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                      
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	            | 3.0       | C.Leite       | First release TIA 15.1
+	06/04/2020  | 3.1       | S. Theocharis | Modified Conveyor block to sorter block
+	07/02/2020  | 3.2       | K. Pokorski   | Modified condition to disable manual mode (safety ok), modified singaling request activation in manual mode
+	07/02/2020  | 3.3       | S. Theocharis | Updated the engergy save mode. Test on the primary sorters
+	09/07/2020  | 3.4       | S. Theocharis | Write HMI status in every scan
+	16/07/2020  | 3.5       | S. Theocharis | Pendant speed hardcoded to 500mm/s
+	31/07/2020  | 3.6       | S. Theocharis | Reset HMI commands of manual mode when conveyor no ready
+	19/08/2020  | 3.7       | S. Theocharis | Encoder fault added. Manual mode to interface. Fix statistics
+	02/03/2021  | 3.8       | K. Pokorski   | Halted status enable only when automatic on
+	23/03/2021  | 3.9       | K. Pokorski   | Protect before starting sorter when ramping down.
+	22/07/2021  | 3.10      | S. Theocharis | Added Manual speed
+	27/07/2021  | 3.11      | S. Theocharis | Energy Save, safety ok logic modifed
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 - Initial
+	    
+	    REGION 1.1 - First PLC cycle
+	        
+	        // Conveyor stops in the first scan of the PLC
+	        IF "DB_Memory".FirstScan
+	        THEN
+	            #iqUDT_EquipmentControl.Command.Start := FALSE;    // Command start
+	            #sx_AutomaticActive := FALSE;                       // switch of automatic active
+	            #iqUDT_HandShakeUp.RTR := False;                   // Reset RTR signal
+	            
+	            #iqUDT_HandShakeUp.CascadeStartUp := FALSE;        // Reset cascade start signal
+	            
+	            #iqUDT_ConveyorInterface.RunFwd := FALSE;          // Order to run forward to VFD
+	            #iqUDT_ConveyorInterface.RunRvs := FALSE;          // Order to run reverse to VFD
+	            
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 1.2 Conditions Up - Down - Stopped
+	        //Used for statistics
+	        
+	        #sx_Up := (#sx_AutomaticActive                               // Automatic active
+	        AND #sx_Ready                                                // Ready active
+	        AND NOT #sx_EnergySaveActive);                              // Not in energy save
+	        
+	        #sx_Down := (NOT #sx_ManualModeActive                                                   // Not in manual mode
+	        AND #sUDT_CommonStatus.Error                                                           // in error 
+	        AND NOT #sx_Ready                                                                       // Conveyor not ready
+	        AND NOT #sx_EnergySaveActive);                                                          // Not in energy save
+	        
+	        #sx_Stopped := (NOT #sx_AutomaticActive AND #sx_Ready);
+	        
+	    END_REGION
+	    
+	    REGION 1.3 - Triggers
+	        
+	        // Rising edge trigger manual mode
+	        #sR_TRIG_ManualMode(CLK := #iqUDT_ConveyorCommand.ManualMode
+	                            OR #iqUDT_EquipmentControl.Command.ManualMode);
+	        
+	        // Falling edge trigger manual mode
+	        #sF_TRIG_ManualMode(CLK := #iqUDT_ConveyorCommand.ManualMode
+	                            OR #iqUDT_EquipmentControl.Command.ManualMode);
+	        
+	        // Rising edge trigger manual mode jog
+	        #sR_TRIG_Jog(CLK := #iqUDT_ConveyorCommand.ManualJog);
+	        
+	        // Falling edge trigger manual mode jog
+	        #sF_TRIG_Jog(CLK := #iqUDT_ConveyorCommand.ManualJog);
+	        
+	        // Rising edge trigger to start in manual mode
+	        #sR_TRIG_RunManual(CLK := #iqUDT_ConveyorCommand.ManualStartStop);
+	        
+	        // Rising edge conveyor up
+	        #sR_TRIG_ConveyorUp(CLK := #sx_Up);
+	        
+	        // Rising edge energy save mode
+	        #sR_TRIG_EnergySave(CLK := #sx_EnergySaveActive);
+	        
+	        // Rising edge running
+	        #sR_TRIG_VFDRunning(CLK := #iqUDT_ConveyorInterface.VFDRunning);
+	        
+	        // Rising edge conveyor conveyor down
+	        #sR_TRIG_ConveyorDownTime(CLK := #sx_Down);
+	        
+	        //Rising edge conveyor stopped
+	        #sR_TRIG_ConveyorStopped(CLK := #sx_Stopped);
+	        
+	        //Rising edge Pendant mode
+	        #sR_TRIG_ServiceMode(CLK := #iqUDT_PendantInerface.ServiceModeEngaged);
+	        
+	        //Falling edge Pendant mode
+	        #sF_TRIG_ServiceMode(CLK := #iqUDT_PendantInerface.ServiceModeEngaged);
+	        
+	    END_REGION
+	    
+	    REGION 1.3 - Move displacement to upstream
+	        // Downstream displacement is mode to upstream conveyor to calculate gap
+	        #iqUDT_HandShakeUp.DownstreamDisplacement := #iqUDT_ConveyorInterface.Displacement;
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 2 - Reset faults
+	    
+	    REGION 2.1 - Send reset request to interface UDT
+	        
+	        // Reset signal is sent to the interface UDT (VFD block, Tracking block, PEC update block)
+	        #iqUDT_ConveyorInterface.InternalErrorReset := #iqUDT_EquipmentControl.Command.Reset;
+	        #iqUDT_ConveyorInterface.ResetStatistics := #iqUDT_EquipmentControl.Command.ResetData;
+	        
+	    END_REGION
+	    
+	    REGION 2.2 - Error / warning
+	        
+	        #sUDT_CommonStatus.Error := #iqUDT_ConveyorInterface.InternalErrorPEC           // Internal PEC error status
+	        OR #iqUDT_ConveyorInterface.InternalErrorVFD            // Internal VFD error status
+	        OR #iqUDT_ConveyorInterface.InternalErrorTracking       // Not applicable in Shoe sorter
+	        OR #iqUDT_ConveyorInterface.Disconnected                // Isolator switch error status 
+	        OR #ix_SorterInterlockError                             // Sorter Interlock errors are handled in the sortation code
+	        OR #iqUDT_ConveyorInterface.InternalErrorEncoder;       // Encoder error
+	        
+	        #sUDT_CommonStatus.Warning := #iqUDT_ConveyorInterface.InternalWarningTracking  // v2.3 Internal Warning Tracking  added
+	        OR #iqUDT_ConveyorInterface.InternalWarningVFD;                                 // v2.3 Internal Warning VFD added
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 3 - Check conditions to set conveyor ready
+	    
+	    //Set safety OK bit. 
+	    //Different logic for service mode in order to mask the STO when SLS is active and drive is standstill
+	    #sx_Safetyok := (#ix_SafetyOk AND NOT #iqUDT_PendantInerface.ServiceModeEngaged)
+	    OR (#iqUDT_PendantInerface.ServiceModeEngaged AND NOT #ix_SS1Active);
+	    
+	    
+	    //  Conditions to set bit sx_Ready to operate in automatic mode
+	    #sx_Ready := NOT #sUDT_CommonStatus.Error                   // Ready bit is set true when common error status its false
+	    AND #sx_Safetyok
+	    AND #ix_24vOk                                               // 24V error status
+	    AND #ix_400vOk                                              // 400V error status
+	    AND #ix_ProfinetOk                                          // Profinet error status
+	    AND NOT #iqUDT_ConveyorInterface.ConfigurationError         // No configuration error      
+	    AND NOT #ix_SorterInterlockError;                           // Sorter interlock error
+	    
+	END_REGION
+	
+	REGION 4 - Stop conveyor
+	    
+	    // Conditions to stop conveyor
+	    IF ((#sR_TRIG_StopRunManual.Q                               // Trigger when conveyor stops in manual mode
+	        OR #sF_TRIG_Jog.Q)                                      // Trigger when conveyor stops jogging by HMI
+	        AND #sx_ManualModeActive)                               // Manual mode is active
+	        
+	        OR (NOT #iqUDT_EquipmentControl.Command.AutomaticOn     // Conveyor stops if the bit AutomaticOn from control block is false
+	        AND NOT #sx_ManualModeActive)                           // Manual mode active bit
+	        
+	        OR (NOT #sx_Ready                                       // Bit conveyor ready to run in automatic mode
+	        AND NOT #sx_ManualModeActive)                           // Manual mode active
+	        
+	        OR #sR_TRIG_ManualMode.Q                                // Trigger when manual mode is set on
+	        OR #sF_TRIG_ManualMode.Q                                // Trigger when manual mode is set off
+	        
+	        OR #sR_TRIG_ServiceMode.Q                               // Sorter related. Rising edge Service mode is enabled
+	        OR #sF_TRIG_ServiceMode.Q                               // Sorter related. Falling edge Service mode is enabled
+	    THEN
+	        //  Order to stop VFD
+	        #iqUDT_ConveyorInterface.RunFwd := FALSE;               // Set false order to VFD run in forward direction
+	        #iqUDT_ConveyorInterface.RunRvs := FALSE;               // Set false order to VFD run in reverse direction
+	        
+	        #iqUDT_HandShakeUp.RTR := FALSE;                        // Set false the bit ready to receive
+	        #iqUDT_HandShakeUp.CascadeStartUp := FALSE;             // Set false cascade start up bit
+	        
+	        
+	        #sx_AutomaticActive := FALSE;                           // Automatic mode is disable
+	        #sx_StartReceived := FALSE;                             // Clear start receive bit 
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 5 - Start
+	    
+	    REGION 5.1 - Save Start bit request
+	        
+	        // The conditions to set the bit "startReceived" are: 
+	        // - Conveyor not in manual mode.
+	        // - Conveyor ready to run.
+	        // - Bit AutomaticOn from control block must be on.
+	        // - Bit start form control block on.
+	        // - Sorter related. Service mode is not engaged
+	        
+	        IF NOT #sx_ManualModeActive
+	            AND #sx_Ready
+	            AND #iqUDT_EquipmentControl.Command.Start
+	            AND #iqUDT_EquipmentControl.Command.AutomaticOn
+	            AND NOT #iqUDT_PendantInerface.ServiceModeEngaged
+	            AND (NOT #iqUDT_ConveyorInterface.VFDRunning OR #iqUDT_ConveyorInterface.RunFwd)
+	        THEN
+	            #sx_StartReceived := TRUE;                          // Start bit from control block received
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 5.2 - Cascade mode
+	        
+	        (* If the bit "StartReceived" is set, automatic mode is activated if the conveyor is set as the first one to run
+	         or the bit cascadestartup from downstream is on. *)
+	        
+	        IF #sx_StartReceived
+	            AND (#iUDT_ConveyorConfiguration.Forward_Direction.FirstConveyorToStart
+	            OR #iqUDT_HandShake.CascadeStartUp)
+	        THEN
+	            #sx_AutomaticActive := TRUE;                        // Conveyor active automatic mode
+	            #sx_StartReceived := FALSE;                         // Reset start bit received from control block
+	        END_IF;
+	        
+	        //Timer to cascade mode
+	        #sFB_CascadeModeTimer(iudi_OnDelayTime := #iUDT_ConveyorConfiguration.CascadeTimeOnDelay,   // Cascade mode timer
+	                              ix_SignalToDelay := #sx_AutomaticActive,
+	                              ix_Enable := #sx_Ready,                                              // Signal ready to enable cascade mode
+	                              qx_DelayedSignal => #sx_CascadeStartUp);                             // Cascade mode signal to upstream
+	        
+	        #iqUDT_HandShakeUp.CascadeStartUp := #sx_CascadeStartUp;
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 6 - Manual mode
+	    
+	    REGION 6.1 - Manual mode force disable 
+	        // Manual mode bits inputs can be reset in case of malfunction
+	        // or when the service mode is engaged from the pendant
+	        // or safety is not ok
+	        IF #iqUDT_EquipmentControl.Command.DisableManualMode
+	            OR #iqUDT_PendantInerface.ServiceModeEngaged
+	        THEN
+	            
+	            #iqUDT_ConveyorCommand.ManualMode := False;
+	            #iqUDT_EquipmentControl.Command.ManualMode := False;
+	            
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 6.2 - Manual mode activation 
+	        
+	        // Manual mode is active if it is active from hmi or by control block  
+	        #sx_ManualModeActive := (#iqUDT_ConveyorCommand.ManualMode
+	        OR #iqUDT_EquipmentControl.Command.ManualMode)
+	        AND NOT #iqUDT_PendantInerface.ServiceModeEngaged;
+	        
+	        //Send manual mode active to PEC/VFD blocks to supress errors
+	        #iqUDT_ConveyorInterface.ManualModeActive := #sx_ManualModeActive;
+	        
+	    END_REGION
+	    
+	    REGION 6.3 - Reset manual commands 
+	        //When the system is not any more in manual mode or when fatal error occurs the HMI commands should be reset
+	        IF NOT #sx_Safetyok
+	            OR NOT #ix_24vOk                                    // 24V error status
+	            OR NOT #ix_400vOk                                   // 400V error status
+	            OR NOT #ix_ProfinetOk                               // Profinet error status
+	            OR #iqUDT_ConveyorInterface.ConfigurationError      // No configuration err
+	            OR #iqUDT_ConveyorInterface.InternalErrorVFD
+	            OR #iqUDT_ConveyorInterface.Disconnected
+	            OR NOT #sx_ManualModeActive
+	            OR #iqUDT_PendantInerface.ServiceModeEngaged
+	        THEN
+	            #iqUDT_ConveyorCommand.ManualStartStop := FALSE;
+	            #iqUDT_ConveyorCommand.ManualFullSpeed := FALSE;
+	            #iqUDT_ConveyorCommand.ManualJog := FALSE;
+	            #iqUDT_ConveyorCommand.Reverse := FALSE;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 6.3 - Start/Stop
+	        
+	        // Pre start conditions to run in manual mode
+	        #sx_PreStartManual := #sx_ManualModeActive              // Manual mode active bit
+	        AND #sx_Safetyok                                        // Safety healthy bit
+	        AND NOT #iqUDT_ConveyorInterface.Disconnected           // Isolator switch connected
+	        AND #ix_ProfinetOk                                      // Profinet comunication 
+	        AND NOT #iqUDT_ConveyorInterface.InternalErrorVFD;      // Internal error from VFD
+	        
+	        #sR_TRIG_PreStartrManual(CLK := #sx_PreStartManual);
+	        
+	        IF (#sx_PreStartManual                                  // Pre start conditions to run in manual mode
+	            AND (#sR_TRIG_RunManual.Q                           // Trigger when conveyor start running in manual mode
+	            AND NOT #iqUDT_ConveyorCommand.ManualJog)           // Conveyor is not running in jog
+	            OR (#sR_TRIG_Jog.Q                                  // Trigger to start jogging
+	            AND NOT #iqUDT_ConveyorCommand.ManualStartStop))    // Conveyor is not running in manual mode
+	            OR (#sR_TRIG_PreStartrManual.Q
+	            AND #iqUDT_ConveyorCommand.ManualStartStop
+	            AND NOT #iqUDT_ConveyorCommand.ManualJog)
+	        THEN
+	            
+	            #iqUDT_EquipmentControl.Request.SignalingRequest := TRUE;  // Request signaling to control block before conveyor run in manual mode
+	            
+	        END_IF;
+	        
+	        // Run conveyor forward in manual mode
+	        #iqUDT_ConveyorInterface.RunFwd := #sx_PreStartManual   // Pre start conditions to run in manual mode
+	        AND NOT #iqUDT_ConveyorCommand.Reverse                  // Not in reverse direction
+	        AND
+	        (NOT #iqUDT_EquipmentControl.Request.SignalingRequest   // Signaling request done
+	        OR #sx_ManualRunning)
+	        AND
+	        (#iqUDT_ConveyorCommand.ManualStartStop                 // Manual mode start to run
+	        OR #iqUDT_ConveyorCommand.ManualJog)                    // Jogging
+	        AND NOT #iqUDT_PendantInerface.ServiceModeEngaged;      // Service mode is not enabled
+	        
+	        
+	        // Never run sorter reverse in manual mode
+	        #iqUDT_ConveyorInterface.RunRvs := FALSE;
+	        
+	        #sx_ManualRunning := #iqUDT_ConveyorInterface.RunFwd;
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 7 - Automatic mode active
+	    
+	    IF NOT #sx_ManualModeActive                                 // Manual mode is not active
+	        AND NOT #iqUDT_PendantInerface.ServiceModeEngaged       // and service mode is not active
+	    THEN
+	        
+	        REGION 7.1 - Operation modes
+	            // Mode slave in automatic
+	            IF #sx_AutomaticActive
+	                AND #sx_Ready
+	            THEN
+	                // Slave
+	                #iqUDT_ConveyorInterface.RunFwd := #sx_AutomaticActive     // Automatic mode active
+	                AND #sx_Ready                                   // Ready active
+	                AND NOT #ix_ExternalRequestHold                 // Halt request is not active
+	                AND NOT #sx_EnergySaveActive                    // Energy save not active
+	                AND #iqUDT_HandShake.RTR;                       // Ready to receive active
+	                
+	                #iqUDT_HandShakeUp.RTR := #iqUDT_ConveyorInterface.RunFwd
+	                AND (#iqUDT_ConveyorInterface.VFDatSpeed OR NOT #iUDT_ConveyorConfiguration.RTR_at_Speed);
+	                
+	                #iqUDT_HandShake.ResetEnergySave := #iqUDT_HandShakeUp.ResetEnergySave  // Send reset energy save to downstream
+	                OR #iqUDT_HandShake.RTS
+	                OR NOT #ix_PECEoS;
+	                
+	            ELSE
+	                // If conveyor is not in manual mode and not ready
+	                #iqUDT_ConveyorInterface.RunFwd := FALSE;       // Order to VFD stop conveyor
+	                #iqUDT_HandShakeUp.RTR := FALSE;                // Set ready to receive false
+	            END_IF;
+	            
+	        END_REGION
+	        
+	        REGION 7.2 - Energy save
+	            
+	            IF #iUDT_ConveyorConfiguration.Energy               // Energy save functionality enable from configuration
+	            THEN
+	                
+	                IF ((NOT #ix_PECEoS OR NOT #ix_PECBoS)        // Photo eye detects a parcel
+	                    AND NOT #sx_EnergySaveActive)               // Energy save active bit
+	                    OR #ix_ResetEnergySave                      // Reset energy save
+	                    OR NOT #iqUDT_EquipmentControl.Command.AutomaticOn  // Automatic ON from control block
+	                    OR #iqUDT_EquipmentControl.Command.Stop     // Stop command from control block
+	                THEN
+	                    #sdi_AuxEnergySaveFwd := 0;                 // Reset energy save counter
+	                    #sx_EnergySaveActive := FALSE;              // Set energy save active to false
+	                ELSE
+	                    #sdi_AuxEnergySaveFwd += #iqUDT_ConveyorInterface.Displacement;
+	                END_IF;
+	                
+	                
+	                #sx_EnergySaveActive := (#sdi_AuxEnergySaveFwd > #iUDT_ConveyorConfiguration.Forward_Direction.EnergySaveLenght);
+	                
+	            ELSE
+	                // If energy save functionality is disable from configuration
+	                #sdi_AuxEnergySaveFwd := 0;                     // Reset energy save counter
+	                #sx_EnergySaveActive := FALSE;                  // Set energy save false
+	            END_IF;
+	            
+	        END_REGION
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 8 - Service mode
+	    
+	    //Run when service mode is engaged - speed control in the next region
+	    IF #iqUDT_PendantInerface.ServiceModeEngaged THEN
+	        
+	        //Run command 
+	        #iqUDT_ConveyorInterface.RunFwd := #iqUDT_PendantInerface.CmdRun
+	        AND #iqUDT_PendantInerface.PendantStopHealthy
+	        AND #sx_Safetyok
+	        AND #ix_24vOk                                           // 24V error status
+	        AND #ix_400vOk                                          // 400V error status
+	        AND #ix_ProfinetOk                                      // Profinet error status
+	        AND NOT #iqUDT_ConveyorInterface.ConfigurationError     // No configuration error      
+	        AND NOT #ix_SorterInterlockError                        // Sorter interlock error
+	        AND NOT #iqUDT_ConveyorInterface.InternalErrorVFD
+	        ;
+	        //Reset VFD                                   
+	        #iqUDT_ConveyorInterface.InternalErrorReset := #iqUDT_PendantInerface.PendantReset;
+	        
+	        
+	    END_IF;
+	    
+	    
+	END_REGION
+	
+	REGION 9 - Speed control
+	    
+	    (*In manual mode, conveyor runs with low speed by default. If "ManualFullSpeed" is set true, conveyor runs with high speed in manual mode.
+	      In automatic mode, conveyor runs with full speed if external is zero. If external speed is bigger than zero, conveyor will run with that speed. *)
+	    
+	    // Protection against wrong speed 
+	    IF #iqUDT_ConveyorCommand.ManualSpeed > 100 THEN
+	        #iqUDT_ConveyorCommand.ManualSpeed := 100;
+	    END_IF;
+	    
+	    IF #iqUDT_ConveyorCommand.ManualSpeed < 0 THEN
+	        #iqUDT_ConveyorCommand.ManualSpeed := 0;
+	    END_IF;
+	    
+	    
+	    IF #sx_ManualModeActive                                     // Manual mode active
+	    THEN
+	        IF #iqUDT_ConveyorCommand.ManualFullSpeed               // Full speed in manual mode
+	            AND #iqUDT_ConveyorCommand.ManualStartStop          // Start/stop conveyor in manual mode
+	        THEN
+	            #iqUDT_ConveyorInterface.SpeedSetpoint := #iUDT_ConveyorConfiguration.SpeedSetpointNominal;     // Move nominal setpoint to the VFD
+	        ELSE
+	            #iqUDT_ConveyorInterface.SpeedSetpoint := REAL_TO_INT(INT_TO_REAL(#iqUDT_ConveyorCommand.ManualSpeed) * (INT_TO_REAL(#iUDT_ConveyorConfiguration.SpeedSetpointNominal) / 100));     // Calculate and Move manual speed setpoint to VFD;         // Move low speed setpoint to VFD
+	        END_IF;
+	        
+	    ELSIF #iqUDT_PendantInerface.ServiceModeEngaged THEN        // pendant control
+	        
+	        IF #iqUDT_PendantInerface.LowSpeedSelected AND #iqUDT_ConveyorInterface.RunFwd THEN                 // low speed
+	            #iqUDT_ConveyorInterface.SpeedSetpoint := #iUDT_ConveyorConfiguration.SpeedSetpointPendantLow;
+	        ELSIF #iqUDT_PendantInerface.ManualSpeedSelected AND #iqUDT_ConveyorInterface.RunFwd THEN           // manual speed
+	            #iqUDT_ConveyorInterface.SpeedSetpoint := 500; //500mm/s
+	        ELSE
+	            #iqUDT_ConveyorInterface.SpeedSetpoint := 0;        //zero speed 
+	        END_IF;
+	        
+	        
+	    ELSE
+	        #iqUDT_ConveyorInterface.SpeedSetpoint := #iUDT_ConveyorConfiguration.SpeedSetpointNominal;       // Move nominal setpoint to VFD
+	    END_IF;
+	    
+	    
+	END_REGION
+	
+	REGION 10 - Statistics
+	    
+	    REGION 10.1 - Conveyor up time
+	        
+	        IF #sx_Up OR #iqUDT_EquipmentControl.Command.ResetData  // Reset statistics
+	        THEN
+	            
+	            "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,                      // Reset statistics input
+	                            ix_Activate := #sx_Up,
+	                            ix_RTrigActivate := #sR_TRIG_ConveyorUp.Q,                                  // Statistics active trigger
+	                            iqUDT_Statistics := #iqUDT_Statistics.ConveyorUp);                         // Statistics values output
+	            
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 10.2 - Energy save
+	        
+	        // Statistics Energy save mode active
+	        IF #sx_EnergySaveActive                                                                         // Energy save active
+	            OR #iqUDT_EquipmentControl.Command.ResetData                                                // Reset statistics
+	        THEN
+	            "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,                      // Reset statistics input
+	                            ix_Activate := #sx_EnergySaveActive,                                        // Activate statistics functions input
+	                            ix_RTrigActivate := #sR_TRIG_EnergySave.Q,                                  // Statistics active trigger
+	                            iqUDT_Statistics := #iqUDT_Statistics.EnergySave);                         // Statistics values output
+	            
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 10.3 - Conveyor down time
+	        
+	        // Conveyor down is when conveyor is not in manual mode and has an error
+	        IF #sx_Down OR #iqUDT_EquipmentControl.Command.ResetData                                        // Reset statistics
+	        THEN
+	            
+	            "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,                      // Reset statistics input
+	                            ix_Activate := #sx_Down,                                                    // Activate statistics functions input
+	                            ix_RTrigActivate := #sR_TRIG_ConveyorDownTime.Q,                            // Statistics active trigger
+	                            iqUDT_Statistics := #iqUDT_Statistics.ConveyorDown);                       // Statistics values output
+	            
+	        END_IF;
+	    END_REGION
+	    
+	    REGION 10.4 - Conveyor stop time
+	        
+	        IF #sx_Stopped OR #iqUDT_EquipmentControl.Command.ResetData                                     // Reset statistics
+	        THEN
+	            
+	            "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,                      // Reset statistics input
+	                            ix_Activate := #sx_Stopped,                                                 // Activate statistics functions input
+	                            ix_RTrigActivate := #sR_TRIG_ConveyorStopped.Q,                             // Statistics active trigger
+	                            iqUDT_Statistics := #iqUDT_Statistics.ConveyorStop);                       // Statistics values output
+	            
+	        END_IF;
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 11 - Status
+	    
+	    #sUDT_HMIStatus.Specific.Reverse := FALSE;                                                          // sorter does not run reverse
+	    #sUDT_CommonStatus.Stopped := #sx_Ready AND NOT #sx_AutomaticActive;                                // stopped
+	    #sUDT_CommonStatus.AutoON := #sx_Ready AND #sx_AutomaticActive;                                     // Auto ON
+	    #sUDT_CommonStatus.Running := #iqUDT_ConveyorInterface.RunFwd;                                      // Running
+	    #sUDT_CommonStatus.Halted := #ix_ExternalRequestHold AND #sUDT_CommonStatus.AutoON;                 // Halted
+	    #sUDT_CommonStatus.EnergySave := #sx_EnergySaveActive;                                              // Energy save active
+	    #sUDT_CommonStatus.Dieback := #sUDT_CommonStatus.AutoON
+	    AND NOT #sUDT_CommonStatus.EnergySave
+	    AND NOT #sUDT_CommonStatus.Running;                                                                 // Die back
+	    #sUDT_CommonStatus.Manual := #sx_ManualModeActive                                                   // Manual
+	    OR #iqUDT_PendantInerface.ServiceModeEngaged;                                                       // Service mode engaged                        
+	    #sUDT_CommonStatus.ManualRun := (#sx_ManualModeActive AND #sUDT_CommonStatus.Running)               // Manual Running
+	    OR (#iqUDT_PendantInerface.ServiceModeEngaged AND #iqUDT_ConveyorInterface.VFDRunning);
+	    #sUDT_CommonStatus.SafetyStop := NOT #sx_Safetyok;                                                  // Safety not ok
+	    
+	    // HMI status update
+	    IF #sUDT_CommonStatusOld <> #sUDT_CommonStatus                                                      // update on change
+	    THEN
+	        
+	        // HMI status initialization
+	        #sUDT_HMIStatus.Status := 0;
+	        
+	        // HMI status calculation
+	        IF #sUDT_CommonStatus.EnergySave                        // Energy save
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".EnergySave;
+	        END_IF;
+	        
+	        IF #sUDT_CommonStatus.Running                           // Running
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Running;
+	        END_IF;
+	        
+	        IF #sUDT_CommonStatus.Stopped                           // Stopped
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Stopped;
+	        END_IF;
+	        
+	        IF #sUDT_CommonStatus.Dieback                           // Dieback
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Dieback;
+	        END_IF;
+	        
+	        IF #sUDT_CommonStatus.Halted                            // Halted
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Halted;
+	        END_IF;
+	        
+	        IF #sUDT_CommonStatus.Manual                            // Manual
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Manual;
+	        END_IF;
+	        
+	        IF #sUDT_CommonStatus.ManualRun                         // Running in manual mode
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".ManualRun;
+	        END_IF;
+	        
+	        IF #iqUDT_ConveyorInterface.InternalWarningTracking     // Internal tracking warning
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Warning;
+	        END_IF;
+	        
+	        IF #iqUDT_ConveyorInterface.InternalErrorTracking       // Internal tracking error
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".TrackingError;
+	        END_IF;
+	        
+	        IF #iqUDT_ConveyorInterface.InternalErrorPEC            // Internal PEC error
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".PECJam;
+	        END_IF;
+	        
+	        // Internal Encoder error
+	        IF #iqUDT_ConveyorInterface.InternalErrorEncoder
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".EncoderError;
+	        END_IF;
+	        
+	        IF #ix_SorterInterlockError
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Error;
+	        END_IF;
+	        
+	        IF #iqUDT_ConveyorInterface.InternalErrorVFD            // Internal VFD error
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".VFDError;
+	        END_IF;
+	        
+	        IF #iqUDT_ConveyorInterface.Disconnected                // Disconnect error
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".CBError;
+	        END_IF;
+	        
+	        IF (#sUDT_CommonStatus.SafetyStop)                      // Safety stop
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".SafetyStop;
+	        END_IF;
+	        
+	        
+	        #sUDT_CommonStatusOld := #sUDT_CommonStatus;            // Copy status to memory
+	        #qUDT_Status := #sUDT_CommonStatus;                     // Copy status to output
+	        
+	    END_IF;
+	    
+	    #qUDT_HMIStatus := #sUDT_HMIStatus;                         // Copy HMI status to output
+	    
+	END_REGION
+	
+	REGION 12 - Report to control block
+	    
+	    // Function to manage report between control block and conveyor block
+	    
+	    "FC_EquipmentReport"(iUDT_Status := #sUDT_CommonStatus,
+	                         iqUDT_Control := #iqUDT_EquipmentControl);
+	    
+	END_REGION
+	
+	REGION 13 - Internal errors and warnings reset
+	    
+	    IF #iqUDT_EquipmentControl.Command.Reset
+	    THEN
+	        #iqUDT_ConveyorInterface.InternalErrorEncoder := FALSE;
+	        #iqUDT_ConveyorInterface.InternalErrorPEC := FALSE;
+	        #iqUDT_ConveyorInterface.InternalWarningTracking := FALSE;
+	        #iqUDT_ConveyorInterface.InternalErrorTracking := FALSE;
+	        #iqUDT_ConveyorInterface.InternalWarningVFD := FALSE;
+	        #iqUDT_ConveyorInterface.InternalErrorVFD := FALSE;
+	        #iqUDT_ConveyorInterface.Disconnected := FALSE;
+	        #iqUDT_ConveyorInterface.ConfigurationError := FALSE;
+	    END_IF;
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

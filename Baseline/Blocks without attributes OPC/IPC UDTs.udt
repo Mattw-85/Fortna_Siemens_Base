@@ -1,0 +1,176 @@
+﻿TYPE "UDT_IPCSorterAlarms"
+VERSION : 0.1
+   STRUCT
+      AlarmCurrentOverloadSortMotor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Alarm Current Overload Sorter motor [SEU2 I0.0]
+      AlarmVaranBusFault { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Alarm Varan Bus Fault
+      InfeedSortKnifeTransition { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Infeed Sorter Knife Transition SIU-S3
+      AlarmPECCheckDedicationJammed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Alarm Photocell Check Dedication Jammed [SIU-S2]
+      EoSInverterFault { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // End of sorter Inverter fault
+      EoSCanBusErrorInverter { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // End of Sorter Can bus error inverter- no connection
+      DedicationDiverterPinMissed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Dedication Diverter Pin missed DUD-S1
+      EoSKnifeTransition { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // End of sorter Knife Transition SEU1-S4
+      EoSLoseTube { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // End of sorter Lose tube SEU1-S3
+      EoSChainSlackLeft { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // End of sorter Chain Slack Left SEU1-S6
+      EoSChainSlackRight { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // End of sorter Chain Slack Right SEU1-S7
+      EoSPECJam { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // End of sorter Photocell Jam SEU1-S5
+      SorterStandalone { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Sorter in standalone mode
+      SorterInService { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Sorter in Service Mode
+      InfeedSorterIOModuleNotOnline { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Infeed Sorter IO module not online SIU
+      Spare { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Spare
+      DedicationDiverterIOModuleFault { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Dedication Diverter IO module not online DUD
+      EoSAirPressureLow { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // End of sorter Air pressure low SEU1-S8
+      EoSEmergencyStopRelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // End of Sorter Emergency Stop Relay
+      EoSIOModuleNotOnlineSEU1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // End of Sorter IO module not online SEU1
+      EoSIOModuleNotOnlineSEU2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // End of Sorter IO module not online SEU2
+      EoSIOModuleNotOnlineSEU3 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // End of Sorter IO module not online SEU3
+      AlarmPECDedicatiomJam { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Alarm Photocel Dedication Jammed (SIU-S1)
+      InfeedSorterPreWarningPulsgeneratorPullsA { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Infeed Sorter Pre warning Pulsgenerator Pulls A SIU-S6
+      InfeedSortPulsgenPullsAFault { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Infeed Sorter Pulsgenerator fault Pulls A SIU-S6
+      HostCommunicationTimeout { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Host Communication Timeout
+      DedicationDivertCheckPinWrongSide { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Dedication Diverter Check Pin wrong side DUD-S5/S6
+      EoSCheckPinWrongSide { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // End of Sorter Check Pin wrong side SEU2-S5/S6
+      DedicationDivertCheckPinMiss { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Dedication Diverter Check pin missed DUD-S5/S6
+      EoSCheckPinMiss { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // End Of Sorter Check Pin missed SEU2-S5/S6
+      InfeedSorterPreWarningPulsgenPulls { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Infeed Sorter Pre warning Pulsgenerator Pulls B SIU-S7
+      InfeedSorterPulsgenFaultPulls { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Infeed Sorter Pulsgenerator Fault Pulls B SIU-S7
+      InfeedSorterRunButNoPulsesFromPulsgen { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Infeed Sorter Running But No Pulses From Pulsgenerator
+      AlarmPinMissDivPosNow { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Alarm Pin Missed Div%p positioning Now . . .
+      AlarmPinMissDivStopOnPos { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Alarm Pin Missed Div%p Stopped on position
+      AlarmCIV521VaranToCanInterface { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Alarm CIV521 Varan to Can Interface :
+      AlarmSyncInfeedFrequencyInverterFaultMotor1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Alarm Sync Infeed Frequency inverter fault motor 1
+      AlarmSyncInfeedFrequencyInverterNotStMotor1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Alarm Sync Infeed Frequency inverter not standby motor 1
+      AlarmSyncInfeedFrequencyInverterFaultMotor2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Alarm Sync Infeed Frequency inverter fault motor 2
+      AlarmSyncInfeedFrequencyInverterNotStMotor2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Alarm Sync Infeed Frequency inverter not standby motor 2
+      AlarmSyncInfeedFrequencyInverterFaultMotor3 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Alarm Sync Infeed Frequency inverter fault motor 3
+      AlarmSyncInfeedFrequencyInverterNotStMotor3 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Alarm Sync Infeed Frequency inverter not standby motor 3
+      AlarmSyncInfeedCanError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Alarm Sync Infeed Can Error
+      AlarmSyncInfeedEmergencyStop { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Alarm Sync Infeed Emergency stop
+      AlarmSyncInfeedMaintSwitchOff { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Alarm Sync Infeed Maintenance switch off
+      AlarmSyncInfeedThermalFailure { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Alarm Sync Infeed Thermal failure
+      AlarmSyncInfeedIOModuleNotOK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Alarm Sync Infeed IO Module not Ok VDM086
+      AlarmSyncInfeedVaranCANInterfaceNotOK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Alarm Sync Infeed Varan-CAN interface not Ok CIV521
+      WarningSyncInfeedSynDisabled { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Warning Sync Infeed Synchronization Disabled
+      WarningChainSlackDetectedEoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Warning Chain Slack detected end of sorter
+      AlarmCycleOverrunInTrackig { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Alarm Cycle overrun in tracking
+      WarningCycleOverrunInTracking { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Warning Cycle overrun in tracking
+      WarningSorterDestinationSimulationMode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Warning Sorter Destination Simulation mode
+      WarningXDiverterDisabled { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Warning x diverter(s) disabled
+      AlarmParcelLostAtEoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Alarm Parcel lost at end of sorter
+      "AlarmChainSlack/SorterStopEoS" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Alarm Chain Slack, sorter stopped end of sorter
+      AlarmPinMissChainSlackDetection { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Alarm Pin missed Chain Slack detection
+      AlarmNoConnectionMessageInterface { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Alarm No Connection Message interface
+      AlarmNoConnnectionIOMessageInterface { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Alarm No Connection IO Message interface
+      AlarmAirPressureLow { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Alarm Air Pressure Low (DUD-S8)
+      NotUsed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Not use (compability reason)
+      NotUsed1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Not use (compability reason)
+      NotUsed2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Not use (compability reason)
+      NotUsed3 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Not use (compability reason)
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_IPCIOData"
+VERSION : 0.1
+   STRUCT
+      SIU { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // SIU
+         PECDedication { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit 0.0 |Input| PEC Dedication
+         PECCheckDedication { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit 0.1 |Input| PEC Check Dedication
+         KnifeTransBeltOK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit 0.2 |Input| Knife transition Belt OK
+         CommEnableSorter { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit 0.3 |Input| Command Enable Sorter from Host
+         CommStartSorterAuto { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit 0.4 |Input| Command Start Sorter Auto from Host
+         PullsAPulsGen { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit 0.5 |Input| Pulls A Pulsgenerator
+         PullsBPulsGen { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit 0.6 |Input| Pulls B Pulsgenerator
+         SortertRun { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit 0.7 |Output| Sorter Running to Host
+      END_STRUCT;
+      DUD { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // DUD
+         PinStraightSide { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit 1.0 |Input| Pin Straight Side
+         PinDivertSide { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit 1.1 |Input| Pin Divert Side
+         SwitchToStraightSide { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit 1.2 |Output| Switch to Straight side
+         SwitchToDivertSide { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit 1.3 |Output| Switch to Divert Side
+         PinCheckStraightSide { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit 1.4 |Input| Pin Check Straight Side
+         PinCheckDivertSide { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit 1.5 |Input| Pin Check Divert Side
+         FreeToUseByHost { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit 1.6 |In/Out| Free to use by host
+         AirPressureOpt2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit 1.7 |Input| Ait pressure (option2)
+      END_STRUCT;
+      Dux { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[1..120] of Struct   // Dux
+         PinStraightSide { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // y.0 |Input| Pin Straight Side
+         PinDivertSide { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // y.1 |Input| Pin Divert Side
+         SwitchToStraightSide { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // y.2 |Output| Switch to Straight side
+         SwitchToDivertSide { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // y.3 |Output| Switch to Divert Side
+         "FreeToUseByHost/ChuteFullSensor" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // y.4 |In/Out| Free to use by host / Chute Full Sensor
+         "FreeToUseByHost/ExitRunTrigger" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // y.5 |In/Out| Free to use by host / Exit Run Trigger
+         "FreeToUseByHost/FaultOnExitRun" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // y.6 |In/Out| Free to use by host / Fault on exit run
+         "FreeToUseByHost/ChuteHalfFullSensor" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // y.7 |In/Out| Free to use by host / Chute half full sensor
+      END_STRUCT;
+      SEU1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // SEU1
+         TriggerNextSorter { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Trigger next Sorter
+         FreeToUse { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Free to use
+         LooseTube { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Loose Tube
+         KnifeTransitionBeltOK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Knife transition belt OK
+         PECSignOff { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Pec Sign off
+         ChainSlackDetectionLeft { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Chain Slack Detection left
+         ChainSlackDetectionRight { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Chain Slack Detection right
+         AirPressureOkOpt1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Air pressure is ok (option 1)
+      END_STRUCT;
+      SEU2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // SEU2
+         ThermFailSortMotor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit 124.0 |Input| Thermal failure Sorter motor
+         "E-stopInServiceMode" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit 124.1 |Input| E-stop in Service mode
+         ServiceModeActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit 124.2 |Input| Service mode active (key switch)
+         "E-stopSorter" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit 124.3 |Input| Emergency stop sorter
+         PinCheckLastDivertLeft { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit 124.4 |Input| Pin check last diverter Left
+         PinCheckLastDivertRight { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit 124.5 |Input| Pin check last diverter Right
+         FreeToUseByHost { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit 124.6 |In/Out| Free to use by host
+         FreeToUseByHost2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit 124.7 |In/Out| Free to use by host
+      END_STRUCT;
+      SEU3 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // SEU3
+         FreeToUseByHost0 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit 125.0 |In/Out| Free to use by host
+         FreeToUseByHost1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit 125.1 |In/Out| Free to use by host
+         FreeToUseByHost2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit 125.2 |In/Out| Free to use by host
+         FreeToUseByHost3 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit 125.3 |In/Out| Free to use by host
+         FreeToUseByHost4 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit 125.4 |In/Out| Free to use by host
+         FreeToUseByHost5 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit 125.5 |In/Out| Free to use by host
+         FreeToUseByHost6 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit 125.6 |In/Out| Free to use by host
+         FreeToUseByHost7 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit 125.7 |In/Out| Free to use by host
+      END_STRUCT;
+      Filler { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Filler
+         NotUsed0 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit 126.0 Not used
+         NotUsed1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit 126.1 Not used
+         NotUsed2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit 126.2 Not used
+         NotUsed3 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit 126.3 Not used
+         NotUsed4 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit 126.4 Not used
+         NotUsed5 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit 126.5 Not used
+         NotUsed6 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit 126.6 Not used
+         NotUsed7 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit 126.7 Not used
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_IPCSorterStatus"
+VERSION : 0.1
+   STRUCT
+      Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Status number
+      SorterAlarms { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_IPCSorterAlarms";   // Sorter alarms structure
+      TooManyParcelsInOverflow { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Too many parcels in overflow
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_IPCIOMessageBody"
+VERSION : 0.1
+   STRUCT
+      CommandBits { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Bit 00 = Sorter enable to start (Sorter -> Host), Bit 00 = Reset Alarms (Host -> Sorter)
+      Speed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Actual speed of sortert [mm/s] (Sorter -> Host), Setpoint speed [mm/s] (Host -> Sorter)
+      Acceleration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Current acceleration [mm/s2] (Sorter -> Host), Setpoint Acceleration (Host -> Sorter)
+      QuickAcc { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Acceleration in case of emergency or alarm on the sorter
+      Spare01 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Future use
+      Spare02 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Future use
+      Spare03 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Future use
+      IOData { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_IPCIOData";   // IOData
+      ChuteFull { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[0..15] of Byte;   // Internal chute full detection (Sorter->Host), 16 byte spare (Host ->Sorter)
+      Spare { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[0..15] of Byte;   // Spare
+      ExitRunTrigger { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[0..15] of Byte;   // 128 bits reporesenting exit run coommand (Sorter ->Host), 128 bits unused (Host -> Sorter)
+   END_STRUCT;
+
+END_TYPE
+

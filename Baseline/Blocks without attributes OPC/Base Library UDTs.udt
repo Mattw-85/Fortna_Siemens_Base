@@ -1,0 +1,787 @@
+﻿TYPE "UDT_DeviceState"
+TITLE = UDT_DeviceState
+VERSION : 0.1
+//User-defined structure of device states.
+   STRUCT
+      Configure { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Device configured in TIA Portal hardware
+      Exist { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Device physically connected
+      Error { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Device has an error
+      ProfinetNumber { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UInt;   // Profinet slave number
+      HW_ID { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UInt;   // Device's HW_ID
+      PNDeviceName { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;   // Device's project name
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_ModuleState"
+TITLE = UDT_ModuleState
+VERSION : 0.1
+//User-defined structure of module states.
+   STRUCT
+      Configured { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Module configured
+      Exist { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Module exist
+      Error { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Module has error
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_CommonStatus"
+TITLE = UDT_CommonStatus
+VERSION : 0.1
+//User-defined structure of common statuses.
+   STRUCT
+      SafetyStop : Bool;   // Emergancy stop
+      Error : Bool;   // An error is active
+      Warning : Bool;   // A warning is active
+      ManualRun : Bool;   // Running in manual mode
+      Manual : Bool;   // In manual mode
+      Halted : Bool;   // Halted
+      Dieback : Bool;   // In dieback
+      Stopped : Bool;   // Stopped
+      Running : Bool;   // Running
+      EnergySave : Bool;   // In energy saving mode
+      AutoON : Bool;   // Automatic started
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_EventStatistic"
+TITLE = UDT_EventStatistic
+VERSION : 0.1
+//User-defined structure of event statistic data.
+   STRUCT
+      NumberOfTimes : DInt;   // Number of times the event occurred since last reset
+      LastEventSeconds : DInt;   // Number of seconds of the current or last event
+      TotalEventSeconds : DInt;   // Total number of seconds the event occurred since last reset
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_EquipmentControl"
+TITLE = UDT_EquipmentControl
+VERSION : 0.1
+//User-defined structure of equipment control commands.
+   STRUCT
+      Command { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Control command
+         Start { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Start conveyor
+         Stop { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Stop conveyor
+         Reset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Faults reset
+         ResetData { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Statistics reset
+         ManualMode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Manual mode required
+         DisableManualMode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Disable manual mode
+         AutomaticOn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // System is started in automatic mode
+         StopRequest { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      END_STRUCT;
+      Report { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   // Conveyors state
+      Request { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Request from equipment
+         RestartRequired { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Restart required from system control
+         SignalingRequest { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Beeper required
+         InhibitStop { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_FifoHeader"
+TITLE = UDT_FifoHeader
+VERSION : 0.1
+//User-defined structure of FIFO register header information.
+   STRUCT
+      Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Status bits
+         Empty { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // FIFO Empty
+         Prefull { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // FIFO Prefull
+         Full { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // FIFO Full
+      END_STRUCT;
+      NextEntryToRead { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Next FIFO entry to read
+      NextEntryToWrite { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Next FIFO entry to write
+      MaxNrOfEntries { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Maximum number of FIFO entries
+      TotalEntriesStored { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Total number of FIFO entries
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_FifoStatus"
+TITLE = UDT_FifoStatus
+VERSION : 0.1
+//
+//User-defined structure of FC_Fifo function status.
+//Version History:
+//Date              | Version   | Author         | Remark
+//24/05/2019  | 0.1           | K.Pokorski   | first release MHSE TIA 15.1
+//24/05/2019  | 0.2           | K.Pokorski   | first release MHSE TIA 15.1
+//
+   STRUCT
+      InvalidMode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Invalid mode selected
+      InvalidMaxNrOfEntries { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Invalid maximum number of entries or buffer is not an array
+      InvalidTotalEntriesStored { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Invalid total number of entries
+      InvalidNextEntryToWrite { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Invalid number of next entry to write
+      InvalidNextEntryToRead { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Invalid number of next entry to read
+      InvalidDataType { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Message and buffer element data type inconsistent
+      FifoPreFull { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 90 % of FIFO data buffer capacity reached
+      FifoFull { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // FIFO data buffer full
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_Message"
+TITLE = UDT_Message
+VERSION : 0.1
+//User-defined structure of the message characters array.
+   STRUCT
+      Character { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[0..499] of Char;   // Message character
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_RIOStatus"
+VERSION : 0.1
+   STRUCT
+      Status : Int;   // Status number
+      Specific : Struct   // Specific structure
+         PNSlaveNotOnline { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet slave is not online
+         PNSlaveError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet slave is in error
+         ET200sp_ErrorModule : Array[0..31] of Bool;   // Module error
+         PNSlaveWarning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet slave has a warning
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_Connection"
+TITLE = UDT_Connection
+VERSION : 0.1
+//User-defined structure of connection parameters.
+   STRUCT
+      ActiveEstablished { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool := FALSE;   // 0 – Passive connection establishment; 1 – Active connection establishment
+      Interface_ID { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : HW_ANY := 64;   // Interface ID of CPU Ethernet interface
+      ID { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : CONN_OUC;   // Unique ID as system reference for the connection
+      IP { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[1..4] of Int;   // IP address
+      Port { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UInt;   // Port number of the communication partner
+      ConTimeout { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Maximum waiting time for response from the communication partner [ms]
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_RIOStatistics"
+TITLE = UDT_RIOStatistics
+VERSION : 0.1
+//User-defined structure of FB_RIO function block statistics.
+   STRUCT
+      PNSlaveNotOnline { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Statistics of  Profinet slave not online
+      PNSlaveError { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Statistics of a Profinet slave error
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_MotorData"
+VERSION : 0.1
+   STRUCT
+      MainVoltage { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // [Volt] Mains
+      NominalVoltage { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // [Volt] Motor nameplate for applicable connection
+      NominalCurrent { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // [Amps] Motor nameplate for applicable connection
+      NominalPower { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // [kW] Motor nameplate
+      NominalSpeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // [RPM] Motor nameplate
+      NominalTorque { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // [Nm] Motor nameplate
+      CosPhi { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // 0.0 - 0.99 Motor nameplate
+      Connection { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // 0=Start , 1=Delta
+      BrakeConfig { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE = Brake control from VFD. FALSE = No Brake
+      EncoderConfig { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE = Encoder connected at the VFD . FALSE = No encoder at the VFD
+      EncoderResolution { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Pulses Per Rev
+      ThermalConfig { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // 0=No thermal control, 1= PTC1, 2=KTY84, 4= Bimetalic Switch
+      NoMotorsParallel { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Number of motors in parallel
+      VFDType { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Specific code 1= G120C, 5302= G120D 0,75kW, 5304= G120D 1,5kW, 5306= G120D 3kW, 5307= G120D 4kW, 5308= 5,5kW, 5309= G120D 7,5kW
+      MinimumRamp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Minimum applicable ramp in ms
+      FAdress { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Safety adress from HW configuration
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_FIFOInductInfo"
+VERSION : 0.1
+   STRUCT
+      InductNumber { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Induct number
+      GapSize { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Size of gap requested by induct
+      RemoveEntry { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Entry is not needed by induct anymore
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_CommisioningNord"
+VERSION : 0.1
+   STRUCT
+      HWAdress { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Actual dipswitch adress of the VFD
+      i_ParCRC { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Word;   // VFD generated CRC
+      CommissionError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Commissioning error active
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_GOSLog"
+VERSION : 0.1
+   STRUCT
+      GIN_nr { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;
+      InfeedUpstreamGap { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Gap in millimeters (mm)
+      InfeedDownstreamGap { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Gap in millimeters (mm)
+      OutfeedUpstreamGap { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Gap in meters (mm)
+      OutfeedDownstreamGap { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Gap in meters (mm)
+      ParcelLength { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;
+      GapToBeRecovered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;
+      ParcelDownStreamResults { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;
+      ParcelUpStreamResults { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;
+      Accelerate { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      Decelerate { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      PrevConveyorUpstreamGap { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;
+      PrevConveyorDownstreamGap { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;
+      NextConveyorUpstreamGap { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;
+      NextConveyorDownstreamGap { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_StopRollerConfiguration"
+VERSION : 0.1
+   STRUCT
+      BrakePuls { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Time [ms] brake is up in brake function
+      BrakePause { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Time [ms] brake is down in brake function
+      BrakePauseLong { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Long time [ms] brake is down in brake function
+      PECBrakeOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // On delay time PEC brake signal
+      PECBrakeOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Off delay time PEC brake signal
+      PECStopOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // On delay time PEC stop signal
+      PECStopOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Off delay time PEC stop signal
+      StopFunctionOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // On delay time stop function
+      StopFunctionOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Off delay time stop function
+      FailSafe { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Activate output to release
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_PneumaticBrakeConfiguration"
+VERSION : 0.1
+   STRUCT
+      BrakePuls { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Time [ms] brake is up in brake function
+      BrakePause { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Time [ms] brake is down in brake function
+      BrakeCycles { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Number of brake cycles
+      BrakeInterval { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Time [ms] between brake cycles
+      PECBrakeOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // On delay time PEC brake signal
+      PECBrakeOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Off delay time PEC brake signal
+      PECStopOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // On delay time PEC stop signal
+      PECStopOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Off delay time PEC stop signal
+      StopFunctionOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // On delay time stop function
+      StopFunctionOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Off delay time stop function
+      FailSafe { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Activate output to release
+      Slave { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Stopper is slave
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_MergeGeneratorConfig"
+TITLE = UDT_MergeGeneratorConfig
+VERSION : 0.1
+//V 3.1
+   STRUCT
+      GenerationPoint { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Position on tracking where is written [mm]
+      NumberInducts { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Number of induct belts conected to the merge belt.
+      GapHeadToHead { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Length of the fixed gap (cm)
+      ChangeWindowModeDistance { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt := 60000;   // Distance to Deactivate window generation (mm)
+      ModeSelection { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // 0= standard, 1 = no empty window
+      DelayDistance { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Delay in looking for next window for the same induct
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_AirPressureSwitchStatus"
+VERSION : 0.1
+   STRUCT
+      Status : Int;   // Status number
+      Specific : Struct   // Equipment specific warnings and errors
+         AirPressureOK : Bool;   // Air pressure switch is okay
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_PolisorterInterface"
+TITLE = UDT_VSUInterface
+VERSION : 0.1
+//User-defined structure of VSU interface parameters.
+   STRUCT
+      Decisionpoint { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Point in tracking where the destination is found on the Polisorter conveyor [cm]
+      RequestedPosition { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Position requested by destination block
+      PositionSetpoint { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Position number (as configured) to go to by positioning device
+      PositionActual { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Position number the positioning device is actually on
+      SwitchingTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UInt;   // Time it takes to go from one position to the next [ms]
+      PNDeviceOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Device ok
+      Automatic { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Automatic mode request
+      RunEnabled { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Running of the positioning device is enabled
+      GoReference { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Activate reference run
+      Referenced { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Positioning device is referenced
+      Manual { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Manual mode request
+      Reference_command { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Refference command
+      JogLeft { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Jog request to move equipment left
+      JogRight { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Jog request to move equipment right
+      Ready { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Positioning block is running and error free
+      MotorRunning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Motor is running
+      Positioning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Positioning device is moving to its position
+      ResetStatistics { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reset statistics
+      InternalErrorVFD { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Positioning device internal error
+      InternalWarningVFD { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Positioning device has a warning
+      InternalErrorReset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reset internal faults
+      RequestDieBackUpstream { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // External request die back to the upstream conveyor of the Polisorter
+      ExternalHold { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // External request to stop the conveyor
+      MaintenanceMode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Maitenance mode enabled
+      BypassMode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bypass mode enable
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_SorterConveyorConfiguration"
+TITLE = UDT_SorterConveyorConfiguration
+VERSION : 0.1
+//User-defined structure of  sorter conveyor parameters.
+   STRUCT
+      Common { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorCommonConfiguration";   // Common configuration
+      Forward_Direction { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Forward Direction configuration
+         EnergySaveLenght { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Distance conveyor travelled before energy save activate [cm]
+         PEC_EoSDistanceOffset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Distance offset between photo eye and the end of conveyor [mm]
+         FirstConveyorToStart { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // First conveyor to start cascade mode forward direction
+      END_STRUCT;
+      CascadeTimeOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Cascade time on delay [ms]
+      SpeedSetpointPendantLow { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Extra gap to recovery die back [cm]
+      SpeedSetpointLow { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Low speed setpoint [mm/s]
+      SpeedSetpointNominal { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Nominal speed setpoint [mm/s]
+      RTR_at_Speed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE = RTR to upstream when sorter reached nominal speed
+      Energy { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Energy save mode enable
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_Merge"
+VERSION : 0.1
+   STRUCT
+      LastUsed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Last used FIFO entry
+      MaxNumberofEntries { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Maximum number of FIFO entries
+      Remove { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // An entry was removed by an induct
+      GenerationInactive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Generation is inactive (not generating and handling requests)
+      ReactivateReq { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Request to activate generation from an induct
+      FIFO { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : Array[0..10] of "UDT_FIFOInductInfo";   // FIFO structure for induct requests
+      TrackingPointerForInduct { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[1..10] of Int;   // Tracking the request for the induct
+      RequestInFIFO { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[1..10] of Bool;   // Request is in FIFO handshake
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_SystemStatistics"
+TITLE = Cabinet MCP Statistics
+VERSION : 0.1
+   STRUCT
+      HMI_Stop : "UDT_EventStatistic";   // HMI stop statistics
+      Field_Stop : "UDT_EventStatistic";   // Field stop statistics
+      Building_EStop : "UDT_EventStatistic";   // Bulding emergency stop statistics
+      MCP_EStop : "UDT_EventStatistic";   // MCP emergency stop statistics
+      RemotePanel_EStop : "UDT_EventStatistic";   // Remote panel emergency stop statistics
+      Error : "UDT_EventStatistic";   // System in error
+      StartNumberOfTimes { S7_SetPoint := 'True'} : DInt;   // Number of times system started
+      ResetNumberOfTimes { S7_SetPoint := 'True'} : DInt;   // Number of timer system reset
+      DataResetNumberOfTimes { S7_SetPoint := 'True'} : DInt;   // Number of data reset
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_Interface_Signal"
+VERSION : 0.1
+   STRUCT
+      RQST { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Request to activate
+      CMD { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Request is Active and thus commanded
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_WE01Status"
+VERSION : 0.1
+   STRUCT
+      Status : Int;   // Status number
+      Specific : Struct
+         WeighingScaleFault { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Weighing Scale unit in Fault state
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_InchingConfiguration"
+TITLE = UDT_InchingConfiguration
+VERSION : 0.1
+//User-defined structure of inching block parameters.
+   STRUCT
+      GapSize { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Gapsize in [cm]
+      MaximalFillingPosition { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Position in [cm] from the end
+      ButtonReleaseDelayTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Time in [ms] to accept the button to set full or release
+      WaitForStartConf { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True = Wait for conformation to start after running empty
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_GateStatus"
+VERSION : 0.1
+   STRUCT
+      Status : Int;   // HMI status structure
+      Specific : Struct
+         GateClosed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // When TRUE then gate is closed, when FALSE then gate is open
+         GateClosedAndNoOperatorPresent { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // When TRUE then gate is closed, no operator is inside
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_EuchnerLockStatus"
+VERSION : 0.1
+   STRUCT
+      LockFault { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Internal lock fault
+      DoorClosed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // The door is closed
+      DoorOpened { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // The door is opened
+      BoltTongueClosed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // The lock bolt tongue is closed
+      Safelylocked { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // The lock is safely locked
+      SafetyLockAckReq { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // The safety lock signal needs to be confirmed
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_EncoderStatus"
+VERSION : 0.1
+   STRUCT
+      Fault { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_EncoderStatistics"
+VERSION : 0.1
+   STRUCT
+      Fault { S7_SetPoint := 'False'} : "UDT_EventStatistic";
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_CapacityConfiguration"
+VERSION : 0.1
+   STRUCT
+      AveragePackageLengthConfiguration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Average package length [mm]
+      Interval { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Interval time [s]
+      Treshold { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Minimum value for the capacity to be saved
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_EmptyWindow"
+VERSION : 0.1
+   STRUCT
+      EmptyWindoSize { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Minimum size of empty window [mm]
+      Last_InductPosition { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Last inducted position
+      No_Of_Empty_Window { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Number of empty window
+      Displacement { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Displacement [cm/scan]
+      EmptyWIndowPosition { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[0..50] of Int;   // Array of avaiable empty windows
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_InchingStatus"
+VERSION : 0.1
+   STRUCT
+      Full { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Conveyor is full
+      Active { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Inching is active
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_Destinations"
+VERSION : 0.1
+   STRUCT
+      Destination { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[0..5] of DInt;   // Destination code to compare to to go to position
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_CA01Status"
+VERSION : 0.1
+   STRUCT
+      Status : Int;   // Status number
+      Specific : Struct
+         GeneralError : Bool;   // General error in one of the camera units
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_StatusTS97"
+VERSION : 0.1
+   STRUCT
+      Conveyor : "UDT_ConveyorStatus";   // Conveyor Status
+      PEC_EoS : "UDT_PECStatus";   // PEC EoS Status
+      VFD : "UDT_VfdStatus";   // VFD Status
+      SpiralVeyor : "UDT_SpiralVeyorStatus";   // SpiralVeyor status
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_StatisticsTS97"
+VERSION : 0.1
+   STRUCT
+      Conveyor : "UDT_ConveyorStatistics";   // Conveyor Statistics
+      PEC_EoS : "UDT_PECStatistics";   // PEC EoS Statistics
+      VFD : "UDT_VfdStatistics";   // VFD Statistics
+      SpiralVeyor : "UDT_SpiralVeyorStatistics";   // SpiralVeyor Statistics
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_RollerMotorNumber"
+VERSION : 0.1
+   STRUCT
+      Controller1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Controller nr.1
+         RollerMotor1Exists { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Roller  nr.1, TRUE= if used FALSE= if not used
+         RollerMotor2Exists { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Roller nr. 2, TRUE= if used FALSE= if not used
+      END_STRUCT;
+      Controller2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Controller nr.4
+         RollerMotor1Exists { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Roller  nr.1, TRUE= if used FALSE= if not used
+         RollerMotor2Exists { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Roller nr. 2, TRUE= if used FALSE= if not used
+      END_STRUCT;
+      Controller3 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Controller nr.4
+         RollerMotor1Exists { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Roller  nr.1, TRUE= if used FALSE= if not used
+         RollerMotor2Exists { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Roller nr. 2, TRUE= if used FALSE= if not used
+      END_STRUCT;
+      Controller4 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Controller nr.4
+         RollerMotor1Exists { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Roller  nr.1, TRUE= if used FALSE= if not used
+         RollerMotor2Exists { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Roller nr. 2, TRUE= if used FALSE= if not used
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_CntrlRollerMotorNumber"
+VERSION : 0.1
+   STRUCT
+      RollerMotorRightExists { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Roller  nr.1, TRUE= if used FALSE= if not used
+      RollerMotorLeftExists { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Roller nr. 2, TRUE= if used FALSE= if not used
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_PointerInfo"
+TITLE = UDT_PointerInfo
+VERSION : 0.1
+//User-defined structure of ANY pointer information.
+   STRUCT
+      DataType { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Word;   // Data type of the variable - see documentation to chceck codes
+      RepFactor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Repetition factor
+      DBNo { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Data block number
+      ByteOffset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UInt;   // Byteoffset
+      BitOffset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UInt;   // Bit offset
+      MemArea { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;   // Memory area - see documentation to chceck codes
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_PointerStruct"
+TITLE = UDT_PointerStruct
+VERSION : 0.1
+//User-defined structure of ANY pointer structure.
+   STRUCT
+      "Type" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Word;   // Data type
+      RepFactor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Repetition factor
+      DBNr { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Data block number
+      Area { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DWord;   // Memory area and data offset
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_PLRS_STATUS"
+VERSION : 0.1
+   STRUCT
+      "DINT" : Array[0..109] of DInt;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_PLRS_CONTROL"
+VERSION : 0.1
+   STRUCT
+      "[0]" : Struct   // DINT [0] as struct of BOOL | Control Bits | INTL_PLRS_CONTROL[0]
+         BuildingHeartbeat : Bool;   // Building heartbeat | INTL_PLRS_CONTROL[0].0 | 1= true
+         UpstreamHearbeat : Bool;   // Upstream heartbeat | INTL_PLRS_CONTROL[0].1 | 1= true
+         DownstreamHeartbeat : Bool;   // Downstream heartbeat | INTL_PLRS_CONTROL[0].2 | 1= true
+         SPARE_3 : Bool;   // Spare | INTL_PLRS_CONTROL[0].3
+         SPARE_4 : Bool;   // Spare | INTL_PLRS_CONTROL[0].4
+         StartArea : Bool;   // Start Polaris Area | INTL_PLRS_CONTROL[0].5 | 1= true
+         StopArea : Bool;   // Stop Polaris Area | INTL_PLRS_CONTROL[0].6 | 1= true
+         ResetFaults : Bool;   // Reset Polaris Faults | INTL_PLRS_CONTROL[0].7 | 1= true
+         ResetStatistics : Bool;   // Reset Polaris Statistics | INTL_PLRS_CONTROL[0].8 | 1= true
+         UpstreamRunning : Bool;   // Upstream is running | INTL_PLRS_CONTROL[0].9 | 1= true
+         DownstreamRunning : Bool;   // Downstream is running | INTL_PLRS_CONTROL[0].10 | 1= true
+         AuxConveyorRunning : Bool;   // Auxiliary conveyor is running | INTL_PLRS_CONTROL[0].11 | 1= true
+         SPARE_12 : Bool;   // Spare | INTL_PLRS_CONTROL[0].12 | 1= true
+         GoIntoEnergySaveMode : Bool;   // Go into Energy Save Mode | INTL_PLRS_CONTROL[0].13 | 1= true
+         SPARE_14 : Bool;   // Spare | INTL_PLRS_CONTROL[0].14
+         SPARE_15 : Bool;   // Spare | INTL_PLRS_CONTROL[0].15
+         SPARE_16 : Bool;   // Spare | INTL_PLRS_CONTROL[0].16
+         SPARE_17 : Bool;   // Spare | INTL_PLRS_CONTROL[0].17
+         SPARE_18 : Bool;   // Spare | INTL_PLRS_CONTROL[0].18
+         SPARE_19 : Bool;   // Spare | INTL_PLRS_CONTROL[0].19
+         SPARE_20 : Bool;   // Spare | INTL_PLRS_CONTROL[0].20
+         SPARE_21 : Bool;   // Spare | INTL_PLRS_CONTROL[0].21
+         SPARE_22 : Bool;   // Spare | INTL_PLRS_CONTROL[0].22
+         SPARE_23 : Bool;   // Spare | INTL_PLRS_CONTROL[0].23
+         SPARE_24 : Bool;   // Spare | INTL_PLRS_CONTROL[0].24
+         SPARE_25 : Bool;   // Spare | INTL_PLRS_CONTROL[0].25
+         SPARE_26 : Bool;   // Spare | INTL_PLRS_CONTROL[0].26
+         SPARE_27 : Bool;   // Spare | INTL_PLRS_CONTROL[0].27
+         SPARE_28 : Bool;   // Spare | INTL_PLRS_CONTROL[0].28
+         SPARE_29 : Bool;   // Spare | INTL_PLRS_CONTROL[0].29
+         SPARE_30 : Bool;   // Spare | INTL_PLRS_CONTROL[0].30
+         SPARE_31 : Bool;   // Spare | INTL_PLRS_CONTROL[0].31
+      END_STRUCT;
+      "[1]" : Struct   // DINT [1] as struct of BOOL | SPARE | INTL_PLRS_CONTROL[1]
+         SPARE_0 : Bool;   // Spare | INTL_PLRS_CONTROL[1].0
+         SPARE_1 : Bool;   // Spare | INTL_PLRS_CONTROL[1].1
+         SPARE_2 : Bool;   // Spare | INTL_PLRS_CONTROL[1].2
+         SPARE_3 : Bool;   // Spare | INTL_PLRS_CONTROL[1].3
+         SPARE_4 : Bool;   // Spare | INTL_PLRS_CONTROL[1].4
+         SPARE_5 : Bool;   // Spare | INTL_PLRS_CONTROL[1].5
+         SPARE_6 : Bool;   // Spare | INTL_PLRS_CONTROL[1].6
+         SPARE_7 : Bool;   // Spare | INTL_PLRS_CONTROL[1].7
+         SPARE_8 : Bool;   // Spare | INTL_PLRS_CONTROL[1].8
+         SPARE_9 : Bool;   // Spare | INTL_PLRS_CONTROL[1].9
+         SPARE_10 : Bool;   // Spare | INTL_PLRS_CONTROL[1].10
+         SPARE_11 : Bool;   // Spare | INTL_PLRS_CONTROL[1].11
+         SPARE_12 : Bool;   // Spare | INTL_PLRS_CONTROL[1].12
+         SPARE_13 : Bool;   // Spare | INTL_PLRS_CONTROL[1].13
+         SPARE_14 : Bool;   // Spare | INTL_PLRS_CONTROL[1].14
+         SPARE_15 : Bool;   // Spare | INTL_PLRS_CONTROL[1].15
+         SPARE_16 : Bool;   // Spare | INTL_PLRS_CONTROL[1].16
+         SPARE_17 : Bool;   // Spare | INTL_PLRS_CONTROL[1].17
+         SPARE_18 : Bool;   // Spare | INTL_PLRS_CONTROL[1].18
+         SPARE_19 : Bool;   // Spare | INTL_PLRS_CONTROL[1].19
+         SPARE_20 : Bool;   // Spare | INTL_PLRS_CONTROL[1].20
+         SPARE_21 : Bool;   // Spare | INTL_PLRS_CONTROL[1].21
+         SPARE_22 : Bool;   // Spare | INTL_PLRS_CONTROL[1].22
+         SPARE_23 : Bool;   // Spare | INTL_PLRS_CONTROL[1].23
+         SPARE_24 : Bool;   // Spare | INTL_PLRS_CONTROL[1].24
+         SPARE_25 : Bool;   // Spare | INTL_PLRS_CONTROL[1].25
+         SPARE_26 : Bool;   // Spare | INTL_PLRS_CONTROL[1].26
+         SPARE_27 : Bool;   // Spare | INTL_PLRS_CONTROL[1].27
+         SPARE_28 : Bool;   // Spare | INTL_PLRS_CONTROL[1].28
+         SPARE_29 : Bool;   // Spare | INTL_PLRS_CONTROL[1].29
+         SPARE_30 : Bool;   // Spare | INTL_PLRS_CONTROL[1].30
+         SPARE_31 : Bool;   // Spare | INTL_PLRS_CONTROL[1].31
+      END_STRUCT;
+      "[2]" : Struct   // DINT [2] as struct of BOOL | SPARE | INTL_PLRS_CONTROL[2]
+         SPARE_0 : Bool;   // Spare | INTL_PLRS_CONTROL[2].0
+         SPARE_1 : Bool;   // Spare | INTL_PLRS_CONTROL[2].1
+         SPARE_2 : Bool;   // Spare | INTL_PLRS_CONTROL[2].2
+         SPARE_3 : Bool;   // Spare | INTL_PLRS_CONTROL[2].3
+         SPARE_4 : Bool;   // Spare | INTL_PLRS_CONTROL[2].4
+         SPARE_5 : Bool;   // Spare | INTL_PLRS_CONTROL[2].5
+         SPARE_6 : Bool;   // Spare | INTL_PLRS_CONTROL[2].6
+         SPARE_7 : Bool;   // Spare | INTL_PLRS_CONTROL[2].7
+         SPARE_8 : Bool;   // Spare | INTL_PLRS_CONTROL[2].8
+         SPARE_9 : Bool;   // Spare | INTL_PLRS_CONTROL[2].9
+         SPARE_10 : Bool;   // Spare | INTL_PLRS_CONTROL[2].10
+         SPARE_11 : Bool;   // Spare | INTL_PLRS_CONTROL[2].11
+         SPARE_12 : Bool;   // Spare | INTL_PLRS_CONTROL[2].12
+         SPARE_13 : Bool;   // Spare | INTL_PLRS_CONTROL[2].13
+         SPARE_14 : Bool;   // Spare | INTL_PLRS_CONTROL[2].14
+         SPARE_15 : Bool;   // Spare | INTL_PLRS_CONTROL[2].15
+         SPARE_16 : Bool;   // Spare | INTL_PLRS_CONTROL[2].16
+         SPARE_17 : Bool;   // Spare | INTL_PLRS_CONTROL[2].17
+         SPARE_18 : Bool;   // Spare | INTL_PLRS_CONTROL[2].18
+         SPARE_19 : Bool;   // Spare | INTL_PLRS_CONTROL[2].19
+         SPARE_20 : Bool;   // Spare | INTL_PLRS_CONTROL[2].20
+         SPARE_21 : Bool;   // Spare | INTL_PLRS_CONTROL[2].21
+         SPARE_22 : Bool;   // Spare | INTL_PLRS_CONTROL[2].22
+         SPARE_23 : Bool;   // Spare | INTL_PLRS_CONTROL[2].23
+         SPARE_24 : Bool;   // Spare | INTL_PLRS_CONTROL[2].24
+         SPARE_25 : Bool;   // Spare | INTL_PLRS_CONTROL[2].25
+         SPARE_26 : Bool;   // Spare | INTL_PLRS_CONTROL[2].26
+         SPARE_27 : Bool;   // Spare | INTL_PLRS_CONTROL[2].27
+         SPARE_28 : Bool;   // Spare | INTL_PLRS_CONTROL[2].28
+         SPARE_29 : Bool;   // Spare | INTL_PLRS_CONTROL[2].29
+         SPARE_30 : Bool;   // Spare | INTL_PLRS_CONTROL[2].30
+         SPARE_31 : Bool;   // Spare | INTL_PLRS_CONTROL[2].31
+      END_STRUCT;
+      "[3]" : Struct   // DINT [3] as struct of BOOL | SPARE | INTL_PLRS_CONTROL[3]
+         SPARE_0 : Bool;   // Spare | INTL_PLRS_CONTROL[3].0
+         SPARE_1 : Bool;   // Spare | INTL_PLRS_CONTROL[3].1
+         SPARE_2 : Bool;   // Spare | INTL_PLRS_CONTROL[3].2
+         SPARE_3 : Bool;   // Spare | INTL_PLRS_CONTROL[3].3
+         SPARE_4 : Bool;   // Spare | INTL_PLRS_CONTROL[3].4
+         SPARE_5 : Bool;   // Spare | INTL_PLRS_CONTROL[3].5
+         SPARE_6 : Bool;   // Spare | INTL_PLRS_CONTROL[3].6
+         SPARE_7 : Bool;   // Spare | INTL_PLRS_CONTROL[3].7
+         SPARE_8 : Bool;   // Spare | INTL_PLRS_CONTROL[3].8
+         SPARE_9 : Bool;   // Spare | INTL_PLRS_CONTROL[3].9
+         SPARE_10 : Bool;   // Spare | INTL_PLRS_CONTROL[3].10
+         SPARE_11 : Bool;   // Spare | INTL_PLRS_CONTROL[3].11
+         SPARE_12 : Bool;   // Spare | INTL_PLRS_CONTROL[3].12
+         SPARE_13 : Bool;   // Spare | INTL_PLRS_CONTROL[3].13
+         SPARE_14 : Bool;   // Spare | INTL_PLRS_CONTROL[3].14
+         SPARE_15 : Bool;   // Spare | INTL_PLRS_CONTROL[3].15
+         SPARE_16 : Bool;   // Spare | INTL_PLRS_CONTROL[3].16
+         SPARE_17 : Bool;   // Spare | INTL_PLRS_CONTROL[3].17
+         SPARE_18 : Bool;   // Spare | INTL_PLRS_CONTROL[3].18
+         SPARE_19 : Bool;   // Spare | INTL_PLRS_CONTROL[3].19
+         SPARE_20 : Bool;   // Spare | INTL_PLRS_CONTROL[3].20
+         SPARE_21 : Bool;   // Spare | INTL_PLRS_CONTROL[3].21
+         SPARE_22 : Bool;   // Spare | INTL_PLRS_CONTROL[3].22
+         SPARE_23 : Bool;   // Spare | INTL_PLRS_CONTROL[3].23
+         SPARE_24 : Bool;   // Spare | INTL_PLRS_CONTROL[3].24
+         SPARE_25 : Bool;   // Spare | INTL_PLRS_CONTROL[3].25
+         SPARE_26 : Bool;   // Spare | INTL_PLRS_CONTROL[3].26
+         SPARE_27 : Bool;   // Spare | INTL_PLRS_CONTROL[3].27
+         SPARE_28 : Bool;   // Spare | INTL_PLRS_CONTROL[3].28
+         SPARE_29 : Bool;   // Spare | INTL_PLRS_CONTROL[3].29
+         SPARE_30 : Bool;   // Spare | INTL_PLRS_CONTROL[3].30
+         SPARE_31 : Bool;   // Spare | INTL_PLRS_CONTROL[3].31
+      END_STRUCT;
+      "[4]" : DInt;   // DINT [4] | SPARE | INTL_PLRS_CONTROL[4]
+      "[5]" : DInt;   // DINT [5] | SPARE | INTL_PLRS_CONTROL[5]
+      "[6]" : DInt;   // DINT [6] | SPARE | INTL_PLRS_CONTROL[6]
+      "[7]" : DInt;   // DINT [7] | SPARE | INTL_PLRS_CONTROL[7]
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_MainRackDiagnoseStatistics"
+VERSION : 0.1
+   STRUCT
+      ModuleError { S7_SetPoint := 'False'} : Array[0..31] of "UDT_EventStatistic";
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_JDSStatus"
+VERSION : 0.1
+   STRUCT
+      BO1_Jam : Bool;   // Jam Detection System B01 Jam
+      BO2_Jam : Bool;   // Jam Detection System B02 Jam
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_Destination"
+TITLE = UDT_Destination
+VERSION : 0.1
+//User-defined structure of destination function variables.
+   STRUCT
+      Direction_1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[0..5] of Int;   // Destination code to compare to to go to direction 1
+      Direction_2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[0..5] of Int;   // Destination code to compare to to go to direction 2
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_JDSStatistics"
+VERSION : 0.1
+   STRUCT
+      BO1_Jam { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // JDS PEC 01 is jammed
+      BO2_Jam { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // JDS PEC 02 is jammed
+   END_STRUCT;
+
+END_TYPE
+

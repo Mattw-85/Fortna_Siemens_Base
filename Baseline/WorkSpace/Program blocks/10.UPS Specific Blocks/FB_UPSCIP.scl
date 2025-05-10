@@ -1,0 +1,287 @@
+﻿FUNCTION_BLOCK "FB_UPSCIP"
+TITLE = Communication Interface Panel Cabinet Block
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : CesarLeite
+VERSION : 0.1
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 51
+// END_ATTRIBUTES
+   VAR_INPUT 
+      ix_SystemRunning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // System running error free
+      ix_XLESelectorSwitch { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Selector switch CHAT/XLE - (True=BackUp, False=Primary)
+      ix_CameraSelectorSwitch { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Selector switch Camera - (True=BackUp, False=Primary)
+      ix_CIP24VDC { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // CIP 24VDC Ok - (True=Healthy, False=Error)
+      ix_CIPCircuitBreakerOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // CIP circuit breaker Ok (True=Healthy, False=Error)
+      ix_DWSOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Weighing Scale Ok (True=Healthy, False=Error)
+      ix_CameraInput1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Camera Tunel Input 1
+      ix_CameraInput2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Camera Tunel Input 2
+      ix_XLEFaulty { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // XLE Chat communication fault
+   END_VAR
+
+   VAR_OUTPUT 
+      qUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_UPSCIPStatus";   // CIP Status
+      qUDT_Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_CommonStatus";   // CIP HMI Status
+      qx_SystemStopRequest { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // System stop request
+      qx_XLEReconnect { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reconnect XLE
+      qx_XLESwitch { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // If the output is false the XLE is in primary, if false the XLE is in backup
+      qx_CameraSwitch { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // If the output is false the camera is in primary, if false the camara is in backup
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_EquipmentControl : "UDT_EquipmentControl";   // CIP Equipment control
+      iqUDT_Statistics : "UDT_UPSCIPStatistics";   // CIP Statistics structure
+   END_VAR
+
+   VAR 
+      sUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_UPSCIPStatus";   // HMI status structure
+      sUDT_CommonStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   // Common status structure
+      sUDT_CommonStatusOld { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   // Common status structure
+      sR_Trig_XLESwitch {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rise trigger when XLE selector switch to backup
+      sF_Trig_XLESwitch {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   // Fall trigger when XLE selector switch to primary
+      sR_Trig_CameraSwitch {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rise trigger when camera selector switch to backup
+      sF_Trig_CameraSwitch {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   // Fall trigger when camera selector switch to primary
+      sF_Trig_CIP24VDC {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   // Fall trigger when CIP 24VDC
+      sF_Trig_CIPCircuitBreaker {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   // Fall trigger when CIP circuit breaker is tripped
+      sF_Trig_DWSFault {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   // Fall trigger when weighing scale has a fault
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                      
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	19/09/2019  | 2.0       | C.Leite       | first release TIA 15.1
+	14/10/2019  | 2.1       | L.Klar        | Updated status structure
+	07/11/2019  | 2.2       | M.Kurc        | Add I/O: system running/stop and camera/XLE switch
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1 
+	09/07/2020  | 3.1       | S.Theocharis  | Update HMI status in every scan. Bug fix with initialization
+	21/08/2020  | 3.2       | S.Theocharis  | Error handling when XLE/Camera switch while system is running
+	                                        | Added statistics of selection switches
+	13/08/2020  | 3.3       | L.Klar        | XLE reconnect command added, communication fault added to stop camera belt
+	22/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 - Trigger
+	    
+	    // Rise trigger selector switch CHAT/XLE BackUp 
+	    #sR_Trig_XLESwitch(CLK := #ix_XLESelectorSwitch);
+	    
+	    // Fall trigger selector switch CHAT/XLE BackUp 
+	    #sF_Trig_XLESwitch(CLK := #ix_XLESelectorSwitch);
+	    
+	    // Fall trigger selector switch camera to primary 
+	    #sF_Trig_CameraSwitch(CLK := #ix_CameraSelectorSwitch);
+	    
+	    // Rise trigger selector switch camera to primary 
+	    #sR_Trig_CameraSwitch(CLK := #ix_CameraSelectorSwitch);
+	    
+	    // Fall trigger CIP 24VDC error
+	    #sF_Trig_CIP24VDC(CLK := #ix_CIP24VDC);
+	    
+	    // Fall trigger CIP 24VDC circuit breaker tripped
+	    #sF_Trig_CIPCircuitBreaker(CLK := #ix_CIPCircuitBreakerOk);
+	    
+	    // Fall trigger weighing scale fault
+	    #sF_Trig_DWSFault(CLK := #ix_DWSOk);
+	    
+	END_REGION
+	
+	REGION 2 - Reset faults
+	    
+	    // All faults are reset when the reset input is true
+	    IF #iqUDT_EquipmentControl.Command.Reset
+	    THEN
+	        
+	        #sUDT_HMIStatus.Specific.CIP24VDCError := FALSE;
+	        #sUDT_HMIStatus.Specific.CIPCircuitBreakerTripped := FALSE;
+	        #sUDT_HMIStatus.Specific.WeighingScaleFault := FALSE;
+	        #sUDT_HMIStatus.Specific.XLE_SwitchError := FALSE;
+	        #sUDT_HMIStatus.Specific.Camera_SwitchError := FALSE;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 3 - Status monitoring 
+	    
+	    // CHAT/XLE Selector Switch
+	    
+	    #sUDT_HMIStatus.Specific.XLEBackUp := #ix_XLESelectorSwitch;
+	    
+	    #sUDT_HMIStatus.Specific.XLEPrimary := NOT #ix_XLESelectorSwitch;
+	    
+	    // CIP 24VDC Fault
+	    
+	    IF NOT #ix_CIP24VDC
+	    THEN
+	        
+	        #sUDT_HMIStatus.Specific.CIP24VDCError := TRUE;
+	        
+	    END_IF;
+	    
+	    // CIP Circuit Breaker Tripped
+	    
+	    IF NOT #ix_CIPCircuitBreakerOk
+	    THEN
+	        
+	        #sUDT_HMIStatus.Specific.CIPCircuitBreakerTripped := TRUE;
+	        
+	    END_IF;
+	    
+	    // Weighing Scale Fault
+	    
+	    IF NOT #ix_DWSOk
+	    THEN
+	        
+	        #sUDT_HMIStatus.Specific.WeighingScaleFault := TRUE;
+	        
+	    END_IF;
+	    
+	    // Camera Tunel 
+	    #sUDT_HMIStatus.Specific.CameraTunel1 := NOT #ix_CameraSelectorSwitch;
+	    #sUDT_HMIStatus.Specific.CameraTunel2 := #ix_CameraSelectorSwitch;
+	    
+	    // XLE Switching error while running
+	    IF #ix_SystemRunning AND (#sR_Trig_XLESwitch.Q OR #sF_Trig_XLESwitch.Q)
+	    THEN
+	        #sUDT_HMIStatus.Specific.XLE_SwitchError := TRUE;
+	    END_IF;
+	    
+	    // Camera Switching error while running
+	    IF #ix_SystemRunning AND (#sR_Trig_CameraSwitch.Q OR #sF_Trig_CameraSwitch.Q)
+	    THEN
+	        #sUDT_HMIStatus.Specific.Camera_SwitchError := TRUE;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 4 - Switching Camera and XLE
+	    
+	    // XLE activation
+	    #qx_XLESwitch := #ix_XLESelectorSwitch;
+	    
+	    // Camera activation
+	    #qx_CameraSwitch := #ix_CameraSelectorSwitch;
+	    
+	END_REGION
+	
+	REGION 5 - XLE change 
+	    
+	    #qx_XLEReconnect := #sR_Trig_XLESwitch.Q OR #sF_Trig_XLESwitch.Q;
+	    
+	END_REGION
+	
+	REGION 6 - Statistics
+	    
+	    // 24 VDC fault statistics
+	    IF #sUDT_HMIStatus.Specific.CIP24VDCError
+	        OR #iqUDT_EquipmentControl.Command.ResetData
+	    THEN
+	        
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #sUDT_HMIStatus.Specific.CIP24VDCError,
+	                        ix_RTrigActivate := #sF_Trig_CIP24VDC.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.CIP24VDCFault);
+	        
+	    END_IF;
+	    
+	    // CIP Circuit Breaker Tripped statistics
+	    IF #sUDT_HMIStatus.Specific.CIPCircuitBreakerTripped
+	        OR #iqUDT_EquipmentControl.Command.ResetData
+	    THEN
+	        
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #sUDT_HMIStatus.Specific.CIPCircuitBreakerTripped,
+	                        ix_RTrigActivate := #sF_Trig_CIPCircuitBreaker.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.CIPCircuitBreakerTripped);
+	        
+	    END_IF;
+	    
+	    // CIP Weighing Scale Fault statistics
+	    IF #sUDT_HMIStatus.Specific.WeighingScaleFault
+	        OR #iqUDT_EquipmentControl.Command.ResetData
+	    THEN
+	        
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #sUDT_HMIStatus.Specific.WeighingScaleFault,
+	                        ix_RTrigActivate := #sF_Trig_DWSFault.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.WeighingScaleFault);
+	    END_IF;
+	    
+	    //Camera selection switch changes
+	    IF #sR_Trig_CameraSwitch.Q OR #sF_Trig_CameraSwitch.Q THEN
+	        #iqUDT_Statistics.SS_Camera += 1;
+	        
+	    ELSIF #iqUDT_EquipmentControl.Command.ResetData THEN
+	        #iqUDT_Statistics.SS_Camera := 0;
+	    END_IF;
+	    
+	    //XLE selector switch changes
+	    IF #sR_Trig_XLESwitch.Q OR #sF_Trig_XLESwitch.Q THEN
+	        #iqUDT_Statistics.SS_XLE += 1;
+	        
+	    ELSIF #iqUDT_EquipmentControl.Command.ResetData THEN
+	        #iqUDT_Statistics.SS_XLE := 0;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 7 - Status
+	    
+	    // Stop system
+	    #qx_SystemStopRequest := #ix_SystemRunning AND (#sUDT_HMIStatus.Specific.Camera_SwitchError OR #sUDT_HMIStatus.Specific.XLE_SwitchError OR #ix_XLEFaulty);
+	    
+	    // Set common error to report 
+	    #sUDT_CommonStatus.Error := #sUDT_HMIStatus.Specific.WeighingScaleFault
+	    OR #sUDT_HMIStatus.Specific.CIPCircuitBreakerTripped
+	    OR #sUDT_HMIStatus.Specific.CIP24VDCError
+	    OR #sUDT_HMIStatus.Specific.Camera_SwitchError
+	    OR #sUDT_HMIStatus.Specific.XLE_SwitchError;
+	    
+	    // Write status value to output
+	    IF #sUDT_CommonStatusOld <> #sUDT_CommonStatus                                // Update on change
+	        OR (#sR_Trig_CameraSwitch.Q OR #sF_Trig_CameraSwitch.Q)
+	        OR (#sR_Trig_XLESwitch.Q OR #sF_Trig_XLESwitch.Q)
+	    THEN
+	        
+	        #sUDT_HMIStatus.Status := 0; //initialize status
+	        
+	        IF #sUDT_HMIStatus.Specific.WeighingScaleFault                             // Error
+	            OR #sUDT_HMIStatus.Specific.Camera_SwitchError
+	            OR #sUDT_HMIStatus.Specific.XLE_SwitchError
+	        THEN
+	            
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Error;
+	            
+	        END_IF;
+	        
+	        IF #sUDT_HMIStatus.Specific.CIPCircuitBreakerTripped                       // CB error
+	            OR #sUDT_HMIStatus.Specific.CIP24VDCError
+	        THEN
+	            
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".CBError;
+	        END_IF;
+	        
+	        
+	        #sUDT_CommonStatusOld := #sUDT_CommonStatus;                              // Copy status to memory
+	        #qUDT_Status := #sUDT_CommonStatus;                                       // Copy status to output
+	    END_IF;
+	    
+	    #qUDT_HMIStatus := #sUDT_HMIStatus;                                           // Copy HMI status
+	    
+	END_REGION
+	
+	REGION 8 - Report to control block
+	    
+	    // Function to manage report between control block and conveyor block
+	    
+	    "FC_EquipmentReport"(iUDT_Status := #sUDT_CommonStatus,
+	                         iqUDT_Control := #iqUDT_EquipmentControl);
+	    
+	END_REGION
+	
+END_FUNCTION_BLOCK
+

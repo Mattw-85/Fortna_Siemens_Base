@@ -1,0 +1,159 @@
+﻿FUNCTION_BLOCK "FB_PECBulk"
+TITLE = FB_PEC
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : Conveyor
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 220
+// END_ATTRIBUTES
+   VAR_INPUT 
+      ix_PEC { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Signal of the PEC
+      ix_PECDownstream { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Downstream PEC signal
+      ix_DownstreamRunning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Downstream conveyor is running
+      iUDT_PECConfiguration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_PECConfiguration";   //   PEC configuration structure
+   END_VAR
+
+   VAR_OUTPUT 
+      qx_PECFiltered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   PEC Filtered
+      qUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_PECStatus";   //   Status structure
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_ConveyorInterface : "UDT_ConveyorInterface";   //   Interface structure
+      iqUDT_PECStatistics : "UDT_PECStatistics";   //   Statistics structure
+   END_VAR
+
+   VAR 
+      s_Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_PECStatus";   //   Status structure
+      s_StatusOld { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_PECStatus";   //   Auxiliary status structure
+      PEC_TimerOnOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   //   Filtering end of section photo eye signal
+      sR_TRIG_PECJam {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Rising edge trigger PEC jam
+   END_VAR
+   VAR RETAIN
+      si_AuxJamDisplacement { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Auxiliary variable to calculate displacement when PEC is blocked
+   END_VAR
+   VAR 
+      sx_Enable { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Enable
+      sx_PECFiltered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Photo eye filtered
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                      
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	16/03/2020  | 3.0       | K.Pokorski    | 3.0 MHS library release TIA 15.1
+	20/03/2020  | 3.1       | S.Theocharis  | Changed check to upsteam and jam condition
+	24/03/2020  | 3.2       | S.Theocharis  | Add input ix Changed ix_UpstreamRunning
+	30/03/2020  | 3.3       | K.Pokorski    | Changed error reset condition
+	02/04/2020  | 3.4       | S.Theocharis  | Changed check to downsteam
+	11/07/2022  | 3.5       | G.Vlooswijk   | Removed #ix_PECDownstream as jam reset condition
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	12/03/2024  | 4.1       | S. Nieswiec   | Small variable name changes according to current standard 
+	*)
+	
+	REGION 1 - Triggers
+	    
+	    // Rising edge PEC Jam.
+	    #sR_TRIG_PECJam(CLK := #s_Status.Jam);
+	    
+	END_REGION
+	
+	REGION 2 - Active function  
+	    
+	    // To activate the Jam monitoring, the jam displacement limit must be greater than zero. 
+	    #sx_Enable := #iUDT_PECConfiguration.JamDisplacementLimit > 0;
+	    
+	END_REGION
+	
+	REGION 3 - Reset errors
+	    
+	    // Reset Jam error and initialize Jam displacement counter, when reset signal occurs.
+	    IF #iqUDT_ConveyorInterface.InternalErrorReset
+	        AND (#iUDT_PECConfiguration.ResetWithPECBlocked
+	        OR (NOT #iUDT_PECConfiguration.ResetWithPECBlocked
+	        AND #sx_PECFiltered))
+	        AND #s_Status.Jam
+	    THEN
+	        #si_AuxJamDisplacement := 0;
+	        #s_Status.Jam := FALSE;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 4 - Photo eye filters
+	    
+	    // End of section photo eye signal filter timer.
+	    #PEC_TimerOnOffDelay(iudi_OnDelayTime := #iUDT_PECConfiguration.TimeOnDelay,
+	                         iudi_OffDelayTime := #iUDT_PECConfiguration.TimeOffDelay,
+	                         ix_SignalToDelay := #ix_PEC,
+	                         ix_Enable := TRUE,
+	                         qx_DelayedSignal => #sx_PECFiltered);
+	    
+	    // Write the current status of the photo eye.
+	    #s_Status.PEC := #sx_PECFiltered;
+	    #qx_PECFiltered := #sx_PECFiltered;
+	    
+	END_REGION
+	
+	REGION 5 - Jam detection   
+	    
+	    // Increasing Jam displacement counter by conveyor displacement, when photo eyes on conveyor and downstream conveyor are blocked and jam functionality is enable.
+	    IF #ix_PECDownstream AND (NOT #sx_PECFiltered) AND #sx_Enable AND #ix_DownstreamRunning
+	        
+	    THEN
+	        #si_AuxJamDisplacement += #iqUDT_ConveyorInterface.Displacement;
+	    ELSE
+	        #si_AuxJamDisplacement := 0;
+	    END_IF;
+	    
+	    // Set jam error when total jam displacement exceeded limit.
+	    IF (#si_AuxJamDisplacement > #iUDT_PECConfiguration.JamDisplacementLimit)
+	        OR (#si_AuxJamDisplacement < (#iUDT_PECConfiguration.JamDisplacementLimit * -1))
+	    THEN
+	        #s_Status.Jam := TRUE;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 6 - Statistics
+	    
+	    // Jam Photo eye blocked statistics.
+	    IF #s_Status.Jam
+	        OR #iqUDT_ConveyorInterface.ResetStatistics
+	    THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_ConveyorInterface.ResetStatistics,
+	                        ix_Activate := #s_Status.Jam,
+	                        ix_RTrigActivate := #sR_TRIG_PECJam.Q,
+	                        iqUDT_Statistics := #iqUDT_PECStatistics.Jam);
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 7 - Internal PEC error
+	    
+	    // Set Internal photo eye error .
+	    IF #s_Status.Jam
+	    THEN
+	        #iqUDT_ConveyorInterface.InternalErrorPEC := TRUE;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 8 - Status
+	    
+	    // Status update on change.
+	    IF #s_StatusOld <> #s_Status
+	    THEN
+	        #qUDT_HMIStatus := #s_Status;
+	        #s_StatusOld := #s_Status;
+	    END_IF;
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

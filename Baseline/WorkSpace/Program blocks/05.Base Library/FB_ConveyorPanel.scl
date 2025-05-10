@@ -1,0 +1,123 @@
+﻿FUNCTION_BLOCK "FB_ConveyorPanel"
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 6
+// END_ATTRIBUTES
+//Main switch and 24V feeedback available in VFD cabinet
+   VAR_INPUT 
+      ix_MainSwitchOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE if main switch with no fault
+      ix_CBFeedback { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE if circuit breacker is ON
+      ix_HardwareOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when hardware is Ok
+   END_VAR
+
+   VAR_OUTPUT 
+      qUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ConveyorPanelStatus";   // HMI status structure
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_ConveyorInterface : "UDT_ConveyorInterface";   // Conveyor interface structure
+      iqUDT_Statistics : "UDT_ConveyorPanelStatistics";   // Statistics structure
+   END_VAR
+
+   VAR 
+      sUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorPanelStatus";   // Conveyor Panel status UDT
+      sR_Trig_24VDC {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rise trigger when a 24VDC fault occurs
+      sR_Trig_MainSwitch {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rise trigger when a Main switch fault occurs
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                      
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	10/01/2020  | 3.0       | S. Nikodem    | first release MHS TIA 15.1
+	16/10/2020  | 3.1       | S. Deulkar    | Changed 24VDc input name to CBFeedback, also UDT are updated
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 - Triggers
+	    
+	    // Rise trigger 24VDC status
+	    #sR_Trig_24VDC(CLK := #sUDT_HMIStatus.CBFeedbackError);
+	    
+	    // Rise trigger Main switch status
+	    #sR_Trig_MainSwitch(CLK := #sUDT_HMIStatus.MainSwitchOff);
+	    
+	END_REGION
+	
+	REGION 2 - Reset error
+	    
+	    IF #iqUDT_ConveyorInterface.InternalErrorReset
+	    THEN
+	        
+	        #sUDT_HMIStatus.CBFeedbackError := FALSE;
+	        #sUDT_HMIStatus.MainSwitchOff := FALSE;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 3 - Faults monitoring 
+	    
+	    // 24 VDC fault status is set when the 24V error occurred
+	    IF NOT #ix_CBFeedback
+	    THEN
+	        
+	        #sUDT_HMIStatus.CBFeedbackError := TRUE;
+	        
+	    END_IF;
+	    
+	    // Main switch fault status is set when the main switch error occurred
+	    IF NOT #ix_MainSwitchOk
+	    THEN
+	        
+	        #sUDT_HMIStatus.MainSwitchOff := TRUE;
+	        
+	    END_IF;
+	    
+	    // Set disconnect bit on Conveyor interface 
+	    #iqUDT_ConveyorInterface.Disconnected := #sUDT_HMIStatus.CBFeedbackError OR #sUDT_HMIStatus.MainSwitchOff;
+	    
+	    // Move static structure to output
+	    #qUDT_HMIStatus := #sUDT_HMIStatus;
+	    
+	END_REGION
+	
+	REGION 4 - Statistics
+	    
+	    // 24 VDC Supply fault statistics
+	    
+	    IF #sUDT_HMIStatus.CBFeedbackError
+	        OR #iqUDT_ConveyorInterface.ResetStatistics
+	    THEN
+	        
+	        "FC_Statistics"(ix_Reset := #iqUDT_ConveyorInterface.ResetStatistics,
+	                        ix_Activate := #sUDT_HMIStatus.CBFeedbackError,
+	                        ix_RTrigActivate := #sR_Trig_24VDC.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.CBFeedbackError);
+	        
+	    END_IF;
+	    
+	    // Main switch fault statistics
+	    
+	    IF #sUDT_HMIStatus.MainSwitchOff
+	        OR #iqUDT_ConveyorInterface.ResetStatistics
+	    THEN
+	        
+	        "FC_Statistics"(ix_Reset := #iqUDT_ConveyorInterface.ResetStatistics,
+	                        ix_Activate := #sUDT_HMIStatus.MainSwitchOff,
+	                        ix_RTrigActivate := #sR_Trig_MainSwitch.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.MainSwitchOff);
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+END_FUNCTION_BLOCK
+

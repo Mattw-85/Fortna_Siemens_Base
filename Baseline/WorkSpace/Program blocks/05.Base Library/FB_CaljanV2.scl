@@ -1,0 +1,587 @@
+﻿FUNCTION_BLOCK "FB_CaljanV2"
+TITLE = FB_Unloader
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : Equimpent
+VERSION : 1.2
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 201
+// END_ATTRIBUTES
+//Function block to control unloader.
+   VAR_INPUT 
+      iUDT_CaljanConfiguration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_CaljanConfigurationV2";   // Caljan configuration structure
+      iUDT_CaljanReceive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_CaljanReceiveV2";   // Caljan receive structure
+      ix_SafetyReset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Safety reset
+      ix_SafetyOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when Safety Circuit of the Conveyor is healthy
+      ix_24vOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when 24VDC is healthy
+      ix_400vOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when 400VAC is healthy
+      ix_HardwareOK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when the PN node(s) are ok
+      ix_ExternalRequestDieBack { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // External request die back
+      ix_ExternalRequestHold { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // External request hold
+      ix_ExternalRunReverse { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // External request only for unloder mode - TRUE when conveyor should run in reverse direction
+      ix_ResetEnergySave { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reset energy save mode timer
+      ix_SimulationModeActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when simulation mode is active
+      ix_CaljanMode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Choosing device 1=loader, 2=unloader
+      ix_BufferPEC { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Buufer PEC
+   END_VAR
+
+   VAR_OUTPUT 
+      qUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_CaljanStatusV2";   // HMI status structure
+      qUDT_Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_CommonStatus";   // Common status structure
+      qUDT_CaljanSend { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_CaljanSendV2";   // Caljan send structure
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_EquipmentControl : "UDT_EquipmentControl";   // Equipment control structure
+      iqUDT_CaljanCommand : "UDT_CaljanCommand";   // Caljan HMI control
+      iqUDT_ConveyorInterface : "UDT_ConveyorInterface";   // Interface structure
+      iqUDT_HandShake : "UDT_ConveyorHandshake";   // Handshake structure
+      iqUDT_HandShakeUp : "UDT_ConveyorHandshake";   // Upstream handshake structure
+      iqUDT_Statistics : "UDT_CaljanStatisticsV2";   // Statistics structure
+   END_VAR
+
+   VAR 
+      s_FB_ResetPulseTimer { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // Timer on/off delay for reset pulse
+      s_FB_CascadeModeTimer { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // Timer on/off delay for cascade mode
+      s_FB_TimerOnOffDelayCheck24V { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // Timer on/off delay to allow startup before fault is generated
+      s_FB_TimerOnOffDelayCheck400V { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // Timer on/off delay to allow startup before fault is generated
+      s_UDT_CommonStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   // Common status structure
+      s_UDT_CommonStatusOld { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   // Auxiliary status structure
+      s_UDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CaljanStatusV2";   // HMI status structure
+      s_UDT_PNDevice { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_PNDevice";   // PN device info structure
+      sa_PNPortsStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[1..8] of Bool;   // TRUE when specific port has an error
+      R_TRIG_EnergySave {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge for energy save
+      R_TRIG_ConveyorUp {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge of automatic active
+      R_TRIG_ConveyorDown {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge of automatic not active
+      R_TRIG_NotHealthy {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge trigger if extendable not healthy
+      R_TRIG_SafetyOk {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge trigger safety is ok
+      s_R_TRIG_PNSlaveError {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge for PN error
+      s_R_TRIG_PNSlaveNotOnline {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge for PN not online
+      s_R_TRIG_ResetEnergySaveRunMode {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge trigger reset energy save mode
+      s_R_TRIG_ResetEnergySaveBufferMode {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge trigger reset energy save mode
+      s_R_TRIG_ResetEnergySaveActive {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge trigger reset energy save mode
+   END_VAR
+   VAR RETAIN
+      sdi_EnergySave { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Energy save displacement
+   END_VAR
+   VAR 
+      sx_Disabled { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Operation is enabled
+      sx_Ready { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Conveyor Ready to operate in Forward mode
+      sx_EnergySaveActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Active energy save mode
+      sx_AutomaticActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Forward active
+      sx_CascadeStartUp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Cascade startup auxiliary bit
+      sx_24VOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 24V ok
+      sx_400VOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 400V ok
+   END_VAR
+
+   VAR CONSTANT 
+      ci_NumberOfProfinetPorts : Int := 2;   // Number of Profinet ports in device
+      ci_PowerSupplyDelayTime : UInt := 4000;   // Power supply delay time
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	|                                                                                      |
+	|  Copyright  2023             FORTNA Europe BV                                        |
+	|  All Rights Reserved         Netherlands                                             |
+	|                                                                                      |  
+	----------------------------------------------------------------------------------------
+	
+	Version history:
+	Date        | Version   | Author       | Remark
+	----------------------------------------------------------------------------------------
+	07/03/2023  | 1.0       | S. Nikodem   | Release TIA 17 | DHL Munich 2023
+	20/12/2023  | 1.1       | M. Diebel    | Update 
+	20/12/2023  | 1.2       | L.Klar       | Energy save mode added
+	05/02/20234 | 1.3       | P.Gryszczyk  | Added HardwareOk to Profinet faults reset
+	05/02/20234 | 1.4       | L.Klar       | Added dieback condition to unload function
+	07/02/20234 | 1.5       | L.Klar       | Buffer mode corrected
+	09/02/2024  | 1.6       | P.Gryszczyk  | Changed logic for BufferPEC when using Caljan sensor
+	*)
+	
+	REGION 1 - Get Device Profinet information
+	    
+	    "FC_GetDevicePN"(is_PNDeviceName := #iUDT_CaljanConfiguration.PNDeviceName,
+	                     ix_SimulationModeActive := #ix_SimulationModeActive,
+	                     iqUDT_PND := #s_UDT_PNDevice);
+	    
+	    "FC_GetPNPortStatus"(ii_NumberOfPorts := #ci_NumberOfProfinetPorts,
+	                         iUDT_DevicePNInfo := #s_UDT_PNDevice,
+	                         qa_PortFault => #sa_PNPortsStatus);
+	    
+	END_REGION
+	
+	REGION 2 - Initial
+	    
+	    REGION 2.1 - First PLC cycle
+	        
+	        IF "DB_Memory".FirstScan
+	        THEN
+	            #sx_AutomaticActive := FALSE;
+	            #iqUDT_HandShakeUp.RTR := FALSE;
+	            #iqUDT_HandShakeUp.CascadeStartUp := FALSE;
+	            #sx_Disabled := FALSE;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 2.2 - Triggers
+	        
+	        // Rising edge trigger energy save
+	        #R_TRIG_EnergySave(CLK := #s_UDT_CommonStatus.EnergySave);
+	        
+	        // Rising edge extendable up
+	        #R_TRIG_ConveyorUp(CLK := #sx_AutomaticActive AND #sx_Ready);
+	        
+	        // Rising edge extendable down
+	        #R_TRIG_ConveyorDown(CLK := #sx_AutomaticActive AND NOT #sx_Ready);
+	        
+	        // Rising edge extendable not healthy 
+	        #R_TRIG_NotHealthy(CLK := #s_UDT_HMIStatus.Specific.NotHealthy);
+	        
+	        // Rising edge for Profinet error
+	        #s_R_TRIG_PNSlaveError(CLK := #s_UDT_HMIStatus.Specific.PNSlaveError);
+	        
+	        // Rising edge for Profinet not online
+	        #s_R_TRIG_PNSlaveNotOnline(CLK := #s_UDT_HMIStatus.Specific.PNSlaveNotOnline);
+	        
+	        // Rising edge for reset energy save mode
+	        
+	        #s_R_TRIG_ResetEnergySaveRunMode(CLK := #iUDT_CaljanReceive.RunModeActivated);
+	        #s_R_TRIG_ResetEnergySaveBufferMode(CLK := #iUDT_CaljanReceive.StoreModeActivated);
+	        #s_R_TRIG_ResetEnergySaveActive(CLK := #sx_EnergySaveActive);
+	        
+	        
+	    END_REGION
+	    
+	    REGION 2.3 - HMI button Disable operation
+	        
+	        // Copy HMI command to static memory
+	        #sx_Disabled := #iqUDT_CaljanCommand.Disable;
+	        
+	        // Copy status to HMI
+	        #s_UDT_HMIStatus.Specific.Disabled := #sx_Disabled;
+	        
+	    END_REGION
+	    
+	    REGION 2.6 - Timers 
+	        
+	        // Hardware will only be available after the delay, so the device has time for the initialisation
+	        #s_FB_TimerOnOffDelayCheck24V(iudi_OnDelayTime := #ci_PowerSupplyDelayTime,
+	                                      ix_SignalToDelay := #ix_24vOk,
+	                                      qx_DelayedSignal => #sx_24VOk);
+	        
+	        #s_FB_TimerOnOffDelayCheck400V(iudi_OnDelayTime := #ci_PowerSupplyDelayTime,
+	                                       ix_SignalToDelay := #ix_400vOk,
+	                                       qx_DelayedSignal => #sx_400VOk);
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 3 - Reset Profinet errors 
+	    
+	    IF #iqUDT_EquipmentControl.Command.Reset OR (NOT #ix_HardwareOK AND #s_UDT_HMIStatus.Specific.PNSlaveNotOnline) THEN
+	        
+	        #s_UDT_HMIStatus.Specific.PNSlaveNotOnline := FALSE;
+	        #s_UDT_HMIStatus.Specific.PNSlaveError := FALSE;
+	        #s_UDT_HMIStatus.Specific.PNSlaveWarning := FALSE;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 4 - Errors
+	    
+	    // Check if PN device is online
+	    IF NOT "DB_ProfinetDiagnostic".ProfinetNetworks[#s_UDT_PNDevice.PNNetworknumber].DeviceStatus[#s_UDT_PNDevice.PNDeviceNumber].DeviceState.Exist
+	        AND NOT #ix_SimulationModeActive
+	        AND #sx_24VOk
+	        AND #ix_HardwareOK
+	    THEN
+	        #s_UDT_HMIStatus.Specific.PNSlaveNotOnline := TRUE;
+	        
+	    END_IF;
+	    
+	    // Check if PN ports are healthy 
+	    IF #sa_PNPortsStatus[1] XOR #sa_PNPortsStatus[2] THEN
+	        #s_UDT_HMIStatus.Specific.PNSlaveWarning := TRUE;
+	    END_IF;
+	    
+	    // Check if PN device has an error
+	    IF "DB_ProfinetDiagnostic".ProfinetNetworks[#s_UDT_PNDevice.PNNetworknumber].DeviceStatus[#s_UDT_PNDevice.PNDeviceNumber].DeviceState.Error
+	        AND NOT #ix_SimulationModeActive
+	        AND #sx_24VOk
+	        AND NOT #s_UDT_HMIStatus.Specific.PNSlaveWarning
+	        AND #ix_HardwareOK
+	    THEN
+	        #s_UDT_HMIStatus.Specific.PNSlaveError := TRUE;
+	    END_IF;
+	    
+	    // Not healthy
+	    #s_UDT_HMIStatus.Specific.NotHealthy := NOT #iUDT_CaljanReceive.Healthy
+	    AND #sx_400VOk
+	    AND #sx_24VOk
+	    AND #ix_HardwareOK
+	    AND #ix_SafetyOk;
+	    
+	    // Common Error
+	    #s_UDT_CommonStatus.Error := NOT #sx_24VOk
+	    OR NOT #sx_400VOk
+	    OR NOT #ix_HardwareOK
+	    OR NOT #ix_SafetyOk
+	    OR #s_UDT_HMIStatus.Specific.PEC_EoS.Jam
+	    OR #s_UDT_HMIStatus.Specific.NotHealthy;
+	    
+	    
+	END_REGION
+	
+	REGION 5 - Speed
+	    
+	    #iqUDT_ConveyorInterface.ActualSpeed := #iUDT_CaljanReceive.ActualSpeed;
+	    
+	END_REGION
+	
+	REGION 6 - Check conditions to set caljan ready    
+	    
+	    #sx_Ready := NOT #s_UDT_CommonStatus.Error;
+	    
+	END_REGION
+	
+	REGION 7 - Stop caljan
+	    
+	    IF NOT #iqUDT_EquipmentControl.Command.AutomaticOn
+	        OR #s_UDT_CommonStatus.Error
+	    THEN
+	        #sx_AutomaticActive := FALSE;
+	        #qUDT_CaljanSend.AllowLoading := FALSE;
+	        #qUDT_CaljanSend.AllowUnloading := FALSE;
+	        #iqUDT_HandShakeUp.RTR := FALSE;
+	        #iqUDT_HandShakeUp.CascadeStartUp := FALSE;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 8 - Start automatic mode  
+	    
+	    // If start (one shot) is received from system, this is memorised until started in cascade. Later the unloader is started
+	    IF #iqUDT_EquipmentControl.Command.Start
+	        AND #sx_Ready
+	    THEN
+	        #sx_AutomaticActive := TRUE;
+	    END_IF;
+	    
+	    //Timer to cascade mode
+	    #s_FB_CascadeModeTimer(iudi_OnDelayTime := #iUDT_CaljanConfiguration.CascadeTimeOnDelay,
+	                           ix_SignalToDelay := #sx_AutomaticActive,
+	                           ix_Enable := #sx_Ready,
+	                           qx_DelayedSignal => #sx_CascadeStartUp);
+	    
+	    #iqUDT_HandShakeUp.CascadeStartUp := #sx_CascadeStartUp;
+	    
+	    //Automatic mode active
+	    #qUDT_CaljanSend.Enable := #sx_AutomaticActive AND NOT #s_R_TRIG_ResetEnergySaveActive.Q;
+	    
+	END_REGION
+	
+	REGION 9 - Automatic mode active
+	    
+	    REGION 9.1 - Operation
+	        
+	        (* *******LOADER ******** *)
+	        IF #ix_CaljanMode = 1 THEN
+	            
+	            // Release loading
+	            #qUDT_CaljanSend.AllowLoading := #sx_AutomaticActive
+	            AND #sx_Ready
+	            AND NOT #sx_Disabled
+	            AND NOT #ix_ExternalRequestHold
+	            AND NOT #sx_EnergySaveActive
+	            AND (#iUDT_CaljanReceive.RunModeActivated OR #iUDT_CaljanReceive.StoreModeActivated);
+	            
+	            #iqUDT_HandShakeUp.RTR := #qUDT_CaljanSend.AllowLoading AND ABS(#iUDT_CaljanReceive.ActualSpeed) > 400;
+	            
+	        END_IF;
+	        
+	        (* *******UNLOADER ******** *)
+	        IF #ix_CaljanMode = 2
+	        THEN
+	            
+	            // Release unloading
+	            #qUDT_CaljanSend.AllowUnloading := #sx_AutomaticActive
+	            AND #sx_Ready
+	            AND (#iqUDT_HandShake.RTR OR #iUDT_CaljanReceive.PECUnloader)
+	            AND NOT #sx_Disabled
+	            AND NOT #ix_ExternalRequestHold
+	            AND NOT #sx_EnergySaveActive
+	            AND NOT #ix_ExternalRunReverse;
+	            
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 9.2 - Energy save
+	        
+	        IF #iUDT_CaljanConfiguration.Energy THEN
+	            
+	            
+	            IF #sdi_EnergySave >= #iUDT_CaljanConfiguration.EnergySaveLenght        // Compare energy save counter with configured lenght
+	            THEN
+	                #sx_EnergySaveActive := TRUE;                                           // Set energy save active true
+	            END_IF;
+	            
+	            (* *******LOADER ******** *)
+	            // Reset 
+	            IF (#ix_CaljanMode = 1
+	                AND (NOT #iUDT_CaljanReceive.PECUnloader
+	                OR NOT #iUDT_CaljanReceive.PECLoader)
+	                AND NOT #sx_EnergySaveActive)
+	                OR #ix_ResetEnergySave
+	                OR #iqUDT_HandShakeUp.RTS
+	                OR #iqUDT_HandShakeUp.ResetEnergySave
+	                OR NOT #iqUDT_EquipmentControl.Command.AutomaticOn
+	                OR #s_R_TRIG_ResetEnergySaveBufferMode.Q
+	                OR #s_R_TRIG_ResetEnergySaveRunMode.Q
+	            THEN
+	                #sx_EnergySaveActive := FALSE;
+	                #sdi_EnergySave := 0;
+	                
+	                (* *******UNLOADER ******** *)
+	            ELSIF (#ix_CaljanMode = 2
+	                AND (NOT #iUDT_CaljanReceive.PECUnloader
+	                OR NOT #iUDT_CaljanReceive.PECLoader)
+	                AND NOT #sx_EnergySaveActive)
+	                OR #ix_ResetEnergySave
+	                OR #s_R_TRIG_ResetEnergySaveBufferMode.Q
+	                OR #s_R_TRIG_ResetEnergySaveRunMode.Q
+	            THEN
+	                #sx_EnergySaveActive := FALSE;
+	                #sdi_EnergySave := 0;
+	                
+	            ELSE
+	                
+	                #sdi_EnergySave += ABS(#iqUDT_ConveyorInterface.Displacement);
+	                
+	            END_IF;
+	        ELSE
+	            
+	            #sx_EnergySaveActive := FALSE;
+	            #sdi_EnergySave := 0;
+	            
+	        END_IF;
+	        
+	        IF #sx_AutomaticActive
+	        THEN
+	            #iqUDT_HandShake.ResetEnergySave := NOT #iUDT_CaljanReceive.PECUnloader AND NOT #sx_EnergySaveActive;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 9.3 Buffer PEC
+	        
+	        IF #iUDT_CaljanConfiguration.BufferPEC THEN
+	            
+	            #qUDT_CaljanSend.BufferPEC := #ix_BufferPEC;
+	            
+	        ELSE
+	            //When in store mode we using Caljan's Unloader PEC the state TRUE,
+	            //means there is a parcel on sensor and Caljan runs to rising edge of BufferPEC and 300MS longer
+	            
+	            #qUDT_CaljanSend.BufferPEC := NOT #iUDT_CaljanReceive.PECUnloader;
+	            
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    
+	END_REGION
+	
+	REGION 10 - Reverse run
+	    
+	    IF #ix_CaljanMode = 2 THEN
+	        
+	        #qUDT_CaljanSend.JogReverseCommand := #ix_ExternalRunReverse;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 11 - Reset
+	    
+	    // Safety ok extended pulse
+	    #R_TRIG_SafetyOk(CLK := #ix_SafetyReset);
+	    
+	    #s_FB_ResetPulseTimer(iudi_OffDelayTime := #iUDT_CaljanConfiguration.ResetDelay,
+	                          ix_SignalToDelay := #R_TRIG_SafetyOk.Q);
+	    
+	    // Send reset signal to Caljan 
+	    #qUDT_CaljanSend.Reset := #ix_SafetyReset OR #iqUDT_EquipmentControl.Command.Reset OR #s_FB_ResetPulseTimer.qx_DelayedSignal;
+	    
+	END_REGION
+	
+	REGION 12 - Status
+	    
+	    //Status
+	    #s_UDT_HMIStatus.Specific.StoreMode := #iUDT_CaljanReceive.StoreModeActivated;
+	    #s_UDT_HMIStatus.Specific.RunMode := #iUDT_CaljanReceive.RunModeActivated;
+	    #s_UDT_HMIStatus.Specific.LowerOngoing := #iUDT_CaljanReceive.LowerOngoing;
+	    #s_UDT_HMIStatus.Specific.RaisingOngoing := #iUDT_CaljanReceive.RaisingOngoing;
+	    #s_UDT_HMIStatus.Specific.ChuteBlocked := #iUDT_CaljanReceive.ChuteBlockedActivated;
+	    
+	    //Status
+	    #s_UDT_CommonStatus.Stopped := NOT #sx_AutomaticActive;
+	    #s_UDT_CommonStatus.Running := (#iUDT_CaljanReceive.BeltDirection_Unloading OR #iUDT_CaljanReceive.BeltDirection_Loading);
+	    #s_UDT_CommonStatus.AutoON := #sx_Ready AND #sx_AutomaticActive;
+	    #s_UDT_CommonStatus.Halted := #ix_ExternalRequestHold AND #s_UDT_CommonStatus.AutoON AND NOT #sx_EnergySaveActive;
+	    #s_UDT_CommonStatus.Dieback := (NOT #iqUDT_HandShake.RTR OR #ix_ExternalRequestDieBack) AND #s_UDT_CommonStatus.AutoON AND NOT #sx_EnergySaveActive
+	    AND NOT #s_UDT_CommonStatus.EnergySave AND NOT #s_UDT_CommonStatus.Running;
+	    
+	    #s_UDT_CommonStatus.EnergySave := #sx_EnergySaveActive;
+	    #s_UDT_CommonStatus.SafetyStop := NOT #ix_SafetyOk;
+	    
+	    // HMI status update on change
+	    IF #s_UDT_CommonStatusOld <> #s_UDT_CommonStatus
+	    THEN
+	        // HMI status initialization
+	        #s_UDT_HMIStatus.Status := 0;
+	        
+	        // Running
+	        IF #s_UDT_CommonStatus.Running
+	        THEN
+	            #s_UDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Running;
+	        END_IF;
+	        
+	        // AutoON
+	        IF #s_UDT_CommonStatus.AutoON
+	        THEN
+	            #s_UDT_HMIStatus.Status := "DB_HMIStatusConfiguration".AutoON;
+	        END_IF;
+	        
+	        // Stopped
+	        IF #s_UDT_CommonStatus.Stopped
+	        THEN
+	            #s_UDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Stopped;
+	        END_IF;
+	        
+	        // Energy save
+	        IF #s_UDT_CommonStatus.EnergySave
+	        THEN
+	            #s_UDT_HMIStatus.Status := "DB_HMIStatusConfiguration".EnergySave;
+	        END_IF;
+	        
+	        // Dieback
+	        IF #s_UDT_CommonStatus.Dieback
+	        THEN
+	            #s_UDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Dieback;
+	        END_IF;
+	        
+	        // Halted
+	        IF #s_UDT_CommonStatus.Halted
+	        THEN
+	            #s_UDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Halted;
+	        END_IF;
+	        
+	        //  PEC error
+	        IF #s_UDT_HMIStatus.Specific.PEC_EoS.Jam
+	        THEN
+	            #s_UDT_HMIStatus.Status := "DB_HMIStatusConfiguration".PECJam;
+	        END_IF;
+	        
+	        // Not healthy
+	        IF #s_UDT_HMIStatus.Specific.NotHealthy
+	        THEN
+	            #s_UDT_HMIStatus.Status := "DB_HMIStatusConfiguration".VFDNotHealthy;
+	        END_IF;
+	        
+	        // Safety stop
+	        IF #s_UDT_CommonStatus.SafetyStop
+	        THEN
+	            #s_UDT_HMIStatus.Status := "DB_HMIStatusConfiguration".SafetyStop;
+	        END_IF;
+	        
+	        // Copy statuses
+	        
+	        #s_UDT_CommonStatusOld := #s_UDT_CommonStatus;
+	        #qUDT_Status := #s_UDT_CommonStatus;
+	    END_IF;
+	    
+	    #qUDT_HMIStatus := #s_UDT_HMIStatus;
+	    
+	END_REGION
+	
+	REGION 13 - Statistics
+	    
+	    // Up time
+	    IF #sx_AutomaticActive
+	        AND #sx_Ready
+	        OR #iqUDT_EquipmentControl.Command.ResetData
+	    THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #sx_AutomaticActive AND #sx_Ready,
+	                        ix_RTrigActivate := #R_TRIG_ConveyorUp.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.ExtendableUpTime);
+	    END_IF;
+	    
+	    // Down time
+	    IF NOT #sx_AutomaticActive
+	        AND #sx_Ready
+	        OR #iqUDT_EquipmentControl.Command.ResetData
+	    THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := NOT #sx_AutomaticActive AND #sx_Ready,
+	                        ix_RTrigActivate := #R_TRIG_ConveyorDown.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.ExtendableDownTime);
+	    END_IF;
+	    
+	    // Energy save mode active
+	    IF #sx_EnergySaveActive
+	        OR #iqUDT_EquipmentControl.Command.ResetData
+	    THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #s_UDT_CommonStatus.EnergySave,
+	                        ix_RTrigActivate := #R_TRIG_EnergySave.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.EnergySave);
+	    END_IF;
+	    
+	    // Not healthy
+	    IF #s_UDT_HMIStatus.Specific.NotHealthy
+	        OR #iqUDT_EquipmentControl.Command.ResetData
+	    THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #s_UDT_HMIStatus.Specific.NotHealthy,
+	                        ix_RTrigActivate := #R_TRIG_NotHealthy.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.NotHealthy);
+	    END_IF;
+	    
+	    // PN Slave not online
+	    IF #iqUDT_EquipmentControl.Command.ResetData OR #s_UDT_HMIStatus.Specific.PNSlaveNotOnline
+	    THEN
+	        
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #s_UDT_HMIStatus.Specific.PNSlaveNotOnline,
+	                        ix_RTrigActivate := #s_R_TRIG_PNSlaveNotOnline.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.PNNodeNotOnline);
+	    END_IF;
+	    
+	    // PN Slave error
+	    IF #iqUDT_EquipmentControl.Command.ResetData OR #s_UDT_HMIStatus.Specific.PNSlaveError
+	    THEN
+	        
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #s_UDT_HMIStatus.Specific.PNSlaveError,
+	                        ix_RTrigActivate := #s_R_TRIG_PNSlaveError.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.PNNodeError);
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 14 - Report to control block
+	    
+	    "FC_EquipmentReport"(iUDT_Status := #s_UDT_CommonStatus,
+	                         iqUDT_Control := #iqUDT_EquipmentControl);
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

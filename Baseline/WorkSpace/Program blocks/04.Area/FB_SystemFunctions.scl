@@ -1,0 +1,271 @@
+﻿FUNCTION_BLOCK "FB_SystemFunctions"
+TITLE = FB_SystemFunctions
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 200
+// END_ATTRIBUTES
+//Function to execute system functions.
+   VAR 
+      sFB_SoftVersion { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_SoftVersion";   // Software version block instance
+      sFB_ProfiDiag_Net1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_ProfiDiag";   // Profinet diagnostic block instance
+      sFB_ProfiDiag_Net2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_ProfiDiag";   // Profinet diagnostic block instance
+      sFB_ProfiDiag_Net3 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_ProfiDiag";   // Profinet diagnostic block instance
+      sFB_ProfiDiag_Net4 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_ProfiDiag";   // Profinet diagnostic block instance
+      sFB_ProfiDiag_Net5 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_ProfiDiag";   // Profinet diagnostic block instance
+      sFB_ProfiDiag_Net6 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_ProfiDiag";   // Profinet diagnostic block instance
+      sFB_ProfiDiag_Net7 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_ProfiDiag";   // Profinet diagnostic block instance
+      sFB_ProfiDiag_Net8 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_ProfiDiag";   // Profinet diagnostic block instance
+      sFB_ProfiDiag_Net9 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_ProfiDiag";   // Profinet diagnostic block instance
+      sFB_ProfiDiag_Net10 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_ProfiDiag";   // Profinet diagnostic block instance
+      sR_TRIG0_1Sec {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rise trigger to detect edge each 0.1 second
+      sR_TRIG0_2Sec {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rise trigger to detect edge each 0.2 second
+      sR_TRIG0_4Sec {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rise trigger to detect edge each 0.4 second
+      sR_TRIG0_5Sec {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rise trigger to detect edge each 0.5 second
+      sR_TRIG0_8Sec {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rise trigger to detect edge each 0.8 second
+      sR_TRIG_1Sec {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rise trigger to detect edge each 1 second
+      sR_TRIG1_6Sec {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rise trigger to detect edge each 1.6 second
+      sR_TRIG_2Sec {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rise trigger to detect edge each 2 second
+   END_VAR
+   VAR DB_SPECIFIC
+      sx_Reset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet fault reset
+      sx_ResetData { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet statistic data reset
+   END_VAR
+   VAR 
+      sx_Error { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      sx_ProfiDiag_Net1_OK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet network 1 Ok
+      sx_ProfiDiag_Net2_OK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet network 2 Ok
+      sx_ProfiDiag_Net3_OK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet network 3 Ok
+      sx_ProfiDiag_Net4_OK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet network 4 Ok
+      sx_ProfiDiag_Net5_OK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet network 5 Ok
+      sx_ProfiDiag_Net6_OK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet network 6 Ok
+      sx_ProfiDiag_Net7_OK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet network 7 Ok
+      sx_ProfiDiag_Net8_OK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet network 8 Ok
+      sx_ProfiDiag_Net9_OK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet network 9 Ok
+      sx_ProfiDiag_Net10_OK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet network 10 Ok
+   END_VAR
+
+   VAR_TEMP 
+      tui_LADDR : HW_IOSYSTEM;
+      tUDT_EquipmentControl : "UDT_EquipmentControl";
+      ti_RD_LOC_T_Status : Int;   // RD_LOC_T - Read actual date and time function status
+      tx_replace : Bool;
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	|                                                                                      |
+	|  Copyright  2019             MHS                                                     |
+	|  All Rights Reserved         Larenweg 90                                             |
+	|                              5234 KC 's-Hertogenbosch,                               |
+	|                              Netherlands                                             |
+	|                                                                                      |     
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	24/05/2019  | 0.1       | L.Klar        | first release MHS TIA 15.1
+	24/07/2019  | 2.0       | L.Klar        | 2.0 MHS library release TIA 15.1
+	03/10/2019  | 2.1       | L.Klar        | Comments adjusted
+	04/10/2019  | 2.2       | L.Klar        | profinet scan marker reset added
+	30/10/2019  | 2.3       | S.Theocharis  | Update the PN calls 
+	04/11/2019  | 2.4       | L.Klar        | Memory bits changed to DB variables
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	11/12/2019  | 3.1       | S. Deulkar    | Called FC simulation in region 2
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 – PLC scan cycle measurement
+	    
+	    "DB_Memory".PrevCycleTime := RUNTIME("DB_Memory".RuntimeMem) * 1000;
+	    
+	END_REGION
+	
+	REGION 2 – Simulation
+	    
+	    "FC_Simulation"();
+	    
+	END_REGION
+	
+	REGION 3 – One shot of PLC clock pulse
+	    
+	    // One shot every 0.1 sec of 10 Hz clock memory
+	    #sR_TRIG0_1Sec(CLK := "DB_Memory".Clock_10Hz,
+	                   Q => "DB_Memory"."OS_0.1sec");
+	    
+	    // One shot every 0.2 sec of 5 Hz clock memory
+	    #sR_TRIG0_2Sec(CLK := "DB_Memory".Clock_5Hz,
+	                   Q => "DB_Memory"."OS_0.2sec");
+	    
+	    // One shot every 0.4 sec of 2.5 Hz clock memory
+	    #sR_TRIG0_4Sec(CLK := "DB_Memory"."Clock_2.5Hz",
+	                   Q => "DB_Memory"."OS_0.4sec");
+	    
+	    // One shot every 0.5 sec of 2 Hz clock memory
+	    #sR_TRIG0_5Sec(CLK := "DB_Memory".Clock_2Hz,
+	                   Q => "DB_Memory"."OS_0.5sec");
+	    
+	    // One shot every 0.8 sec of 1.25 Hz clock memory
+	    #sR_TRIG0_8Sec(CLK := "DB_Memory"."Clock_1.25Hz",
+	                   Q => "DB_Memory"."OS_0.8sec");
+	    
+	    // One shot every 1 sec of 1 Hz clock memory
+	    #sR_TRIG_1Sec(CLK := "DB_Memory".Clock_1Hz,
+	                  Q => "DB_Memory".OS_1sec);
+	    
+	    // One shot every 1.6 sec of 0.625 Hz clock memory
+	    #sR_TRIG1_6Sec(CLK := "DB_Memory"."Clock_0.625Hz",
+	                   Q => "DB_Memory"."OS_1.6sec");
+	    
+	    // One shot every 2 sec of 0.5 Hz clock memory
+	    #sR_TRIG_2Sec(CLK := "DB_Memory"."Clock_0.5Hz",
+	                  Q => "DB_Memory".OS_2sec);
+	    
+	    
+	END_REGION
+	
+	REGION 4 – Actual time
+	    
+	    // Read actual PLC date and time 
+	    #ti_RD_LOC_T_Status := RD_LOC_T("DB_Time".ActualTimeDTL);
+	    
+	    // Convert actual time from DTL format to string 
+	    "FC_TimeToString"(ia_Date := "DB_Time".ActualTimeDTL,
+	                      qs_Date => "DB_Time".ActualTime);
+	    
+	END_REGION
+	
+	REGION 5 – Software version
+	    //Function to detect changes in the software and retun software version 
+	    
+	    #sFB_SoftVersion(is_ActualDateTime := "DB_Time".ActualTime,
+	                     qs_SoftVersion => "DB_SoftwareVersion".Version,
+	                     qa_StandardCRC => "DB_SoftwareVersion".StandardChecksum,
+	                     qa_SafetyCRC => "DB_SoftwareVersion".SafetyChecksum);
+	    
+	END_REGION
+	
+	REGION 6 – Profinet diagnostic
+	    
+	    // CPU Interface 1 HW ID = 262 
+	    #sFB_ProfiDiag_Net1(iui_LADDR := "DB_Memory"."Local~PROFINET_IO-System",
+	                        ix_ExternalScan := FALSE,
+	                        qx_ProfinetOk => #sx_ProfiDiag_Net1_OK,
+	                        qx_Error => #sx_Error,
+	                        iqUDT_EquipmentControl := "DB_Control".System1,
+	                        iqUDT_PNDiagArray := "DB_ProfinetDiagnostic".ProfinetNetworks[1],
+	                        iqUDT_Statistics := "DB_Statistics".System.Profinet);
+	    
+	    //Keep only the in use ones. 
+	    
+	    //Network 2 - CM Card 1542-1_1 HW ID = xxxx 
+	    #sFB_ProfiDiag_Net2(iui_LADDR := #tui_LADDR,
+	                        ix_ExternalScan := FALSE,
+	                        qx_ProfinetOk => #sx_ProfiDiag_Net2_OK,
+	                        qx_Error => #sx_Error,
+	                        iqUDT_EquipmentControl := "DB_Control".System1,
+	                        iqUDT_PNDiagArray := "DB_ProfinetDiagnostic".ProfinetNetworks[2],
+	                        iqUDT_Statistics := "DB_Statistics".System.Profinet);
+	    
+	    //Network 3 - CM Card 1542-1_2 HW ID = xxxx 
+	    #sFB_ProfiDiag_Net3(iui_LADDR := #tui_LADDR,
+	                        ix_ExternalScan := FALSE,
+	                        qx_ProfinetOk => #sx_ProfiDiag_Net3_OK,
+	                        qx_Error => #sx_Error,
+	                        iqUDT_EquipmentControl := "DB_Control".System1,
+	                        iqUDT_PNDiagArray := "DB_ProfinetDiagnostic".ProfinetNetworks[3],
+	                        iqUDT_Statistics := "DB_Statistics".System.Profinet);
+	    
+	    //Network 4 - CM Card 1542-1_3 HW ID = xxxx
+	    #sFB_ProfiDiag_Net4(iui_LADDR := #tui_LADDR,
+	                        ix_ExternalScan := FALSE,
+	                        qx_ProfinetOk => #sx_ProfiDiag_Net4_OK,
+	                        qx_Error => #sx_Error,
+	                        iqUDT_EquipmentControl := "DB_Control".System1,
+	                        iqUDT_PNDiagArray := "DB_ProfinetDiagnostic".ProfinetNetworks[4],
+	                        iqUDT_Statistics := "DB_Statistics".System.Profinet);
+	    
+	    //Network 5 - CM Card 1542-1_4 HW ID = xxxx
+	    #sFB_ProfiDiag_Net5(iui_LADDR := #tui_LADDR,
+	                        ix_ExternalScan := FALSE,
+	                        qx_ProfinetOk => #sx_ProfiDiag_Net5_OK,
+	                        qx_Error => #sx_Error,
+	                        iqUDT_EquipmentControl := "DB_Control".System1,
+	                        iqUDT_PNDiagArray := "DB_ProfinetDiagnostic".ProfinetNetworks[5],
+	                        iqUDT_Statistics := "DB_Statistics".System.Profinet);
+	    
+	    //Network 6 - CM Card 1542-1_5 HW ID = xxxx
+	    #sFB_ProfiDiag_Net6(iui_LADDR := #tui_LADDR,
+	                        ix_ExternalScan := FALSE,
+	                        qx_ProfinetOk => #sx_ProfiDiag_Net6_OK,
+	                        qx_Error => #sx_Error,
+	                        iqUDT_EquipmentControl := "DB_Control".System1,
+	                        iqUDT_PNDiagArray := "DB_ProfinetDiagnostic".ProfinetNetworks[6],
+	                        iqUDT_Statistics := "DB_Statistics".System.Profinet);
+	    
+	    //Network 7 - CM Card 1542-1_6 HW ID = xxxx
+	    #sFB_ProfiDiag_Net7(iui_LADDR := #tui_LADDR,
+	                        ix_ExternalScan := FALSE,
+	                        qx_ProfinetOk => #sx_ProfiDiag_Net7_OK,
+	                        qx_Error => #sx_Error,
+	                        iqUDT_EquipmentControl := "DB_Control".System1,
+	                        iqUDT_PNDiagArray := "DB_ProfinetDiagnostic".ProfinetNetworks[7],
+	                        iqUDT_Statistics := "DB_Statistics".System.Profinet);
+	    
+	    //Network 8 - CM Card 1542-1_7 HW ID = xxxx
+	    #sFB_ProfiDiag_Net8(iui_LADDR := #tui_LADDR,
+	                        ix_ExternalScan := FALSE,
+	                        qx_ProfinetOk => #sx_ProfiDiag_Net8_OK,
+	                        qx_Error => #sx_Error,
+	                        iqUDT_EquipmentControl := "DB_Control".System1,
+	                        iqUDT_PNDiagArray := "DB_ProfinetDiagnostic".ProfinetNetworks[8],
+	                        iqUDT_Statistics := "DB_Statistics".System.Profinet);
+	    
+	    //Network 9 - CM Card 1542-1_8 HW ID = xxxx
+	    #sFB_ProfiDiag_Net9(iui_LADDR := #tui_LADDR,
+	                        ix_ExternalScan := FALSE,
+	                        qx_ProfinetOk => #sx_ProfiDiag_Net9_OK,
+	                        qx_Error => #sx_Error,
+	                        iqUDT_EquipmentControl := "DB_Control".System1,
+	                        iqUDT_PNDiagArray := "DB_ProfinetDiagnostic".ProfinetNetworks[9],
+	                        iqUDT_Statistics := "DB_Statistics".System.Profinet);
+	    
+	    //Network 10 - CM Card 1542-1_9 HW ID = xxxx
+	    #sFB_ProfiDiag_Net10(iui_LADDR := #tui_LADDR,
+	                         ix_ExternalScan := FALSE,
+	                         qx_ProfinetOk => #sx_ProfiDiag_Net10_OK,
+	                         qx_Error => #sx_Error,
+	                         iqUDT_EquipmentControl := "DB_Control".System1,
+	                         iqUDT_PNDiagArray := "DB_ProfinetDiagnostic".ProfinetNetworks[10],
+	                         iqUDT_Statistics := "DB_Statistics".System.Profinet);
+	    
+	    
+	END_REGION
+	
+	REGION 7 – Profinet OK detection 
+	    
+	    IF #sx_ProfiDiag_Net1_OK
+	        AND #sx_ProfiDiag_Net2_OK   //delete if not in use
+	        AND #sx_ProfiDiag_Net3_OK   //delete if not in use
+	        AND #sx_ProfiDiag_Net4_OK   //delete if not in use
+	        AND #sx_ProfiDiag_Net5_OK   //delete if not in use
+	        AND #sx_ProfiDiag_Net6_OK   //delete if not in use
+	        AND #sx_ProfiDiag_Net7_OK   //delete if not in use
+	        AND #sx_ProfiDiag_Net8_OK   //delete if not in use
+	        AND #sx_ProfiDiag_Net9_OK   //delete if not in use
+	        AND #sx_ProfiDiag_Net10_OK  //delete if not in use
+	    THEN
+	        
+	        "DB_Memory".ScanProfinet := FALSE;
+	        
+	    END_IF;
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

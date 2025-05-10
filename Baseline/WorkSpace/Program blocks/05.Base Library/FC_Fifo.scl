@@ -1,0 +1,290 @@
+﻿FUNCTION "FC_Fifo" : Void
+TITLE = FC_Fifo
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 17
+// END_ATTRIBUTES
+//Function for controlling FIFO register.
+   VAR_INPUT 
+      ic_Mode : Char;   // Mode selector: "W" - Write; "R" - Read; "C" - Clear (Reset) "S" - Status
+   END_VAR
+
+   VAR_OUTPUT 
+      qUDT_Status : "UDT_FifoStatus";   // FIFO status structure
+      qx_Error : Bool;   // Collective error output
+      qx_Warning : Bool;   // Collective warning output
+   END_VAR
+
+   VAR_IN_OUT 
+      iqv_Data : Variant;   // Data
+      iqUDT_FifoHeader : "UDT_FifoHeader";   // FIFO header
+      iqv_DataBuffer : Variant;   // FIFO data buffer
+   END_VAR
+
+   VAR_TEMP 
+      tUDT_Status : "UDT_FifoStatus";   // Status structure
+      ti_MoveBLKErrorCode : Int;   // Move_BLK_Variant function return
+      tx_HeaderValid : Bool;   // Header valid
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	24/05/2019  | 0.1       | L.Klar        | first release MHS TIA 15.1
+	14/06/2019  | 0.2       | A.Nowak       | Replacement of instruction if for direct write into variable - Region 3 , 4.1 , 4.2 , 4.3 , 4.4 , 8.1  , 8.2 
+	17/07/2019  | 0.3       | L.Klar        | Status handling changed
+	24/07/2019  | 2.0       | L.Klar        | 2.0 MHS library release TIA 15.1
+	23/08/2019  | 2.1       | K.Pokorski    | Comments corrected
+	27/08/2019  | 2.2       | M.Kurpiers    | Comments adjusted
+	27/09/2019  | 2.3       | K.Pokorski    | Variant input included
+	01/10/2019  | 2.4       | A.Nowak       | Correct comments and rename regions
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 – Diagnostic bits initialization
+	    
+	    // Clear FIFO statuses
+	    #tUDT_Status.FifoFull := FALSE;
+	    #tUDT_Status.FifoPreFull := FALSE;
+	    
+	END_REGION
+	
+	REGION 2 – Array's information
+	    
+	    // If buffer elements type is invalid, set the error 
+	    #tUDT_Status.InvalidDataType := NOT (TypeOf(#iqv_Data) = TypeOfElements(#iqv_DataBuffer));
+	    
+	END_REGION
+	
+	REGION 3 – Mode validation
+	    
+	    // Set the mode invalid if selected mode isn't one of the following: W- Write, R - Read, C - Clear, S - Status
+	    #tUDT_Status.InvalidMode := #ic_Mode <> 'W'
+	    AND #ic_Mode <> 'R'
+	    AND #ic_Mode <> 'C'
+	    AND #ic_Mode <> 'S';
+	    
+	END_REGION
+	
+	REGION 4 – The header settings checking
+	    
+	    // The correct mode has been selected and data type is valid
+	    IF (NOT #tUDT_Status.InvalidMode
+	        AND NOT #tUDT_Status.InvalidDataType)
+	    THEN
+	        
+	        REGION 4.1 – The number of maximum FIFO entries validation 
+	            
+	            // Write the number of array's elements to FIFO header
+	            #iqUDT_FifoHeader.MaxNrOfEntries := "FC_GetNrOfArrayEl"(#iqv_DataBuffer);
+	            
+	            // Set the invalid maximum number of entries error 
+	            #tUDT_Status.InvalidMaxNrOfEntries := #iqUDT_FifoHeader.MaxNrOfEntries <= 0;
+	            
+	        END_REGION
+	        
+	        REGION 4.2 – The number of total FIFO entries validation
+	            
+	            // Set the invalid total number of entries error 
+	            #tUDT_Status.InvalidTotalEntriesStored := #iqUDT_FifoHeader.TotalEntriesStored < 0        // The total number of entries is lower than 0
+	            OR #iqUDT_FifoHeader.TotalEntriesStored > #iqUDT_FifoHeader.MaxNrOfEntries;               // The total number of entries is greater than the maximum number of entries
+	            
+	        END_REGION
+	        
+	        REGION 4.3 – The number of the next entry to write 
+	            
+	            // Set the invalid next entry to write
+	            #tUDT_Status.InvalidNextEntryToWrite := #iqUDT_FifoHeader.NextEntryToWrite < 0            // The number of next entry to write is lower than 0  
+	            OR #iqUDT_FifoHeader.NextEntryToWrite >= #iqUDT_FifoHeader.MaxNrOfEntries;                // The number of next entry to write is greater or equal to the maximum number of entries 
+	            
+	        END_REGION
+	        
+	        REGION 4.4 – The number of the next entry to read 
+	            
+	            // Set the invalid next entry to read
+	            #tUDT_Status.InvalidNextEntryToRead := #iqUDT_FifoHeader.NextEntryToRead < 0              // The number of next entry to read is lower than 0 
+	            OR #iqUDT_FifoHeader.NextEntryToRead >= #iqUDT_FifoHeader.MaxNrOfEntries;                 // The number of next entry to read is greater or equal to the maximum nr of entries 
+	            
+	        END_REGION
+	        
+	        REGION 4.5 – FIFO header validation summary
+	            
+	            // Create collective header error
+	            #tx_HeaderValid := NOT #tUDT_Status.InvalidMaxNrOfEntries
+	            AND NOT #tUDT_Status.InvalidTotalEntriesStored
+	            AND NOT #tUDT_Status.InvalidNextEntryToWrite
+	            AND NOT #tUDT_Status.InvalidNextEntryToRead;
+	            
+	        END_REGION
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 5 – Writing the data into the FIFO buffer
+	    
+	    IF (#ic_Mode = 'W'                                                                          // Write mode selected                                                               
+	        AND #tx_HeaderValid                                                                     // FIFO header valid 
+	        AND NOT #tUDT_Status.InvalidDataType)                                                  // Buffer data type valid
+	    THEN
+	        
+	        
+	        IF (#iqUDT_FifoHeader.TotalEntriesStored < #iqUDT_FifoHeader.MaxNrOfEntries)          // Checking total number of stored entries                
+	        THEN
+	            
+	            // Move input data to FIFO data buffer  
+	            #ti_MoveBLKErrorCode := MOVE_BLK_VARIANT(SRC := #iqv_Data,
+	                                                     COUNT := 1,
+	                                                     SRC_INDEX := 0,
+	                                                     DEST_INDEX := #iqUDT_FifoHeader.NextEntryToWrite,
+	                                                     DEST => #iqv_DataBuffer);
+	            
+	            // Increment the number of the next entry to write 
+	            #iqUDT_FifoHeader.NextEntryToWrite += 1;
+	            
+	            // Increment the total number of stored entries 
+	            #iqUDT_FifoHeader.TotalEntriesStored += 1;
+	            
+	            
+	            IF (#iqUDT_FifoHeader.NextEntryToWrite >= #iqUDT_FifoHeader.MaxNrOfEntries)       // Check the number of the next entry to write                             
+	            THEN
+	                
+	                #iqUDT_FifoHeader.NextEntryToWrite := 0;
+	                
+	            END_IF;
+	            
+	        ELSE
+	            
+	            #tUDT_Status.FifoFull := TRUE;
+	            
+	        END_IF;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 6 – Reading the data from the FIFO data buffer
+	    
+	    IF (#ic_Mode = 'R'                                                                  // Read mode selected    
+	        AND #tx_HeaderValid                                                             // FIFO header valid 
+	        AND NOT #tUDT_Status.InvalidDataType)                                           // Buffer data type valid                                                
+	    THEN
+	        
+	        IF (#iqUDT_FifoHeader.TotalEntriesStored > 0)                                   // Checking total number of stored entries                                                     
+	        THEN
+	            
+	            // Move the FIFO data to the data output
+	            #ti_MoveBLKErrorCode := MOVE_BLK_VARIANT(SRC := #iqv_DataBuffer,
+	                                                     COUNT := 1,
+	                                                     SRC_INDEX := #iqUDT_FifoHeader.NextEntryToRead,
+	                                                     DEST_INDEX := 0,
+	                                                     DEST => #iqv_Data);
+	            
+	            // Increment the number of the next entry to read
+	            #iqUDT_FifoHeader.NextEntryToRead += 1;
+	            
+	            // Decrement the total number of stored entries
+	            #iqUDT_FifoHeader.TotalEntriesStored -= 1;
+	            
+	            IF (#iqUDT_FifoHeader.NextEntryToRead >= #iqUDT_FifoHeader.MaxNrOfEntries)  // Check the number of the next entry to read                 
+	            THEN
+	                
+	                #iqUDT_FifoHeader.NextEntryToRead := 0;
+	                
+	            END_IF;
+	            
+	        END_IF;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 7 – Clearing the FIFO header
+	    
+	    IF (#ic_Mode = 'C'                      // Clear mode selected  
+	        AND #tx_HeaderValid)                // FIFO header valid                         
+	    THEN
+	        
+	        #iqUDT_FifoHeader.TotalEntriesStored := 0;
+	        #iqUDT_FifoHeader.NextEntryToWrite := 0;
+	        #iqUDT_FifoHeader.NextEntryToRead := 0;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 8 – FIFO management status update
+	    
+	    IF (#tx_HeaderValid)                   // The header is valid                                     
+	    THEN
+	        
+	        REGION 8.1 – FIFO Empty
+	            
+	            // Set the FIFO empty status bit
+	            #iqUDT_FifoHeader.Status.Empty := #iqUDT_FifoHeader.TotalEntriesStored = 0;
+	            
+	        END_REGION
+	        
+	        REGION 8.2 – FIFO Full
+	            
+	            // Set the FIFO full status bit 
+	            #iqUDT_FifoHeader.Status.Full := #iqUDT_FifoHeader.TotalEntriesStored = #iqUDT_FifoHeader.MaxNrOfEntries;
+	            
+	        END_REGION
+	        
+	        REGION 8.3 – FIFO Pre-full
+	            
+	            IF (#iqUDT_FifoHeader.TotalEntriesStored >= 0.9 * #iqUDT_FifoHeader.MaxNrOfEntries)       // Checking if the number of total stored entries is greater or equal to 90% of the max number of entries     
+	            THEN
+	                
+	                // Set the FIFO pre-full status 
+	                #iqUDT_FifoHeader.Status.Prefull := TRUE;
+	                #tUDT_Status.FifoPreFull := TRUE;
+	                
+	            ELSE
+	                
+	                #iqUDT_FifoHeader.Status.Prefull := FALSE;
+	                
+	            END_IF;
+	            
+	        END_REGION
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 9 – Status
+	    
+	    REGION 9.1 – Common status update
+	        
+	        // Collective error output
+	        #qx_Error := NOT #tx_HeaderValid
+	        OR #tUDT_Status.InvalidMode
+	        OR #tUDT_Status.FifoFull
+	        OR #tUDT_Status.InvalidDataType;
+	        
+	        // Collective warning output              
+	        #qx_Warning := #tUDT_Status.FifoPreFull;
+	        
+	    END_REGION
+	    
+	    REGION 9.2 – Status update
+	        
+	        // Update the outer status structure with internal status structure
+	        #qUDT_Status := #tUDT_Status;
+	        
+	    END_REGION
+	    
+	END_REGION
+END_FUNCTION
+

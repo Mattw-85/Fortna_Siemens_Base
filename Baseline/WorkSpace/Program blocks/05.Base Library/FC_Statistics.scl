@@ -1,0 +1,93 @@
+﻿FUNCTION "FC_Statistics" : Void
+TITLE = FC_Statistics
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 26
+// END_ATTRIBUTES
+//Function to calculate statistics.
+   VAR_INPUT 
+      ix_Reset : Bool;   // Reset statistics data
+      ix_Activate : Bool;   // Activete statistics counters
+      ix_RTrigActivate : Bool;   // Activation rise trigger
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_Statistics : "UDT_EventStatistic";   // Statistic structure
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	24/05/2019  | 0.1       | C. Leite      | first release MHS TIA 15.1
+	17/07/2019  | 0.2       | A.Nowak       | Add comments
+	24/07/2019  | 2.0       | L.Klar        | 2.0 MHS library release TIA 15.1
+	27/08/2019  | 2.1       | M.Kurpiers    | Comments adjusted
+	04/11/2019  | 2.2       | L.Klar        | 1 second pulse changed from memory bit to DB variable
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 - Number of events
+	    
+	    IF (#ix_RTrigActivate)      // Event occured                                
+	    THEN
+	        
+	        // Increment the number of times the event occurred and clear the time of the current or last event
+	        #iqUDT_Statistics.NumberOfTimes += 1;
+	        #iqUDT_Statistics.LastEventSeconds := 0;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 2 - Event time
+	    
+	    // 1 shot every 1 sec and activate statistic counter 
+	    IF ("DB_Memory".OS_1sec AND #ix_Activate)
+	    THEN
+	        
+	        // Increment the time of the current or last event and the time of all events that occured
+	        #iqUDT_Statistics.LastEventSeconds += 1;
+	        #iqUDT_Statistics.TotalEventSeconds += 1;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 3 - Data reset
+	    
+	    
+	    IF (#ix_Reset)                                            // Reset statistics data                                          
+	    THEN
+	        
+	        IF (NOT #ix_Activate)                                 // Statistic counter isn't activate                                
+	        THEN
+	            
+	            // Clear statistics data
+	            #iqUDT_Statistics.NumberOfTimes := 0;
+	            #iqUDT_Statistics.LastEventSeconds := 0;
+	            #iqUDT_Statistics.TotalEventSeconds := 0;
+	            
+	        ELSE
+	            
+	            // Write 1 to the number of times the event occurred and clear times  
+	            #iqUDT_Statistics.NumberOfTimes := 1;
+	            #iqUDT_Statistics.LastEventSeconds := 0;
+	            #iqUDT_Statistics.TotalEventSeconds := 0;
+	            
+	        END_IF;
+	        
+	    END_IF;
+	    
+	END_REGION
+END_FUNCTION
+

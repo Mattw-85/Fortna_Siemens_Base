@@ -1,0 +1,250 @@
+﻿TYPE "UDT_EventStatistic"
+TITLE = UDT_EventStatistic
+VERSION : 0.1
+//User-defined structure of event statistic data.
+   STRUCT
+      NumberOfTimes : DInt;   // Number of times the event occurred since last reset
+      LastEventSeconds : DInt;   // Number of seconds of the current or last event
+      TotalEventSeconds : DInt;   // Total number of seconds the event occurred since last reset
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_PECStatus"
+VERSION : 0.1
+   STRUCT
+      PEC { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Current state of the photo eye
+      Jam { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // PEC jam error
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_PECStatistics"
+VERSION : 0.1
+   STRUCT
+      Jam : "UDT_EventStatistic";   // Number of times PEC got jammed
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_PECConfiguration"
+VERSION : 0.1
+   STRUCT
+      Distance : DInt;   // Distance between photo eye and the end of conveyor [mm]
+      JamDisplacementLimit : Int;   // Limit displacement with PEC blocked o detect jam [cm]
+      TimeOnDelay : UDInt;   // Photo eye time on delay [ms]
+      TimeOffDelay : UDInt;   // Photo eye time off delay [ms]
+      ResetWithPECBlocked { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // When 'True' Allow reset system after jam with PEC blocked
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_CaljanStatusV2"
+TITLE = UDT_UnloaderStatus
+VERSION : 0.1
+//User-defined structure of FB_Unloader function block status.
+   STRUCT
+      Status : Int;   // Status number
+      Specific : Struct   // Equipment specific warnings and errors
+         PEC_EoS : "UDT_PECStatus";   // PEC status structure
+         PNSlaveNotOnline { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet slave is not online
+         PNSlaveError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet slave is in error
+         PNSlaveWarning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet slave has  a warning
+         Disabled { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Unloader is disabled by HMI
+         VFDError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Unloader has an VFD error
+         NotHealthy { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Unloader is not healthy
+         StoreMode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Store mode activated
+         RunMode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Run mode activated
+         LowerOngoing { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // "lower belt" hydraulic valve is active
+         RaisingOngoing { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // "raise belt" hydraulic valve is active
+         ChuteBlocked { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Chute blocked activated
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_CaljanStatus"
+TITLE = UDT_UnloaderStatus
+VERSION : 0.1
+//User-defined structure of FB_Unloader function block status.
+   STRUCT
+      Status : Int;   // Status number
+      Specific : Struct   // Equipment specific warnings and errors
+         PEC_EoS : "UDT_PECStatus";   // PEC status structure
+         PNSlaveNotOnline { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet slave is not online
+         PNSlaveError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet slave is in error
+         PNSlaveWarning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet slave has  a warning
+         Disabled { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Unloader is disabled by HMI
+         TooLongParcel { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Unloader detected a too long parcel
+         VFDError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Unloader has an VFD error
+         NotHealthy { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Unloader is not healthy
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_CaljanStatisticsV2"
+TITLE = UDT_UnloaderStatistics
+VERSION : 0.1
+//User-defined structure of FB_Unloader function block statistics.
+   STRUCT
+      EnergySave : "UDT_EventStatistic";   // Number of times that save energy mode occurs
+      ExtendableUpTime : "UDT_EventStatistic";   // Conveyor up time
+      ExtendableDownTime : "UDT_EventStatistic";   // Conveyor down time
+      VFDError : "UDT_EventStatistic";   // VFD Error
+      NotHealthy : "UDT_EventStatistic";   // Extendable not healthy
+      PEC_EOS : "UDT_PECStatistics";   // PEC error
+      PNNodeNotOnline : "UDT_EventStatistic";   // PN node not online
+      PNNodeError : "UDT_EventStatistic";   // PN node has error
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_CaljanStatistics"
+TITLE = UDT_UnloaderStatistics
+VERSION : 0.1
+//User-defined structure of FB_Unloader function block statistics.
+   STRUCT
+      EnergySave : "UDT_EventStatistic";   // Number of times that save energy mode occurs
+      ExtendableUpTime : "UDT_EventStatistic";   // Conveyor up time
+      ExtendableDownTime : "UDT_EventStatistic";   // Conveyor down time
+      VFDError : "UDT_EventStatistic";   // VFD Error
+      NotHealthy : "UDT_EventStatistic";   // Extendable not healthy
+      TooLongParcel : "UDT_EventStatistic";   // Too long parcels
+      PEC_EOS : "UDT_PECStatistics";   // PEC error
+      PNNodeNotOnline : "UDT_EventStatistic";   // PN node not online
+      PNNodeError : "UDT_EventStatistic";   // PN node has error
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_CaljanConfiguration"
+TITLE = UDT_UnloaderConfiguration
+VERSION : 0.1
+//User-defined structure of unloader parameters.
+   STRUCT
+      PEC_EOS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_PECConfiguration";   // Photo eye time on delay
+      Forward_Direction { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Forward Direction configuration
+         GapHeadToHead { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Gapping head to head value [cm]
+         GapTailToHead { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Gapping tail to head value [cm]
+         GapCorrection { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Gap offset to cover VFD's ramps [cm]
+      END_STRUCT;
+      PNDeviceName { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;   // VFD's Profinet device name
+      Speedsetpoint { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Speedsetpoint: 0=Low, 1=Nom, 2=High
+      EnergySaveLength { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Distance conveyor traveled before energy save activate [cm]
+      FirstConveyorToStart { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // First conveyor to start cascade mode
+      Energy { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Energy save mode enable
+      ResetDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt := 1000;   // Time required
+      CaljanMode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Choosing device 1=loader, 2=unloader
+      CascadeTimeOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Cascade time on delay [ms]
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_CaljanSendV2"
+VERSION : 0.1
+   STRUCT
+      Enable { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Needs to be True for the “Run” mode to be active
+      AllowLoading { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True if belt start in loading mode is allowed
+      AllowUnloading { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True if belt start in unloading mode is allowed
+      Reset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reset error and safety command
+      BufferPEC { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Photoeye signal. Used for store mode. True when product is detected.
+      "Spare_Q0.5" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Spare Bit 5
+      JogReverseCommand { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // While TRUE the extendible conveyor should run in reverse (external hold-to-run reverse signal) Reverse = Loading direction
+      "Spare_Q0.7" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Spare Bit 7
+      Spare_QB1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;   // Spare Byte 1
+      Spare_QW2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Word;   // Spare Word 2
+      Spare_QW4 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Word;   // Spare Word 4
+      Spare_QW6 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Word;   // Spare Word 6
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_CaljanSend"
+VERSION : 0.1
+   STRUCT
+      PEC_Override { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True if passage of parcels through PEC is allowed. (HMI)
+      AllowLoading { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True if belt start in loading mode is allowed
+      AllowUnloading { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True if belt start in unloading mode is allowed
+      Reset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reset error and safety command
+      "Spare_Q0.4" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Spare Bit 4
+      "Spare_Q0.5" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool := FALSE;   // Spare Bit 5
+      "Spare_Q0.6" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool := FALSE;   // Spare Bit 6
+      "Spare_Q0.7" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool := FALSE;   // Spare Bit 7
+      Spare_QB1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;   // Spare Byte 1
+      Spare_QW2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Word;   // Spare Word 2
+      Spare_QW4 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Word := 16#0000;   // Spare Word 4
+      Spare_QW6 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Word := 16#0000;   // Spare Word 6
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_CaljanReceiveV2"
+VERSION : 0.1
+   STRUCT
+      Healthy { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True if (un)loader is healthy
+      BeltDirection_Loading { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True if belt is running in loading mode
+      BeltDirection_Unloading { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True if belt is running in unloading mode
+      ReadyToReceive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True if loader is ready to receive
+      ChuteBlockedActivated { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True when the button chute blocked at the keypad is set
+      PECLoader { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True when no parcels are detected (fail safe) Signal from Caljan Front photo eye
+      PECUnloader { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True when no parcels are detected (fail safe). Signal from Caljan Rear photo eye
+      StoreModeActivated { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True when store mode is selected at the kyepad
+      RunModeActivated { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True when the run mode is selected at the keypad
+      LowerOngoing { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True when the "lower belt" hydraulic valve is active
+      RaisingOngoing { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True when the "raise belt" hydraulic valve is active
+      "Spare_I1.3" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Spare Bit 3
+      "Spare_I1.4" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Spare Bit 4
+      "Spare_I1.5" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Spare Bit 5
+      "Spare_I1.6" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Spare Bit 6
+      "Spare_I1.7" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Spare Bit 7
+      ActualSpeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Speed in milimeters per second
+      Spare_IW4 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Word;   // Spare Word 4
+      Spare_IW6 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Word;   // Spare Word 6
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_CaljanReceive"
+VERSION : 0.1
+   STRUCT
+      Healthy { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True if (un)loader is healthy
+      BeltDirection_Loading { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True if belt is running in loading mode
+      BeltDirection_Unloading { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True if belt is running in unloading mode
+      ReadyToReceive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True if loader is ready to receive
+      HoldReverseSignal { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True when reverse button is pressed (only applicable to unloaders)
+      ResetReverse { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True when reset reverse button is pressed (only applicable to unloaders)
+      PECUnloader { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True when no parcels are detected (fail safe)
+      "Spare_I0.7" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Spare Bit 7
+      Spare_IB1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;   // Spare Byte 1
+      ActualSpeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Actual speed [mm/s]
+      Spare_IW4 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Word;   // Spare Word 3
+      Spare_IW6 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Word;   // Spare Word 4
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_CaljanConfigurationV2"
+TITLE = UDT_UnloaderConfiguration
+VERSION : 0.1
+//User-defined structure of unloader parameters.
+   STRUCT
+      PNDeviceName { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;   // Profinet device Name
+      FirstConveyorToStart { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // First conveyor to start cascade mode
+      Energy { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Energy save mode enable
+      EnergySaveLenght { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Distance conveyor travelled before energy save activate [cm]
+      ResetDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt := 1000;   // Time required
+      CascadeTimeOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Cascade time on delay [ms]
+      BufferPEC { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when buffer PEC from system is available
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_CaljanCommand"
+VERSION : 0.1
+   STRUCT
+      Disable { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Disable unloader
+   END_STRUCT;
+
+END_TYPE
+

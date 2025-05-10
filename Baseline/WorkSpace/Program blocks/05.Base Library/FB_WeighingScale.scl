@@ -1,0 +1,130 @@
+﻿FUNCTION_BLOCK "FB_WeighingScale"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 42
+// END_ATTRIBUTES
+   VAR_INPUT 
+      ix_ScaleInFault { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Weighing Scale unit is in fault
+   END_VAR
+
+   VAR_OUTPUT 
+      qUDT_Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_CommonStatus";   //  Common status structure
+      qUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_WE01Status";   //  HMI status structure
+      qx_Automatic { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_EquipmentControl : "UDT_EquipmentControl";   //  Equipment control structure
+   END_VAR
+
+   VAR 
+      sUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_WE01Status";   // UDT Weigghing Scale status
+      sUDT_Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   //  Common status structure
+      sUDT_CommonStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   //  Common status structure
+      sUDT_CommonStatusOld { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   //  Auxiliary status structure
+      sFB_TimerOnOffDelayAutoOn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";
+      sx_AutoOnDelayed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+   END_VAR
+
+   VAR CONSTANT 
+      cdi_DelayOffAutomaticOn : UDInt := 600000;   // Delay before turning off the AutoOn signal
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                      
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	17/09/2019  | 2.0       | M.Singh       | first release TIA 15.1
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	12/03/2024  | 4.1       | S. Nieswie    | Variable name changes accroding to current standard
+	
+	 *)
+	
+	REGION 1 - Reset Error 
+	    // If reset Provided from outside; reset the Error
+	    
+	    IF #iqUDT_EquipmentControl.Command.Reset THEN
+	        #sUDT_HMIStatus.Specific.WeighingScaleFault := FALSE;
+	    END_IF;
+	END_REGION
+	
+	REGION 2 - Fault monitoring
+	    // Make Camera Error Status
+	    
+	    IF #ix_ScaleInFault THEN
+	        #sUDT_HMIStatus.Specific.WeighingScaleFault := True;
+	    END_IF;
+	END_REGION
+	
+	REGION 3 - Send Automatic Signal to Weighing Scale
+	    //  Delay the Turning off of "Automatic on" Signal to Weighing Scale 
+	    #sFB_TimerOnOffDelayAutoOn(iudi_OffDelayTime := #cdi_DelayOffAutomaticOn,
+	                               ix_SignalToDelay := #iqUDT_EquipmentControl.Command.AutomaticOn,
+	                               qx_DelayedSignal => #sx_AutoOnDelayed);
+	    
+	    #qx_Automatic := #sx_AutoOnDelayed;
+	END_REGION
+	
+	REGION 10 - Make Status
+	    // Set Common Status Report
+	    
+	    // Error active
+	    #sUDT_CommonStatus.Error := #sUDT_HMIStatus.Specific.WeighingScaleFault;
+	    
+	    // Running
+	    #sUDT_CommonStatus.Running := #iqUDT_EquipmentControl.Command.AutomaticOn AND NOT #sUDT_CommonStatus.Error;
+	    
+	    // Stopped 
+	    #sUDT_CommonStatus.Stopped := NOT #qx_Automatic;
+	    
+	    IF #sUDT_CommonStatusOld <> #sUDT_CommonStatus                   // update on change
+	    THEN
+	        
+	        // HMI status initialization
+	        #sUDT_HMIStatus.Status := 0;
+	        
+	        // Running in Automatic mode
+	        IF #sUDT_CommonStatus.Running
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Running;
+	        END_IF;
+	        
+	        // Stopped
+	        IF #sUDT_CommonStatus.Stopped THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Stopped;
+	        END_IF;
+	        
+	        // Error
+	        IF #sUDT_HMIStatus.Specific.WeighingScaleFault
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Error;
+	        END_IF;
+	        
+	        #sUDT_CommonStatusOld := #sUDT_CommonStatus;                  // Copy status to memory
+	        #sUDT_Status := #sUDT_CommonStatus;                           // Copy status to output
+	    END_IF;
+	    
+	    #qUDT_HMIStatus := #sUDT_HMIStatus;                               // Copy HMI status to output
+	    #qUDT_Status := #sUDT_Status;                                     // Copy common status to output
+	    
+	    
+	END_REGION
+	
+	REGION 11 - Report to control block
+	    
+	    // Function to manage report between control block and conveyor block
+	    
+	    "FC_EquipmentReport"(iUDT_Status := #sUDT_CommonStatus,
+	                         iqUDT_Control := #iqUDT_EquipmentControl);
+	    
+	END_REGION
+	
+	
+END_FUNCTION_BLOCK
+

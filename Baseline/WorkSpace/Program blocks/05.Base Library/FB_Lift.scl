@@ -1,0 +1,364 @@
+﻿FUNCTION_BLOCK "FB_Lift"
+TITLE = FB_Lift
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 198
+// END_ATTRIBUTES
+//Function to generate a position decision and handle conveyors around the in and outfeed of a lift
+   VAR_INPUT 
+      iUDT_LiftConveyorInterface { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ConveyorInterface";   // Interface structure
+      iUDT_VSUInterface { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_VSUInterface";   // Interface between VSU and VFD
+      ix_SectionIsDown { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when section is down
+      ix_SectionIsUp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when section is up
+      ix_PECLift { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when PEC on lift is free
+      ix_ConveyorEmptyInAuto { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Conveyor is started in auto
+      ix_ConveyorEmptyOutAuto { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Conveyor is started in auto
+      ix_ConveyorFullInAuto { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Conveyor is started in auto
+      ix_ConveyorFullOutAuto { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Conveyor is started in auto
+   END_VAR
+
+   VAR_OUTPUT 
+      qi_RequestedPosition { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Requested position to go to
+      qx_HoldLiftConveyor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Hold conveyor on lift as lift moves
+      qx_TransportIdle { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // No transports are active, free to move
+      qx_LiftConveyorDirection { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // FALSE - Right, TRUE - Left
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_LiftConveyorHandShakeUpstream : "UDT_ConveyorHandshake";
+      iqUDT_LiftConveyorHandShake : "UDT_ConveyorHandshake";
+      iqUDT_InfeedEmptyUpHandShake : "UDT_ConveyorHandshake";
+      iqUDT_OutfeedEmptyDownHandShake : "UDT_ConveyorHandshake";
+      iqUDT_InfeedFullDownHandShake : "UDT_ConveyorHandshake";
+      iqUDT_OutfeedFullUpHandShake : "UDT_ConveyorHandshake";
+      iqUDT_OutfeedFullUpHandshakeUpstream : "UDT_ConveyorHandshake";
+      iqUDT_OutfeedEmptyDownHandshakeUpstream : "UDT_ConveyorHandshake";
+   END_VAR
+
+   VAR 
+      sUDT_Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   // Common status structure
+      sR_TRIG_Automatic {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge starting automatic mode
+      sR_TRIG_PECOn {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge trigger PEC on lift conveyor
+      sF_TRIG_TIPLiftConveyor {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   // Falling edge trigger TIP signal lift conveyor
+      sF_TRIG_PECOff {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   // Falling edge trigger PEC on lift conveyor
+      sx_AutomaticActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Running in automatic
+      sx_LoadIsEmptyTote { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Load on lift conveyor is an empty tote
+      sx_LoadIsFullTote { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Load on lift conveyor is a full tote
+      sx_GetEmptyTote { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Transport empty tote in
+      sx_GetFullTote { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Transport full tote in
+      sx_DeliverEmptyTote { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Transport empty tote out
+      sx_DeliverFullTote { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Transport full tote out
+      sx_EmptyRequest { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Valid empty request active
+      sx_FullRequest { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Valid full request active
+      sx_DoEmptyRequest { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Handle empty request
+      sx_DoFullRequest { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Handle full request
+      sx_Idle { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Transport is Idle
+      si_DistanceToOutfeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Actual distance to the end of the lift conveyor
+      sx_UpperOutfeedingActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Outfeeding to the upper outfeed is on
+      sx_LowerOutfeedingActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Outfeeding to the upper outfeed is on
+   END_VAR
+
+   VAR CONSTANT 
+      ci_Up : Int := 2;
+      ci_Down : Int := 1;
+      ci_DistanceToOutfeed : Int := 39;   // Distance from middle to the end of the lift conveyor
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	
+	Version
+	history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	07/04/2023  | 3.0       | F.Baten       | First release TIA 17.5
+	14/06/2024  | 3.1       | R.Pieczonka   | Changed handshakes connections, added distance counting while outfeeding
+	                                            
+	*)
+	
+	
+	REGION 1 - Initial
+	    REGION 1.1 - Triggers
+	        // Starting automatic
+	        #sR_TRIG_Automatic(CLK := #iUDT_VSUInterface.Automatic);
+	        
+	        // Lift conveyor finished TIP
+	        #sF_TRIG_TIPLiftConveyor(CLK := #iqUDT_LiftConveyorHandShake.TIP);
+	        
+	        // Tote arrived on PEC
+	        #sF_TRIG_PECOff(CLK := #ix_PECLift);
+	        
+	        //Tote gone from PEC
+	        #sR_TRIG_PECOn(CLK := #ix_PECLift);
+	        
+	    END_REGION
+	END_REGION
+	
+	REGION 7 - Automatic mode
+	    
+	    REGION 7.1 - Determine load on lift
+	        // Lift is in upper position and conveyor is ready to send, the empty tote is loaded on the conveyor. 
+	        IF #ix_SectionIsUp
+	            AND #sx_DoEmptyRequest
+	            AND #iUDT_LiftConveyorInterface.VFDRunning
+	            AND #sF_TRIG_PECOff.Q
+	        THEN
+	            #sx_LoadIsEmptyTote := TRUE;
+	        END_IF;
+	        // Lift is in lower position, and outfeeding empty tote. 
+	        IF #ix_SectionIsDown
+	            AND #iUDT_LiftConveyorInterface.VFDRunning
+	            AND #sR_TRIG_PECOn.Q
+	            AND #sx_LoadIsEmptyTote
+	        THEN
+	            #sx_LowerOutfeedingActive := TRUE;
+	            #si_DistanceToOutfeed := #ci_DistanceToOutfeed;
+	        END_IF;
+	        
+	        IF #sx_LowerOutfeedingActive
+	        THEN
+	            #si_DistanceToOutfeed -= #iUDT_LiftConveyorInterface.Displacement;
+	        END_IF;
+	        //If the ditance from middle conveyor to the end of it is reached,  then the information about tote on the lift is cleared.
+	        IF #sx_LowerOutfeedingActive
+	            AND #si_DistanceToOutfeed <= 0
+	        THEN
+	            #sx_LowerOutfeedingActive := FALSE;
+	            #sx_LoadIsEmptyTote := FALSE;
+	        END_IF;
+	        
+	        // Lift is in lower position and conveyor is ready to send, the full tote is loaded on the conveyor. 
+	        IF #ix_SectionIsDown
+	            AND #sx_DoFullRequest
+	            AND #iUDT_LiftConveyorInterface.VFDRunning
+	            AND #sF_TRIG_PECOff.Q
+	        THEN
+	            #sx_LoadIsFullTote := TRUE;
+	        END_IF;
+	        // Lift is in upper position, and outfeeding full tote. 
+	        IF #ix_SectionIsUp
+	            AND #iUDT_LiftConveyorInterface.VFDRunning
+	            AND #sR_TRIG_PECOn.Q
+	            AND #sx_LoadIsFullTote
+	        THEN
+	            #sx_UpperOutfeedingActive := TRUE;
+	            #si_DistanceToOutfeed := #ci_DistanceToOutfeed;
+	        END_IF;
+	        
+	        IF #sx_UpperOutfeedingActive
+	        THEN
+	            #si_DistanceToOutfeed += #iUDT_LiftConveyorInterface.Displacement;
+	        END_IF;
+	        //If the ditance from middle conveyor to the end of it is reached, then the information about tote on the lift is cleared. 
+	        IF #sx_UpperOutfeedingActive
+	            AND #si_DistanceToOutfeed <= 0
+	        THEN
+	            #sx_LoadIsFullTote := FALSE;
+	            #sx_UpperOutfeedingActive := FALSE;
+	        END_IF;
+	        
+	        // When starting automatic mode and no load is active but pec still occupied, the load will be set as Full tote.  
+	        IF NOT #sx_LoadIsFullTote
+	            AND NOT #sx_LoadIsEmptyTote
+	            AND NOT #ix_PECLift
+	            AND #sR_TRIG_Automatic.Q
+	        THEN
+	            #sx_LoadIsFullTote := TRUE;
+	        END_IF;
+	        
+	        IF #sR_TRIG_Automatic.Q
+	        THEN
+	            #sx_LowerOutfeedingActive := FALSE;
+	            #sx_UpperOutfeedingActive := FALSE;
+	        END_IF;
+	    END_REGION
+	    
+	    REGION 7.2 - Request totes
+	        // request for empty totes : infeed is full and outfeed is empty and both are automatic active
+	        #sx_EmptyRequest := #iqUDT_InfeedEmptyUpHandShake.RTS
+	        AND #iqUDT_OutfeedEmptyDownHandShake.RTR
+	        AND #ix_ConveyorEmptyInAuto
+	        AND #ix_ConveyorEmptyOutAuto;
+	        
+	        // request for full totes : infeed is full and outfeed is empty and both are automatic active
+	        #sx_FullRequest := #iqUDT_InfeedFullDownHandShake.RTS
+	        AND #iqUDT_OutfeedFullUpHandshakeUpstream.RTR
+	        AND #ix_ConveyorFullInAuto
+	        AND #ix_ConveyorFullOutAuto;
+	    END_REGION
+	    
+	    REGION 7.3 - Handle request
+	        // Setting reqest to be handled
+	        IF #sx_EmptyRequest
+	            AND NOT #sx_DoFullRequest
+	            AND NOT #sx_LoadIsEmptyTote
+	        THEN
+	            #sx_DoEmptyRequest := TRUE;
+	        ELSIF #sx_FullRequest
+	            AND NOT #sx_DoEmptyRequest
+	            AND NOT #sx_LoadIsFullTote
+	        THEN
+	            #sx_DoFullRequest := TRUE;
+	        END_IF;
+	        
+	        // Empty tote is loaded
+	        IF (#sx_DoEmptyRequest AND #sx_LoadIsEmptyTote)
+	        THEN
+	            #sx_DoEmptyRequest := FALSE;
+	        END_IF;
+	        
+	        // Full tote is loaded
+	        IF (#sx_DoFullRequest AND #sx_LoadIsFullTote)
+	        THEN
+	            #sx_DoFullRequest := FALSE;
+	        END_IF;
+	        
+	        // Active request is not valid anymore as lift moved to position  
+	        IF #sx_DoEmptyRequest AND NOT #sx_EmptyRequest AND #iqUDT_InfeedEmptyUpHandShake.RTS AND #ix_SectionIsUp AND #sx_GetEmptyTote THEN
+	            #sx_GetEmptyTote := FALSE;
+	            #sx_DoEmptyRequest := FALSE;
+	        END_IF;
+	        
+	        IF #sx_DoFullRequest AND NOT #sx_FullRequest AND #iqUDT_InfeedFullDownHandShake.RTS AND #ix_SectionIsDown AND #sx_GetFullTote THEN
+	            #sx_GetFullTote := FALSE;
+	            #sx_DoFullRequest := FALSE;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 7.4 - Active Transports
+	        // Load empty tote transport is active
+	        IF #sx_DoEmptyRequest AND #ix_SectionIsUp
+	        THEN
+	            #sx_GetEmptyTote := TRUE;
+	        END_IF;
+	        
+	        IF #sx_GetEmptyTote
+	            AND
+	            ((#iUDT_LiftConveyorInterface.ActualSpeed = 0) AND #sx_LoadIsEmptyTote)
+	        THEN
+	            #sx_GetEmptyTote := FALSE;
+	        END_IF;
+	        
+	        // Load full tote transport is active
+	        IF #sx_DoFullRequest AND #ix_SectionIsDown
+	        THEN
+	            #sx_GetFullTote := TRUE;
+	        END_IF;
+	        
+	        IF #sx_GetFullTote AND #sx_LoadIsFullTote AND (#iUDT_LiftConveyorInterface.ActualSpeed = 0)
+	        THEN
+	            #sx_GetFullTote := FALSE;
+	        END_IF;
+	        
+	        // Deliver transports are active
+	        #sx_DeliverEmptyTote := #ix_SectionIsDown AND #sx_LoadIsEmptyTote AND (#iUDT_LiftConveyorInterface.ActualSpeed <> 0);
+	        #sx_DeliverFullTote := #ix_SectionIsUp AND #sx_LoadIsFullTote AND (#iUDT_LiftConveyorInterface.ActualSpeed <> 0);
+	        
+	        // Transport is idle
+	        #sx_Idle := NOT #sx_GetEmptyTote
+	        AND NOT #sx_GetFullTote
+	        AND NOT #sx_DeliverFullTote
+	        AND NOT #sx_DeliverEmptyTote;
+	    END_REGION
+	    
+	    REGION 7.5 - Lift position request
+	        // When lift is at level and transports finished (free to move)
+	        // To go to lower level (bring empty tote or get full one)
+	        IF #sx_Idle
+	            AND ((#ix_SectionIsUp AND #sx_DoFullRequest)
+	            OR #sx_LoadIsEmptyTote)
+	        THEN
+	            #qi_RequestedPosition := #ci_Down;
+	        END_IF;
+	        
+	        // To go to upper level (bring full tote or get empty one)
+	        IF #sx_Idle
+	            AND ((#ix_SectionIsDown AND #sx_DoEmptyRequest) OR #sx_LoadIsFullTote)
+	        THEN
+	            #qi_RequestedPosition := #ci_Up;
+	        END_IF;
+	        
+	        #qx_TransportIdle := #sx_Idle;
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 8 - Handshake to conveyors
+	    // Reset when not connected 
+	    #iqUDT_InfeedEmptyUpHandShake.RTR := FALSE;
+	    #iqUDT_InfeedFullDownHandShake.RTR := FALSE;
+	    
+	    #iqUDT_LiftConveyorHandShakeUpstream.GIN := 0;
+	    #iqUDT_LiftConveyorHandShakeUpstream.NrOfPosToShift := 0;
+	    #iqUDT_OutfeedFullUpHandShake.GIN := 0;
+	    #iqUDT_OutfeedFullUpHandShake.NrOfPosToShift := 0;
+	    #iqUDT_OutfeedEmptyDownHandShake.GIN := 0;
+	    #iqUDT_OutfeedEmptyDownHandShake.NrOfPosToShift := 0;
+	    
+	    // Direct interface signals when on level
+	    IF #ix_SectionIsUp THEN
+	        #qx_LiftConveyorDirection := TRUE;                  // Changing direction to left
+	        // Infeed 
+	        #iqUDT_InfeedEmptyUpHandShake.RTR := #iqUDT_LiftConveyorHandShake.RTR AND (#sx_EmptyRequest OR #iqUDT_InfeedEmptyUpHandShake.TIP);
+	        #iqUDT_LiftConveyorHandShake.GIN := #iqUDT_InfeedEmptyUpHandShake.GIN;
+	        #iqUDT_LiftConveyorHandShakeUpstream.NrOfPosToShift := #iqUDT_InfeedEmptyUpHandShake.NrOfPosToShift;
+	        #iqUDT_InfeedEmptyUpHandShake.NrOfPosToShift := 0;
+	        #iqUDT_LiftConveyorHandShakeUpstream.RTS := #iqUDT_InfeedEmptyUpHandShake.RTS;
+	        //  #iqUDT_HandShakeLiftUp.TIP := #iqUDT_HandShakeEmptyIn.TIP;
+	        #iqUDT_LiftConveyorHandShakeUpstream.ResetEnergySave := #iqUDT_InfeedEmptyUpHandShake.ResetEnergySave;
+	        
+	        // Outfeed 
+	        #iqUDT_OutfeedFullUpHandshakeUpstream.RTS := #iqUDT_LiftConveyorHandShake.RTS AND #sx_LoadIsFullTote;
+	        #iqUDT_OutfeedFullUpHandshakeUpstream.TIP := #iqUDT_LiftConveyorHandShake.TIP;
+	        #iqUDT_OutfeedFullUpHandshakeUpstream.GIN := #iqUDT_LiftConveyorHandShake.GIN;
+	        #iqUDT_OutfeedFullUpHandshakeUpstream.NrOfPosToShift := #iqUDT_LiftConveyorHandShake.NrOfPosToShift;
+	        #iqUDT_LiftConveyorHandShake.NrOfPosToShift := 0;
+	        
+	        // lift to outfeed transport
+	        #iqUDT_LiftConveyorHandShakeUpstream.RTR := #iqUDT_OutfeedFullUpHandshakeUpstream.RTR AND (#sx_LoadIsFullTote OR #iqUDT_LiftConveyorHandShake.TIP);
+	    END_IF;
+	    
+	    IF #ix_SectionIsDown THEN
+	        #qx_LiftConveyorDirection := FALSE;                 //Changing direction to right
+	        
+	        // Infeed Full to lift 
+	        #iqUDT_InfeedFullDownHandShake.RTR := #iqUDT_LiftConveyorHandShakeUpstream.RTR AND (#sx_FullRequest OR #iqUDT_InfeedFullDownHandShake.TIP);
+	        #iqUDT_LiftConveyorHandShakeUpstream.GIN := #iqUDT_InfeedFullDownHandShake.GIN;
+	        #iqUDT_LiftConveyorHandShakeUpstream.NrOfPosToShift := #iqUDT_InfeedFullDownHandShake.NrOfPosToShift;
+	        #iqUDT_InfeedFullDownHandShake.NrOfPosToShift := 0;
+	        #iqUDT_LiftConveyorHandShakeUpstream.RTS := #iqUDT_InfeedFullDownHandShake.RTS;
+	        #iqUDT_LiftConveyorHandShakeUpstream.TIP := #iqUDT_InfeedFullDownHandShake.TIP;
+	        #iqUDT_LiftConveyorHandShakeUpstream.ResetEnergySave := #iqUDT_InfeedFullDownHandShake.ResetEnergySave;
+	        
+	        // Outfeed 
+	        #iqUDT_OutfeedEmptyDownHandshakeUpstream.RTS := #iqUDT_LiftConveyorHandShakeUpstream.RTS AND #sx_LoadIsEmptyTote;
+	        #iqUDT_OutfeedEmptyDownHandshakeUpstream.TIP := #iqUDT_LiftConveyorHandShake.TIP;
+	        #iqUDT_OutfeedEmptyDownHandshakeUpstream.GIN := #iqUDT_LiftConveyorHandShake.GIN;
+	        #iqUDT_OutfeedEmptyDownHandshakeUpstream.NrOfPosToShift := #iqUDT_LiftConveyorHandShake.NrOfPosToShift;
+	        #iqUDT_LiftConveyorHandShake.NrOfPosToShift := 0;
+	        
+	        // lift to outfeed transport
+	        #iqUDT_LiftConveyorHandShake.RTR := #iqUDT_OutfeedEmptyDownHandshakeUpstream.RTR AND (#sx_LoadIsEmptyTote OR #iqUDT_LiftConveyorHandShake.TIP);
+	        
+	    END_IF;
+	    
+	    #iqUDT_OutfeedFullUpHandshakeUpstream.ResetEnergySave := #iqUDT_InfeedFullDownHandShake.ResetEnergySave
+	    OR #iqUDT_LiftConveyorHandShake.ResetEnergySave
+	    AND #ix_SectionIsUp;
+	    #iqUDT_OutfeedEmptyDownHandshakeUpstream.ResetEnergySave := #iqUDT_InfeedEmptyUpHandShake.ResetEnergySave
+	    OR #iqUDT_LiftConveyorHandShake.ResetEnergySave
+	    AND #ix_SectionIsDown;
+	    
+	    //Stop when NOT on level
+	    #qx_HoldLiftConveyor := NOT #ix_SectionIsDown AND NOT #ix_SectionIsUp;
+	    
+	END_REGION
+	
+END_FUNCTION_BLOCK
+

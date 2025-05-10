@@ -1,0 +1,75 @@
+﻿FUNCTION_BLOCK "FB_ConveyorZPAlast"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_OUTPUT 
+      qUDT_CommonStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_CommonStatus";   //           Common status structure
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_ConveyorInterface : "UDT_ConveyorInterface";   //           Handshake structure in forward direction
+      iqUDT_ZPAinterface : "UDT_ZPAinterface";   //           Handshake structure in forward direction
+      iqUDT_HandShake : "UDT_ConveyorHandshake";   //           Handshake structure in forward direction
+   END_VAR
+
+   VAR 
+      sUDT_HandShake { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorHandshake";   //           Handshake structure in forward direction
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                      
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	02/10/2024  | 1.0       | R.Willems     | First release TIA 18
+	                                       
+	                                        
+	*)
+	
+	REGION 1 Common status
+	    //Write
+	    #qUDT_CommonStatus := #iqUDT_ZPAinterface.CommonStatus;
+	END_REGION
+	
+	REGION 2 Conveyor interface
+	    REGION 2.1 Displacement
+	        //Write
+	        //NOT USED, USES OWN DISPLACEMENT
+	        //#iqUDT_ConveyorInterface.Displacement := #iqUDT_ZPAinterface.ConveyorInterface.Displacement;
+	        #iqUDT_ConveyorInterface.ActualSpeed := #iqUDT_ZPAinterface.ConveyorInterface.ActualSpeed;
+	    END_REGION
+	    REGION 2.1 PEC
+	        //Connect ZPA Interface to PEC
+	        #iqUDT_ConveyorInterface.InternalErrorReset := #iqUDT_ZPAinterface.ConveyorInterface.InternalErrorReset;
+	        #iqUDT_ConveyorInterface.ResetStatistics := #iqUDT_ZPAinterface.ConveyorInterface.ResetStatistics;
+	        //Read
+	        #iqUDT_ZPAinterface.ConveyorInterface.InternalErrorPEC := #iqUDT_ConveyorInterface.InternalErrorPEC;
+	    END_REGION
+	END_REGION
+	
+	REGION 3 Handshake
+	    //Write
+	    #iqUDT_HandShake.GIN := #sUDT_HandShake.GIN := #iqUDT_ZPAinterface.Handshake.GIN;
+	    //Write/Read
+	    IF #iqUDT_HandShake.RTS <> #sUDT_HandShake.RTS THEN
+	        #iqUDT_ZPAinterface.Handshake.RTS := #sUDT_HandShake.RTS := #iqUDT_HandShake.RTS;
+	    ELSE
+	        #iqUDT_HandShake.RTS := #sUDT_HandShake.RTS := #iqUDT_ZPAinterface.Handshake.RTS;
+	    END_IF;
+	    IF #iqUDT_HandShake.RTR <> #sUDT_HandShake.RTR THEN
+	        #iqUDT_ZPAinterface.Handshake.RTR := #sUDT_HandShake.RTR := #iqUDT_HandShake.RTR;
+	    ELSE
+	        #iqUDT_HandShake.RTR := #sUDT_HandShake.RTR := #iqUDT_ZPAinterface.Handshake.RTR;
+	    END_IF;
+	    IF #iqUDT_HandShake.TIP <> #sUDT_HandShake.TIP THEN
+	        #iqUDT_ZPAinterface.Handshake.TIP := #sUDT_HandShake.TIP := #iqUDT_HandShake.TIP;
+	    ELSE
+	        #iqUDT_HandShake.TIP := #sUDT_HandShake.TIP := #iqUDT_ZPAinterface.Handshake.TIP;
+	    END_IF;
+	END_REGION
+	
+	
+END_FUNCTION_BLOCK
+

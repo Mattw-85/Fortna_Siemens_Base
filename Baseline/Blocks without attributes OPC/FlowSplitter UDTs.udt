@@ -1,0 +1,103 @@
+﻿TYPE "UDT_EventStatistic"
+TITLE = UDT_EventStatistic
+VERSION : 0.1
+//User-defined structure of event statistic data.
+   STRUCT
+      NumberOfTimes : DInt;   // Number of times the event occurred since last reset
+      LastEventSeconds : DInt;   // Number of seconds of the current or last event
+      TotalEventSeconds : DInt;   // Total number of seconds the event occurred since last reset
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_FlowSplitterStatus"
+TITLE = Flow splitter status
+VERSION : 0.1
+   STRUCT
+      Status : Int;   // Status number
+      Specific : Struct
+         Mode : Int;   // Mode: 1- 100% transport; 2- 50% transport; 3- 100% divert; 4- % divert via HMI; 5- Semi automatic
+         Debris { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Debris detected under the belt
+         PEC_EoSJam { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // PEC Jam detected
+         PEC_DivertChuteJam { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // PEC divert chute jam detected
+         DivertsActivationError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Error when zone 1 is not active but zone 2 is active
+         AirPressure { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Air pressure error
+         EncoderError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Encoder error
+         Zone1Divert { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Zone 1 divert is active
+         Zone2Divert { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Zone 2 divert is active
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_FlowSplitterStatistics"
+TITLE = Flow splitter statistics
+VERSION : 0.1
+   STRUCT
+      FlowSplitterUpTime : "UDT_EventStatistic";   // Flow splitter up time
+      FlowSplitterDownTime : "UDT_EventStatistic";   // Flow splitter down time
+      PECChuteDivertJam : "UDT_EventStatistic";   // PEC chute divert jam
+      PEC_EoSJam : "UDT_EventStatistic";   // PEC end of section jam
+      AirPressure : "UDT_EventStatistic";   // Air pressure fault
+      DebrisSensor : "UDT_EventStatistic";   // Debris detected under the belt
+      EncoderError : "UDT_EventStatistic";   // Encoder error
+      Mode100Straight : "UDT_EventStatistic";   // 100% send to straight downstream conveyor
+      "Mode50/50" : "UDT_EventStatistic";   // 50% send to straight downstream conveyor, 50% send to divert downstream conveyor
+      Mode100Divert : "UDT_EventStatistic";   // 100% send to divert downstream conveyor
+      ModeTimeBasedSplit : "UDT_EventStatistic";   // Time base split mode
+      ModeSemiAutomatic : "UDT_EventStatistic";   // Semi automatic mode
+      EnergySave : "UDT_EventStatistic";   // Number of times that save energy mode occurs
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_FlowSplitterConfiguration"
+TITLE = Flow Splitter Configuration
+VERSION : 0.1
+   STRUCT
+      PEC_EoSTimeOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Photo eye time on delay [ms]
+      PEC_EoSTimeOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Photo eye time off delay [ms]
+      PEC_FilterChuteTimeOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Divert chute photo eye time on delay [ms]
+      PEC_FilterChuteTimeOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Divert chute photo eye time off delay [ms]
+      PEC_FilterUpstreamTimeOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Upstream photo eye time on delay [ms]
+      PEC_FilterUpstreamTimeOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Upstream photo eye time off delay [ms]
+      AirPressure_FilterTimeOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Air pressure time off delay [ms]
+      DivertsTimeActivation { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Time to enable diverts pop-up [ms]
+      CascadeTimeOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Cascade time on delay [ms]
+      DebrisTimeFilter { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Time to filter debris sensor signal [ms]
+      SpeedSetpointNominal { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Nominal speed setpoint [mm/s]
+      SpeedSetpointLow { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Low speed setpoint [mm/s]
+      DivertSwitchDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Divert switch delay [s]
+      JamDisplacementLimit { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Limit displacement with PEC blocked to detect jam [cm]
+      DivertChuteJamDisplacLimit { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Limit displacement with PEC divert chute blocked to detect jam [cm]
+      TimeBasedSplit { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Time based split [s]
+      Length { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Conveyor length [mm]
+      LengthCorrection { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Length correction [mm]
+      DefaultMode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Mode: 1- 100% transport; 2- 50% transport; 3- 100% divert; 4- % divert; 5 - Semi automatic
+      PEC_Present { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Thue when a photo eye is present in the flow splitter
+      PEC_ChutePesent { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Thue when a photo eye is present in the chute
+      FirstConveyorToStart { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // First conveyor to start cascade mode
+      OnFlyChangeOfMode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // On fly change of mode
+      DivertsTimeSave { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Disable diverts if there is no parcels
+      Energy { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Energy save mode enable
+      EnergySaveLength { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Distance conveyor travelled before energy save activate [cm]
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_FlowSplitterCommand"
+TITLE = Flow Splitter Command
+VERSION : 0.1
+   STRUCT
+      PercentageSplit : Int;   // Percentage value [%] that diverts are on.
+      Mode : Int;   // 1- 100% transport; 2- 50% transport; 3- 100% divert; 4- % divert via HMI; 5- Semi automatic
+      ManualMode : Bool;   // Manual mode command from HMI
+      ManualStartStop : Bool;   // Start conveyor running when the bit is true, stop conveyor when the bit is false
+      ManualFullSpeed : Bool;   // Full speed conveyor in manual mode
+      ManualJog : Bool;   // Command to jog conveyor in slow speed from HMI
+      Zone1DivertActivation : Bool;   // Active diverts in zone 1
+      Zone2DivertActivation : Bool;   // Active diverts in zone 2
+   END_STRUCT;
+
+END_TYPE
+

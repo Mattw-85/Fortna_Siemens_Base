@@ -1,0 +1,49 @@
+﻿TYPE "UDT_EventStatistic"
+TITLE = UDT_EventStatistic
+VERSION : 0.1
+//User-defined structure of event statistic data.
+   STRUCT
+      NumberOfTimes : DInt;   // Number of times the event occurred since last reset
+      LastEventSeconds : DInt;   // Number of seconds of the current or last event
+      TotalEventSeconds : DInt;   // Total number of seconds the event occurred since last reset
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_SystemControlStatus"
+TITLE = UDT_SystemControlStatus
+VERSION : 0.1
+//User-defined structure of FB_SystemControl function block status.
+   STRUCT
+      Status : Int;   // Status number
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_SystemControlStatistics"
+TITLE = UDT_SystemControlStatistics
+VERSION : 0.1
+//User-defined structure of FB_SystemControl function block statistics.
+   STRUCT
+      Run : "UDT_EventStatistic";   // Equipment run statistics
+      Error : "UDT_EventStatistic";   // Equipment error statistics
+      EnergySave : "UDT_EventStatistic";   // Equipment energy save statistics
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_SystemControlCommand"
+TITLE = UDT_SystemControlCommand
+VERSION : 0.1
+//User-defined structure of system control commands.
+   STRUCT
+      Start : Bool;   // Start Command from HMI
+      Stop : Bool;   // Stop command from HMI
+      Reset : Bool;   // Reset command from HMI
+      ResetData : Bool;   // Reset data command from HMI
+      ResetSafety : Bool;   // Reset safety command from HMI
+      ManualMode : Bool;   // Manual mode command from HMI
+   END_STRUCT;
+
+END_TYPE
+

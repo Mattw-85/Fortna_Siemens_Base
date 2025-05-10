@@ -1,0 +1,69 @@
+﻿TYPE "UDT_ValveCommand"
+TITLE = UDT_ConveyorCommand
+VERSION : 0.1
+//User-defined structure of conveyor commands.
+   STRUCT
+      ManualMode : Bool;   // Manual mode command from HMI
+      AutoMode : Bool;   // Automatic mode command from HMI
+      ManualOpen : Bool;   // Manual command valve Open / Extend
+      ManualClose : Bool;   // Manual command valve Close / Retract
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_ValveStatistics"
+VERSION : 0.1
+   STRUCT
+      Open { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Number of times PEC got jammed
+      Fail { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_EventStatistic";
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_ValveStatus"
+TITLE = UDT_ConveyorStatus
+VERSION : 0.1
+//User-defined structure of FB_Conveyor function block status.
+   STRUCT
+      Status { ExternalWritable := 'False'} : Int;   // Status number
+      Specific { ExternalWritable := 'False'} : Struct
+         Opening { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Valve is opening
+         Opened { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Valve in Open position
+         Closing { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Valve is closing
+         Closed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Valve in Closed position
+         FailToOpen { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Fail to open / extend
+         FailToClose { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Fail to close / retract
+         AirPressureLost { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // No air pressure
+         ConfigurationError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Configuration is not set correctly
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_ValveConfiguration"
+VERSION : 0.1
+   STRUCT
+      ControlMode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int := 1;   // 1 = Hold ix_open to keep qx_open active, 2 = detects rising edge on ix_Open to Open, ix_Close to Close
+      ValveType { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int := 1;   // 1 = SEV, 2 = DEV
+      CloseFeedBackExist { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Valve has a feed back that signals when fully cLosed
+      OpenFeedBackExist { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Valve has a feed back that signals when fully Open
+      OpenTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // estimated open time, will trigger FTO if open feedback exist and not detected
+      CloseTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // estimated close time, will trigger FTC if close feedback exist and not detected
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_ValveInterface"
+TITLE = UDT_ValveInterface
+VERSION : 0.1
+//UDT valve interface between modules
+   STRUCT
+      Open { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Interface command valve Open / Extend
+      Close { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Interface command valve Close / Retract
+      IsOpened { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Valve feedback opened / extended
+      IsClosed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Valve feedback closed / retracted
+      Error { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Valve error
+   END_STRUCT;
+
+END_TYPE
+

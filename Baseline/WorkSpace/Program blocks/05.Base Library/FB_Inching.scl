@@ -1,0 +1,339 @@
+﻿FUNCTION_BLOCK "FB_Inching"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 214
+// END_ATTRIBUTES
+   VAR_INPUT 
+      iUDT_InchingConfiguration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_InchingConfiguration";   //  Inching configuration structure
+      iUDT_FeedConveyorConfiguration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ConveyorConfiguration";   //  Feed conveyor configuration structure
+      iUDT_ConveyorConfiguration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ConveyorConfiguration";   //  Conveyor configuration structure
+      ii_PECEoSDistanceUpstream { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //  Distance between photo eye and the end of conveyor [mm]
+      ii_PECEoSDistance { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //  Distance between photo eye and the end of conveyor [mm]
+      ix_PECEoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  PEC signal End of Section
+      ix_Release { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Release button
+      ix_Clockpulse1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Clock pulse to flash when emptying
+      ix_Clockpulse2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Clock pulse to flash when emptied
+   END_VAR
+
+   VAR_OUTPUT 
+      qx_ExternalRequestHold { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  External output to request conveyor hold
+      qx_ExternalRequestDieBack { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  External output to request die back
+      qx_IndicationSignal { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Output to indication: flashing with clockpuls 1 then emptying, flashing with clockpuls 2 then emptied, continuously on then full
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_FeedConveyor : "UDT_ConveyorInterface";   //  Feed conveyor interface structure
+      iqUDT_InchingConveyor : "UDT_ConveyorInterface";   //  Inching conveyor interface structure
+      iqUDT_HandShakeUp : "UDT_ConveyorHandshake";   //  Conveyor handshake structure
+   END_VAR
+
+   VAR 
+      sFB_ButtonTimerFull { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   //  Delaytime of the release button to set the conveyor full
+      sFB_ButtonTimerRelease { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   //  Delaytime of the release button to release the conveyor to emty
+      sR_TRIG_RTSUp {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge trigger ready to send upstream
+      sR_TRIG_TIP {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge trigger tip
+      sF_TRIG_PECEoS {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   //  Falling edge trigger PEC EoS
+      sdi_FirstParcelPosition { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //  The position the front of the first parcel is where '0' is end of conveyor [cm]
+      sdi_ActualGapCounter { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //  The number of centimeters the conveyor has to run to complete the gap
+      sdi_ActualRunningEmpty { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //  The number of centimeters the conveyor has to run to run empty
+      sdi_ActualTIPDistance { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //  Actual distance befor TIP will be activated
+      sdi_FullDegree { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //  Filling degree
+      sx_Emptied { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Inching conveyor condition is emptied, wait to start
+      sx_Inching { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Inching conveyor condition is inching
+      sx_Full { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Inching conveyor condition is full
+      sx_Emptying { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Inching conveyor condition is emptying
+      sx_Run { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Run inching conveyor (release hold)
+      sx_FirstParcel { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  First parcel entering the inching conveyor
+      sx_UpdateFirst { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  The first parcel has entered the PEC
+      sx_ReleaseButton { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Release button is pressed to set Full condidition, first release the button to set Release function
+   END_VAR
+
+   VAR CONSTANT 
+      ci_Startvalue : Int := 2;
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                      
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	28/10/2019  | 3.0       | F.Baten       | first release TIA 15
+	14/01/2020  | 3.1       | F.Baten       | Updatet "UDT_ConveyorConfiguration"
+	22/04/2020  | 3.2       | L.Klar        | Adjusted after conveyor UDT's change
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 - Triggers
+	    
+	    // Beginning of transporting the parcel in.
+	    #sR_TRIG_TIP(CLK := #iqUDT_HandShakeUp.TIP);
+	    
+	    // The upstream conveyor is ready to transport.
+	    #sR_TRIG_RTSUp(CLK := #iqUDT_HandShakeUp.RTS);
+	    
+	    // Falling edge trigger PEC EoS.
+	    #sF_TRIG_PECEoS(CLK := #ix_PECEoS);
+	    
+	END_REGION
+	
+	REGION 2 - Set distances
+	    
+	    REGION 2.1 - Set the desired gap distance when the TIP starts.
+	        
+	        // The actual starting of the inching conveyor is the offset earlier so that has to be deducted from the desired gap.
+	        IF #sR_TRIG_TIP.Q
+	        THEN
+	            // Distance the parcel starts at the tipping position is smaller than the disired gapsize.
+	            IF (#iUDT_FeedConveyorConfiguration.Forward_Direction.PEC_EoSDistanceOffset / 10) < #iUDT_InchingConfiguration.GapSize
+	            THEN
+	                // Then decrease the gapsize (to be done at the inching conveyor) with the offset because both conveyors are running when the TIP is active.
+	                #sdi_ActualGapCounter :=
+	                #iUDT_InchingConfiguration.GapSize -
+	                (#iUDT_FeedConveyorConfiguration.Forward_Direction.PEC_EoSDistanceOffset / 10) -
+	                #ci_Startvalue;
+	            ELSE
+	                // The distance for the gap is already covered by the offset distance.
+	                #sdi_ActualGapCounter := 0;
+	            END_IF;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 2.2 - Track the parcel on the upstream conveyor
+	        
+	        //  Set the distance from the trigger signal until the point the TIP would start.
+	        IF #sR_TRIG_RTSUp.Q
+	        THEN
+	            // PEC distance - Offset = TIP distance on the upstream conveyor.
+	            #sdi_ActualTIPDistance := (#ii_PECEoSDistanceUpstream - #iUDT_FeedConveyorConfiguration.Forward_Direction.PEC_EoSDistanceOffset) / 10;
+	            IF #sdi_ActualTIPDistance < 0
+	            THEN
+	                #sdi_ActualTIPDistance := 0;
+	            END_IF;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 2.3 - Update the first parcel position
+	        
+	        IF #sF_TRIG_PECEoS.Q
+	            AND NOT #sx_UpdateFirst
+	        THEN
+	            // Set the position of the PEC as the first parcel position.
+	            #sdi_FirstParcelPosition := #ii_PECEoSDistance / 10;
+	            // First parcel is updated.
+	            #sx_UpdateFirst := TRUE;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 3 - Button
+	    
+	    // When the button is pressed for a longer time it is accepted as setting full action.
+	    #sFB_ButtonTimerRelease(iudi_OnDelayTime := #iUDT_InchingConfiguration.ButtonReleaseDelayTime,
+	                            iudi_OffDelayTime := 0,
+	                            ix_SignalToDelay := #sx_Full AND #ix_Release AND NOT #sx_ReleaseButton);
+	    
+	    // When the button is pressed for a longer time it is accepted as release action.
+	    #sFB_ButtonTimerFull(iudi_OnDelayTime := #iUDT_InchingConfiguration.ButtonReleaseDelayTime,
+	                         iudi_OffDelayTime := 0,
+	                         ix_SignalToDelay := #sx_Inching AND #ix_Release);
+	    
+	    #sx_ReleaseButton := (#sx_Inching
+	    OR #sx_ReleaseButton)
+	    AND #ix_Release;
+	    
+	    // When full, the release is started by the release button.
+	    IF #sx_Full
+	        AND #sFB_ButtonTimerRelease.qx_DelayedSignal
+	    THEN
+	        #sx_Emptying := TRUE;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 4 - Displacement update
+	    
+	    REGION 4.1 - Update the gap between the parcel and the beginning of the conveyor
+	        
+	        // The Inching conveyor is allowed to run and not transferring to upstream and the gapcounter is still bigger than '0'.
+	        IF #sx_Run
+	            AND NOT #iqUDT_HandShakeUp.TIP
+	            AND #sdi_ActualGapCounter > 0
+	        THEN
+	            // Decrease the counter by the conveyors displacement.
+	            #sdi_ActualGapCounter -= #iqUDT_InchingConveyor.Displacement;
+	            IF #sdi_ActualGapCounter < 0
+	            THEN
+	                #sdi_ActualGapCounter := 0;
+	            END_IF;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 4.2 - Update the first parcel position (the head OF the cue)
+	        
+	        // The counter is still bigger than '0'.
+	        IF #sdi_FirstParcelPosition > 0
+	        THEN
+	            // Decrease the counter by the conveyors displacement.
+	            #sdi_FirstParcelPosition -= #iqUDT_InchingConveyor.Displacement;
+	            IF #sdi_FirstParcelPosition < 0
+	            THEN
+	                #sdi_FirstParcelPosition := 0;
+	            END_IF;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 4.3 - Update running empty distance
+	        
+	        // The counter is still bigger than '0'.
+	        IF #sdi_ActualRunningEmpty > 0
+	            AND #sx_Emptying
+	        THEN
+	            // Decrease the counter by the conveyors displacement.
+	            #sdi_ActualRunningEmpty -= #iqUDT_InchingConveyor.Displacement;
+	            IF #sdi_ActualRunningEmpty < 0
+	            THEN
+	                #sdi_ActualRunningEmpty := 0;
+	            END_IF;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 4.4 - Update the parcel position on the upstream conveyor
+	        
+	        // The counter is still bigger than '0'.
+	        IF #sdi_ActualTIPDistance > 0
+	        THEN
+	            // Decrease the counter by the conveyors displacement.
+	            #sdi_ActualTIPDistance -= #iqUDT_FeedConveyor.Displacement;
+	            IF #sdi_ActualTIPDistance < 0
+	            THEN
+	                #sdi_ActualTIPDistance := 0;
+	            END_IF;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	
+	REGION 5 - Status mode
+	    
+	    (* The positions are counting back from the maximal to '0'.
+	     When the inching conveyor is full, set the running empty distance. *)
+	    IF (#sdi_FirstParcelPosition < #iUDT_InchingConfiguration.MaximalFillingPosition
+	        AND #sx_FirstParcel
+	        AND NOT #iqUDT_HandShakeUp.TIP
+	        AND NOT #sx_Full)
+	        OR (#sdi_FirstParcelPosition < 2
+	        AND #sx_FirstParcel
+	        AND NOT #sx_Full)
+	        OR #sFB_ButtonTimerFull.qx_DelayedSignal
+	    THEN
+	        // The length of the conveyor is the run empty length.
+	        #sdi_ActualRunningEmpty := #iUDT_ConveyorConfiguration.Common.Length / 10;
+	        #sx_Full := TRUE;
+	        #sx_Inching := FALSE;
+	    END_IF;
+	    
+	    // Running epmty and the distance is done.
+	    IF #sx_Emptying
+	        AND #sdi_ActualRunningEmpty <= 0
+	    THEN
+	        #sx_UpdateFirst := FALSE;
+	        #sx_FirstParcel := FALSE;
+	        #sx_Emptying := FALSE;
+	        #sx_Full := FALSE;
+	        #sx_Emptied := TRUE;
+	    END_IF;
+	    
+	    // Acknowledge from operator to start again.
+	    IF #sx_Emptied
+	        AND (#ix_Release
+	        OR NOT #iUDT_InchingConfiguration.WaitForStartConf)
+	    THEN
+	        #sx_Inching := TRUE;
+	        #sx_Emptied := FALSE;
+	    END_IF;
+	    
+	    // Activate first parcel.
+	    IF #sx_Inching
+	        AND NOT #sx_FirstParcel
+	        AND #iqUDT_HandShakeUp.TIP
+	    THEN
+	        // Set the position the parcel actual is. 
+	        #sdi_FirstParcelPosition := (#iUDT_ConveyorConfiguration.Common.Length + #iUDT_FeedConveyorConfiguration.Forward_Direction.PEC_EoSDistanceOffset) / 10;
+	        // Indicating the first parcel is detected.
+	        #sx_FirstParcel := TRUE;
+	    END_IF;
+	    
+	    // If no mode is active the conveyor is set to full so an operator has to check and release.
+	    IF NOT #sx_Emptied AND NOT #sx_Emptying AND NOT #sx_Full AND NOT #sx_Inching
+	    THEN
+	        #sx_Full := TRUE;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 6 - Hold inching conveyor
+	    
+	    (* Run inching conveyor
+	       - inching mode - RTS signal and parcel is 1 cm before it will stop
+	                      - Gap is not there yet
+	       - running empty *)
+	    #sx_Run :=
+	    #sx_Inching
+	    AND (((#iqUDT_HandShakeUp.RTS OR #iqUDT_HandShakeUp.TIP)
+	    AND (#sdi_ActualTIPDistance < #ci_Startvalue)
+	    OR #iqUDT_HandShakeUp.RTS
+	    AND NOT (#iqUDT_FeedConveyor.RunFwd OR #iqUDT_FeedConveyor.RunRvs))
+	    OR #sdi_ActualGapCounter > 1)
+	    OR #sx_Emptying;
+	    
+	    #qx_ExternalRequestHold := NOT #sx_Run;
+	    
+	END_REGION
+	
+	REGION 7 - External dieback signal    
+	    
+	    (* Stop feeding in new parcels 
+	       - Gap has to be there
+	       - Conveyor is full
+	       - Conveyor is running empty *)
+	    #qx_ExternalRequestDieBack :=
+	    (#iqUDT_HandShakeUp.RTS
+	    AND (#sdi_ActualGapCounter > 1)
+	    AND NOT #iqUDT_HandShakeUp.TIP)
+	    OR #sx_Full
+	    OR #sx_Emptying;
+	    
+	END_REGION
+	
+	REGION 8 - Signal
+	    
+	    // Signalling full and emptying.
+	    #qx_IndicationSignal :=
+	    (NOT #sx_Emptying
+	    AND #sx_Full)
+	    OR (#sx_Emptying
+	    AND #ix_Clockpulse1)
+	    OR (#sx_Emptied
+	    AND #ix_Clockpulse2);
+	    
+	    // Percentage of conveyor used.
+	    #sdi_FullDegree := 100 - (#sdi_FirstParcelPosition / (#iUDT_ConveyorConfiguration.Common.Length / 1000));
+	    
+	END_REGION
+	
+END_FUNCTION_BLOCK
+

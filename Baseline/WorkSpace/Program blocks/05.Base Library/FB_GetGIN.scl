@@ -1,0 +1,99 @@
+﻿FUNCTION_BLOCK "FB_GetGIN"
+TITLE = FB_GetGIN
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 10
+// END_ATTRIBUTES
+//Function block to find GIN in tracking array.
+   VAR_INPUT 
+      ii_TriggerPosition { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Position of trigger [cm]
+      ii_SearchWindow { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Search window [cm]
+      ix_Trigger { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // When TRUE get GIN code
+   END_VAR
+
+   VAR_OUTPUT 
+      qi_Gin { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // General Identification Number found
+   END_VAR
+
+   VAR_IN_OUT 
+      iqa_TrackingData : Array[*] of Int;   // Tracking data
+      iqx_Received { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // When TRUE qi_GIN output is set to '0'
+   END_VAR
+
+   VAR 
+      sR_Trigger {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;
+      si_Loopcounter { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;
+      si_Position { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Position to look for Gin
+      si_PosFound { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Position first Gin was found
+      sx_Found { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	 
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	28/05/2019  | 0.1       | F.Baten       | first release TIA 15
+	24/07/2019  | 2.0       | L.Klar        | 2.0 MHS library release TIA 15.1
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	
+	
+	                               Trigger
+	XXX                            position                                       0
+	|                                  |                                          |
+	|-----------------------------------------------------------------------------|
+	|                   |              |                                          |
+	|                    <---window--->                               >-- tracking/flow direction -->     
+	|                                                                             |
+	|-----------------------------------------------------------------------------|
+	
+	At a trigger pulse a Gin-code is searched in the tracking DB starting from the trigger position. 
+	When found the block provides the found GIN and the position it was found on. 
+	
+	When the Gin was handled it can also reset the found value to 0.
+	*)
+	
+	REGION 1 Get GIN from tracking DB  
+	    #sR_Trigger(CLK := #ix_Trigger);
+	    
+	    IF #sR_Trigger.Q                                                                    // One shot to start searching in tracking DB
+	    THEN
+	        #qi_Gin := 0;                                                                   // reset GIN found
+	        #si_Position := 0;                                                              // reset position found
+	        #sx_Found := FALSE;                                                             // reset found bit
+	        
+	        
+	        FOR #si_Loopcounter := 0 TO #ii_SearchWindow BY 1 DO                            // Set loopsize by search window
+	            
+	            #si_Position := #ii_TriggerPosition + #si_Loopcounter;                      // Set position to look for GIN
+	            
+	            IF #iqa_TrackingData[#si_Position] <> 0 AND #sx_Found = FALSE THEN          // If there is a value within the search window
+	                #si_PosFound := #si_Position;
+	                #qi_Gin := #iqa_TrackingData[#si_Position];                             // copy that value to output
+	                #sx_Found := TRUE;                                                      // Set found
+	                EXIT;
+	                // EXIT loop
+	            END_IF;
+	        END_FOR;
+	    END_IF;
+	END_REGION
+	
+	REGION 2 Reset GIN, was handled
+	    IF #iqx_Received                                                                    // External signal meaning GIN was received and handled
+	    THEN
+	        #qi_Gin := 0;                                                                   // Reset output
+	        #sx_Found := FALSE;                                                             // Reset found signal
+	        #iqx_Received := FALSE;                                                         // Reset handshake
+	    END_IF;
+	END_REGION
+	
+END_FUNCTION_BLOCK
+

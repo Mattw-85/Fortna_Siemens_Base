@@ -1,0 +1,30 @@
+﻿FUNCTION "FC_SafetyInterface" : Void
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 12
+// END_ATTRIBUTES
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	
+	*)
+	
+	(* !!Note: Remove the comment once the safety software is imported!!
+	
+	REGION Safety Status Mapping
+	
+	
+	END_REGION
+	
+	!!Note: Remove the comment once the safety software is imported!! *) 
+	
+	
+END_FUNCTION
+

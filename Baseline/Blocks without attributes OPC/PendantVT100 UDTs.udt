@@ -1,0 +1,105 @@
+﻿TYPE "UDT_EventStatistic"
+TITLE = UDT_EventStatistic
+VERSION : 0.1
+//User-defined structure of event statistic data.
+   STRUCT
+      NumberOfTimes : DInt;   // Number of times the event occurred since last reset
+      LastEventSeconds : DInt;   // Number of seconds of the current or last event
+      TotalEventSeconds : DInt;   // Total number of seconds the event occurred since last reset
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_PendantVT100Status"
+VERSION : 0.1
+//Configuation variables for VT100 Radio Pendant
+   STRUCT
+      Status : Int;   // Status number
+      Specific : Struct   // Specific structure
+         PNSlaveNotOnline { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet slave is not online
+         PNSlaveError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet slave is in error
+         CommunicationError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Tx-Rx Communication error
+         ServiceModeEngaged { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Service mode is activated
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_PendantVT100Statistics"
+VERSION : 0.1
+   STRUCT
+      PNSlaveError : "UDT_EventStatistic";   // Statistics of a Profinet slave error
+      PNSlaveNotOnline : "UDT_EventStatistic";   // Statistics of  Profinet slave not online
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_PendantVT100LCDOutBytes"
+VERSION : 0.1
+   STRUCT
+      "Byte" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[0..7] of Byte;   // Output byte for VT100 LCD
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_PendantVT100Interface"
+TITLE = Configuation variables for VT100 Radio Pendant
+VERSION : 0.1
+   STRUCT
+      LowSpeedSelected { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Lowest Speed
+      ManualSpeedSelected { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Manual Speed
+      CmdRun { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Comman to run VFD
+      CmdDivert { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Command to divert
+      ServiceModeEngaged { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Pendant service mode is engaged
+      PendantStopHealthy { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Pedant Stop button is healthy
+      PendantReset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reset command from pendant
+      RequestSTO { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Request STO command to safety program
+      ForceLowSpeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Force low speed for pin detection
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_PendantVT100InBytes"
+VERSION : 0.1
+   STRUCT
+      StartButton1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // start button pressed half way
+      StartButton2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // start button pressed full way
+      Stop_NO { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // NO contact of stop button
+      Spare1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // spare
+      Spare2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // spare
+      Spare3 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // spare
+      Spare4 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // spare
+      Stop_NC { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // NC contact of stop button
+      LeftButton1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // left button pressed half way
+      PB_Speed2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Push button for low speed
+      RightButton1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // right button pressed half way
+      PB_Speed1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Push button for manual speed
+      DownButton1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // down button pressed half way
+      DownButton2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // down button pressed full way
+      UpButton1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // up button pressed half way
+      PB_Divert { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Push button to activate divert
+      ResetButton1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // reset button pressed half way
+      ResetButton2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // reset button pressed full way
+      MOT_Button1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // motor button pressed half way
+      MOT_Button2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // motor button pressed full way
+      Spare5 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // spare
+      Spare6 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // spare
+      Spare7 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // spare
+      Spare8 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // spare
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_PendantVT100Configuration"
+VERSION : 0.1
+//Configuration variables for PendantVT100 
+   STRUCT
+      Line1Cursor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[0..7] of Byte := [16#001B, 16#005B, 16#0031, 16#003B, 16#0033, 16#0048, 16#006D, 16#0000];   // Configuration of telegram command to move cursor to line 1
+      Line2Cursor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[0..7] of Byte := [16#001B, 16#005B, 16#0032, 16#003B, 16#0035, 16#0048, 16#006D, 16#0000];   // Configuration of telegram command to move cursor to line 2
+      DisplayName { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[8];   // PLC name with a max of 8 characters
+      HornRequest { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True = Request horn to sound before VFD run
+      PNDeviceName { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;   // Device name of pendant receiver
+   END_STRUCT;
+
+END_TYPE
+

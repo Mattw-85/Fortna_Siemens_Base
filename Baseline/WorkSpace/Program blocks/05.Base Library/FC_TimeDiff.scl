@@ -1,0 +1,86 @@
+﻿FUNCTION "FC_TimeDiff" : Void
+TITLE = FC_TimeDiff
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 28
+// END_ATTRIBUTES
+//Function to calculate time difference.
+   VAR_INPUT 
+      is_EarlierTimeAsString : String;   // Earlier time in string
+      is_LaterTimeAsString : String;   // Later time in sting
+   END_VAR
+
+   VAR_OUTPUT 
+      qt_TimeDifference : LTime;   // Difference between times
+   END_VAR
+
+   VAR_TEMP 
+      tt_EarlierDate {InstructionName := 'DTL'; LibVersion := '1.0'} : DTL;   // Earlier date in DTL
+      tt_LaterDate {InstructionName := 'DTL'; LibVersion := '1.0'} : DTL;   // Later date in DTL
+      tt_LaterDateInc {InstructionName := 'DTL'; LibVersion := '1.0'} : DTL;   // Later date in DTL with one additional day
+      tt_TimeDifference : LTime;   // Time differance
+   END_VAR
+
+   VAR CONSTANT 
+      ct_OneDay : Time := T#1D;   // One day
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	24/05/2019  | 0.1       | K.Pokorski    | first release MHS TIA 15.1
+	24/07/2019  | 2.0       | L.Klar        | 2.0 MHS library release TIA 15.1
+	26/08/2019  | 2.1       | M.Kurpiers    | Comments adjusted
+	06/09/2019  | 2.2       | M.Kurpiers    | Change in region 2. Correcting the names of inputs variables.
+	21/10/2019  | 2.3       | P.Majka       | Logic changed in region 2 and 3. Simpler checking for the date changed
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 - Conversion string TO DTL
+	    
+	    // Using MHS "FC_StringToTime" standard function convert time in string format to date in DTL format
+	    "FC_StringToTime"(is_StringTime := #is_EarlierTimeAsString,
+	                      qt_Date => #tt_EarlierDate);
+	    
+	    "FC_StringToTime"(is_StringTime := #is_LaterTimeAsString,
+	                      qt_Date => #tt_LaterDate);
+	    
+	END_REGION
+	
+	REGION 2 - Difference between times   
+	    
+	    // Calculate difference between times
+	    #tt_TimeDifference := #tt_LaterDate - #tt_EarlierDate;
+	    
+	    // Checking the negativity in the time difference                                              
+	    IF (LTIME_TO_DINT(#tt_TimeDifference) < 0)
+	    THEN
+	        
+	        // Add one day to later date - later time is smaller than ealier time 
+	        #tt_LaterDateInc := T_ADD(IN1 := #tt_LaterDate, IN2 := #ct_OneDay);
+	        
+	        // Calculate difference between times 
+	        #tt_TimeDifference := #tt_LaterDateInc - #tt_EarlierDate;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 3 - Write outputs
+	    
+	    // Saving time difference to the output    
+	    #qt_TimeDifference := #tt_TimeDifference;
+	    
+	END_REGION
+END_FUNCTION
+

@@ -1,0 +1,593 @@
+﻿FUNCTION_BLOCK "FB_VfdNORDPPO4"
+TITLE = Control block for NORD VFD with PPO4
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHS
+VERSION : 0.1
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 235
+// END_ATTRIBUTES
+   VAR_INPUT 
+      iUDT_VFDConfig { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_VfdConfiguration";   // Configuration structure
+      iUDT_VFDInputs { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_VfdNordPI";   // VFD inputs structure
+      iUDT_MotorData { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_MotorData";   // Motor data structure
+      ix_24vOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when 24VDC is healthy
+      ix_400vOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when 400VAC is healthy
+      ix_QuickStopDisable { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool := FALSE;   // TRUE when Motor can turn, False = Quick stop
+      ix_SimulationModeActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when Simulation mode active
+   END_VAR
+
+   VAR_OUTPUT 
+      qUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_VfdStatus";   // HMI status structure
+      qUDT_VFDOutputs { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_VfdNordPO";   // VFD outputs structure
+      qUDT_commisioning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_CommisioningNord";
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_ConveyorInterface : "UDT_ConveyorInterface";   // Conveyor interface structure
+      iqUDT_VFDStatistics : "UDT_VfdStatistics";   // Satistics structure
+      iqx_StartCommissioning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when Start auto-commissioning
+   END_VAR
+
+   VAR 
+      sFB_TimerOnOffDelayCheck24V { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // MHS "TimerOnOffDelay" - to delay time for VFD 24V contactor
+      sFB_TimerOnOffDelayCheck400V { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // MHS "TimerOnOffDelay" - to delay time for VFD 400V contactor
+      sFB_TimerOnOffDelayVFDReset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // MHS "TimerOnOffDelay" - to extend VFD reset
+      sFB_TimerOnOffDelayVFDRunningFeedbackError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // MHS "TimerOnOffDelay" - to delay time for VFDRunningFeedback error
+      sFB_VfdNORDCommissiong { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_VfdNORDCommissioning";   // FB to commissiong NORD drive
+      sUDT_Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_VfdStatus";   // Detailed VFD status overview
+      sUDT_PNDevice { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_PNDevice";   // PN device info structure
+      sa_PNPortsStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[1..8] of Bool;   // TRUE when specific port has an error
+      sp_VFDTelegram { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : HW_ANY;   // Free telegram's HW_ID
+      sv_VFDGeoStruct {InstructionName := 'GEOADDR'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : GEOADDR;   //  Geo structure indicate to telegram
+      sR_TRIG_PNSlaveNotOnline {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge for trigger Profinet slave not online statistics
+      sR_TRIG_PNSlaveError {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge for trigger Profinet slave error statistics
+      sR_TRIG_VFDInternalError {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge for trigger Internal VFD Error statistics
+      sR_TRIG_Running {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge for starting of the running signal
+      sF_TRIG_RunFwd {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   // Falling edge for run forward signal
+      sF_TRIG_RunRvs {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   // Falling edge for run reverse signal
+      sr_RPMActual { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Drive RPM feedback
+      sr_RPMSetpoint { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Actual speed setpoint [rpm]
+      sr_ReferenceFrequency { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Frequency of the reference RPM in [Hz]
+      sdi_LastRampTimeUp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Last cycle ramp down time
+      sdi_LastRampTimeDown { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Last cycle ramp up time
+      si_ActualRamp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UInt;   // Actual ramp value
+      si_ActualRampUpTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UInt;   // Actual ramp up time
+      si_ActualRampDownTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UInt;   // Actual ramp down time
+      si_HWAdress { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;
+      si_ActualSpeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Actual speed in [mm/sec]
+      si_Log2GeoReturn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Log2Geo function return
+      si_Geo2LogReturn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Geo2Log function return
+      sx_ConfigurationError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Commissioning: configuration error
+      sx_PNDeviceHealthy { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet device is online and error free
+      sx_HardwareAvailable { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Power and communication to drive are ok
+      sx_VfdAvailable { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Hardware of VFD is ok and no communication error with movikit
+      sx_24vOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 24VDC is healthy
+      sx_400vOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 400VAC is healthy
+      sx_ErrorActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Block has an error
+      sx_EnableOperation { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Enable operation signal
+      sx_RunVFDReverse { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Start VFD backward
+      sx_RunVFDForward { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Start VFD forward
+      sx_SpeedSetpointReached { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Motor is running at requested speed
+      sx_VFDStopping { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // VFD Stopping
+      sx_VFDNotReadyError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Temporary Error need to be implemented in the status
+   END_VAR
+
+   VAR CONSTANT 
+      cr_MaximumValueSpeedWord : Real := 16384.0;   // Maximum value of speed actual value
+      cr_MaximumValueRampWord : Real := 32767.0;   // Maximum value of ramp setpoint ( corresponds to 20Sec)
+      cr_MaximumFrequency : Real := 16384.0;   // Maximum value of frequency setpoint (corresponds to P105 Maximum Frequency)
+      cudi_DefaultRampDownTime : UDInt := 20000;   // VFD ramp down default time [ms]
+      cudi_DefaultRampUpTime : UDInt := 20000;   // VFD ramp up default time [ms]
+      ci_VFDArea : UInt := 1;   // Area ID of IO Profinet devices
+      ci_SubmoduleHWType : UInt := 5;   // Submodule HW_type number
+      ci_TelegramSlot : UInt := 0;   // PPO4 telegram slot
+      ci_TelegramSubslot : UInt := 1;   // PPO4 telegram subslot
+      ci_NumberOfProfinetPorts : Int := 2;   // Number of Profinet ports in device
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                      
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	25/01/2020  | 0.1       | S.Theocharis  | Initial version TIA 15.1
+	28/04/2022  | 0.2       | K. Pokorski   | NORD Commissioning interface change
+	09/05/2022  | 0.3       | M. Pluskota   | Reference speed changed to nominal speed for actual speed calculation
+	12/05/2022  | 0.4       | M. Pluskota   | Ramp equation adjustet for nord drives
+	04/06/2022  | 0.5       | M. Pluskota   | Aded a if statment to not exceed the max value of the ramp value
+	                                        | Error decoding changed now the error is shown as ErrorCode.SubErrorCodee
+	12/07/2022  | 0.6       | M. Pluskota   | Ramp equation bug fix 
+	29/07/2022  | 0.7       | M. Piela      | Add hardware ok to the profinet checking
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	
+	REGION 1 - Get Device Profinet information
+	    
+	    "FC_GetDevicePN"(is_PNDeviceName := #iUDT_VFDConfig.VFDPNDeviceName,
+	                     ix_SimulationModeActive := #ix_SimulationModeActive,
+	                     iqUDT_PND := #sUDT_PNDevice);
+	    
+	    
+	    "FC_GetPNPortStatus"(ii_NumberOfPorts := #ci_NumberOfProfinetPorts,
+	                         iUDT_DevicePNInfo := #sUDT_PNDevice,
+	                         qa_PortFault => #sa_PNPortsStatus);
+	    
+	END_REGION
+	
+	REGION 2 - Reset errors
+	    
+	    IF #iqUDT_ConveyorInterface.InternalErrorReset OR (NOT #iqUDT_ConveyorInterface.HardwareOk AND #sUDT_Status.PNSlaveNotonline)   // Reser errors when Reset is given
+	    THEN
+	        
+	        #sUDT_Status.PNSlaveNotonline := FALSE;
+	        #sUDT_Status.PNSlaveError := FALSE;
+	        #sUDT_Status.InternalError := FALSE;
+	        #sUDT_Status.VFDRunningFeedbackError := FALSE;
+	        #sUDT_Status.PNSlaveWarning := FALSE;
+	        
+	    END_IF;
+	    
+	    
+	    // Create  extended pulse for VFD Reset
+	    #sFB_TimerOnOffDelayVFDReset(iudi_OnDelayTime := 0,
+	                                 iudi_OffDelayTime := 200,
+	                                 ix_SignalToDelay := #iqUDT_ConveyorInterface.InternalErrorReset,
+	                                 ix_Enable := TRUE);
+	    
+	END_REGION
+	
+	REGION 3 - Hardware checks
+	    // Hardware will only be available after the delay, so the device has time for the initialisation
+	    #sFB_TimerOnOffDelayCheck24V(iudi_OnDelayTime := 2000,
+	                                 iudi_OffDelayTime := 0,
+	                                 ix_SignalToDelay := #ix_24vOk
+	    );
+	    
+	    #sx_24vOk := #sFB_TimerOnOffDelayCheck24V.qx_DelayedSignal;
+	    
+	    #sFB_TimerOnOffDelayCheck400V(iudi_OnDelayTime := 2000,
+	                                  ix_SignalToDelay := #ix_400vOk);
+	    
+	    #sx_400vOk := #sFB_TimerOnOffDelayCheck400V.qx_DelayedSignal;
+	    
+	    // Check if PN device is online
+	    IF NOT "DB_ProfinetDiagnostic".ProfinetNetworks[#sUDT_PNDevice.PNNetworknumber].DeviceStatus[#sUDT_PNDevice.PNDeviceNumber].DeviceState.Exist
+	        AND NOT #ix_SimulationModeActive
+	        AND #sx_24vOk
+	        AND #iqUDT_ConveyorInterface.HardwareOk
+	    THEN
+	        #sUDT_Status.PNSlaveNotonline := TRUE;
+	        
+	    END_IF;
+	    
+	    // Check if PN ports are healthy 
+	    IF #sa_PNPortsStatus[1] XOR #sa_PNPortsStatus[2] THEN
+	        #sUDT_Status.PNSlaveWarning := TRUE;
+	    END_IF;
+	    
+	    
+	    // Check if PN device has an error
+	    IF "DB_ProfinetDiagnostic".ProfinetNetworks[#sUDT_PNDevice.PNNetworknumber].DeviceStatus[#sUDT_PNDevice.PNDeviceNumber].DeviceState.Error
+	        AND NOT #ix_SimulationModeActive
+	        AND #sx_24vOk
+	        AND NOT #sUDT_Status.PNSlaveWarning
+	        AND #iqUDT_ConveyorInterface.HardwareOk
+	    THEN
+	        #sUDT_Status.PNSlaveError := TRUE;
+	    END_IF;
+	    
+	    // Set bit when PN device is healthy (online and no error)
+	    #sx_PNDeviceHealthy := NOT #sUDT_Status.PNSlaveNotonline
+	    AND NOT #sUDT_Status.PNSlaveError
+	    AND #sUDT_PNDevice.PNDeviceFound
+	    AND #sx_24vOk;
+	    
+	    // Set hardware available bit when all conditions are met
+	    #sx_HardwareAvailable := (#sx_24vOk
+	    AND #sx_PNDeviceHealthy)
+	    OR #ix_SimulationModeActive;
+	    
+	    
+	    // VFD is ready for operation if hardware ok 
+	    #sx_VfdAvailable := #sx_HardwareAvailable;
+	    
+	    //VFD not ready error . Temporary 
+	    #sx_VFDNotReadyError := #sx_HardwareAvailable
+	    AND NOT #iUDT_VFDInputs.ZSW.ReadyToStart
+	    AND #iUDT_VFDInputs.ZSW.EmergencyStop
+	    OR NOT #iUDT_VFDInputs.ZSW.BusControlActive;
+	    
+	    
+	    
+	    
+	END_REGION
+	
+	REGION 4 - Check errors and warnings 
+	    
+	    // Check if the VFD has a warning
+	    #sUDT_Status.InternalWarning := #iUDT_VFDInputs.ZSW.WarningActive;
+	    
+	    // Copy warning code to status DB when warning active
+	    IF #sUDT_Status.InternalWarning
+	    THEN
+	        
+	        #sUDT_Status.ErrorCode := #iUDT_VFDInputs.FaultCode / 10; // AST check the value of warning
+	        #sUDT_Status.SubErrorCode := #iUDT_VFDInputs.FaultCode MOD 10;
+	        
+	    END_IF;
+	    
+	    // Check if the VFD has an error
+	    #sUDT_Status.InternalError := #iUDT_VFDInputs.ZSW.Fault; // AND NOT #sx_StartMeasuring;
+	    
+	    // Copy error code to status DB when error active
+	    IF #sUDT_Status.InternalError
+	    THEN
+	        
+	        #sUDT_Status.ErrorCode := #iUDT_VFDInputs.FaultCode / 10; // AST check the value of warning
+	        #sUDT_Status.SubErrorCode := #iUDT_VFDInputs.FaultCode MOD 10;
+	        
+	    END_IF;
+	    
+	    // Reset error code if warning and error not available    
+	    IF (NOT #sUDT_Status.InternalWarning
+	        AND NOT #sUDT_Status.InternalError)
+	    THEN
+	        
+	        #sUDT_Status.ErrorCode := 0;
+	        #sUDT_Status.SubErrorCode := 0;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 5 - Check if configuration is ok for commissioning purposes
+	    
+	    IF #iUDT_VFDConfig.WheelEndPerimeter > 0.0                                         // If perimeter of wheel at the end of gear is greater than 0 
+	        AND #iUDT_VFDConfig.GearRatio > 0.0                                            // and gear ratio is greater than 0
+	        AND #iUDT_VFDConfig.ReferenceRPM > 0.0                                         // and maximum speed is greater than 0
+	        AND #iUDT_VFDConfig.VFDRampUpTime > 0                                          // and ramp up time is greater than 0
+	        AND #iUDT_VFDConfig.VFDRampDownTime > 0                                        // and ramp down time is greater than zero
+	        AND #iUDT_VFDConfig.VFDStartupTime > 0.0                                       // and startup time is greater then zero
+	        //  AND MOTOR NOMINAL SPEED IS >0  the reference speed is invalid for NORD drives    
+	        AND #cudi_DefaultRampUpTime > #iUDT_VFDConfig.VFDRampUpTime                     // and ramp up time is not greater than default ramp up time
+	        AND #cudi_DefaultRampDownTime > #iUDT_VFDConfig.VFDRampDownTime                 // and ramp down time is not greater than default ramp down time
+	        // need to know if the FI receives a percentage of a default ramp or value in ms , depending to that the configuration validation code will change
+	        
+	        AND (#sUDT_PNDevice.PNDeviceFound                                              // and device not found in PN structure 
+	        OR #ix_SimulationModeActive)                                                    // or simulation mode is active
+	    THEN
+	        #sx_ConfigurationError := FALSE;                                                // Reset configuration error
+	    ELSE
+	        #sx_ConfigurationError := TRUE;                                                 // Set configuration error
+	    END_IF;
+	    #qUDT_commisioning.CommissionError := #sx_ConfigurationError;
+	    
+	END_REGION
+	
+	REGION 6 - Speed handling  
+	    
+	    //Calculate actual speed value in rpm 
+	    // #sr_RPMActual := ((INT_TO_REAL(#i_UDT_VFDInputs.ActualSpeed) / #cr_MaximumValueSpeedWord) * INT_TO_REAL(#i_UDT_MotorData.NominalSpeed));
+	    
+	    //#sr_RPMActual := ((INT_TO_REAL(#i_UDT_VFDInputs.ActualSpeed) / #cr_MaximumValueSpeedWord) * (#i_UDT_MotorData.NominalSpeed));
+	    #sr_RPMActual := ((INT_TO_REAL(#iUDT_VFDInputs.ActualSpeed) / #cr_MaximumFrequency) * (#iUDT_VFDConfig.ReferenceRPM));
+	    // Calculate actual speed in mm/s                                                                                                         
+	    #si_ActualSpeed := REAL_TO_INT((#sr_RPMActual / #iUDT_VFDConfig.GearRatio) * ((#iUDT_VFDConfig.WheelEndPerimeter) / 60.0));
+	    
+	    
+	    //change the i_UDT_VFDInput.Actualspeed to RPM
+	    
+	    // Reversal actual speed
+	    IF #iUDT_VFDConfig.DirectionReversal THEN
+	        
+	        #si_ActualSpeed := #si_ActualSpeed * -1;
+	        
+	    END_IF;
+	    
+	    // Calculate actual speed setpoint in rpm
+	    #sr_RPMSetpoint := ((DINT_TO_REAL(INT_TO_DINT(#iqUDT_ConveyorInterface.SpeedSetpoint) * 60)) / #iUDT_VFDConfig.WheelEndPerimeter) * #iUDT_VFDConfig.GearRatio;
+	    
+	    // Check if speed setpoint is reached                                 
+	    #sx_SpeedSetpointReached := (ABS(#si_ActualSpeed) >= (#iqUDT_ConveyorInterface.SpeedSetpoint - #iUDT_VFDConfig.SpeedSetpointWindow))
+	    AND (ABS(#si_ActualSpeed) <= (#iqUDT_ConveyorInterface.SpeedSetpoint + #iUDT_VFDConfig.SpeedSetpointWindow));
+	    
+	    
+	END_REGION
+	
+	REGION 7 - Prepare output data VFD
+	    
+	    REGION 7.1 - Set speed setpoint in forward and reverse directory 
+	        
+	        // If motor stopped and Run forward is requested and interlock forward is active, the speed setpoint is loaded to run forward.
+	        //  IF (#i_UDT_VFDInputs.ActualSpeed = 0) AND #iq_UDT_ConveyorInterface.RunFwd AND #i_UDT_VFDConfig.InterlockFwd
+	        IF #iqUDT_ConveyorInterface.RunFwd AND #iUDT_VFDConfig.InterlockFwd
+	        THEN
+	            #sx_RunVFDForward := TRUE;
+	            #sx_RunVFDReverse := FALSE;
+	        END_IF;
+	        
+	        // If motor stopped and Run reverse is requested and interlock reverse is active, the speed setpoint is loaded to run reverse.
+	        IF (#iUDT_VFDInputs.ActualSpeed = 0) AND #iqUDT_ConveyorInterface.RunRvs AND #iUDT_VFDConfig.InterlockRvs
+	        THEN
+	            #sx_RunVFDReverse := TRUE;
+	            #sx_RunVFDForward := FALSE;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 7.2 - Stopping
+	        
+	        // Create trigger when direction signal falling
+	        #sF_TRIG_RunFwd(CLK := #iqUDT_ConveyorInterface.RunFwd);
+	        #sF_TRIG_RunRvs(CLK := #iqUDT_ConveyorInterface.RunRvs);
+	        
+	        // When no run signal is given the VFD should stop
+	        IF NOT #iqUDT_ConveyorInterface.RunRvs AND NOT #iqUDT_ConveyorInterface.RunFwd
+	            OR (#iqUDT_ConveyorInterface.RunRvs AND #iqUDT_ConveyorInterface.RunFwd)
+	            OR #sF_TRIG_RunRvs.Q
+	            OR #sF_TRIG_RunFwd.Q
+	            
+	        THEN
+	            #sx_RunVFDReverse := FALSE;
+	            #sx_RunVFDForward := FALSE;
+	        END_IF;
+	        
+	        IF NOT #sx_RunVFDReverse AND NOT #sx_RunVFDForward AND (#iUDT_VFDInputs.ActualSpeed <> 0)
+	        THEN
+	            #sx_VFDStopping := TRUE;
+	        ELSE
+	            #sx_VFDStopping := FALSE;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 7.3 - Check for enable operation signal
+	        
+	        #sx_EnableOperation := #sx_VfdAvailable
+	        AND #sx_400vOk
+	        AND NOT #sx_ConfigurationError
+	        AND (#sx_RunVFDForward OR #sx_RunVFDReverse); // add communication error
+	        
+	    END_REGION
+	    
+	    REGION 7.4 - Write acceleration and deceleration value to drive
+	        
+	        //Detect is VFD is ramping up 
+	        IF ABS(#sr_RPMSetpoint) > ABS(#sr_RPMActual)
+	            AND NOT #sx_SpeedSetpointReached
+	            AND #iUDT_VFDInputs.ZSW.OperationEnabled
+	            AND (#sx_RunVFDForward OR #sx_RunVFDReverse)
+	        THEN
+	            // Calculate the ramp up time if the vfd configuration is changed durning process or the vfd starts from speed 0 
+	            IF #sdi_LastRampTimeUp <> #iUDT_VFDConfig.VFDRampUpTime THEN
+	                #si_ActualRamp := REAL_TO_UINT(UDINT_TO_REAL(#iUDT_VFDConfig.VFDRampUpTime) / UDINT_TO_REAL(#cudi_DefaultRampUpTime) * #cr_MaximumValueRampWord / (#sr_RPMSetpoint / #iUDT_VFDConfig.ReferenceRPM));
+	                #si_ActualRampUpTime := #si_ActualRamp;
+	            ELSE
+	                #si_ActualRamp := #si_ActualRampUpTime;
+	            END_IF;
+	            #sdi_LastRampTimeUp := #iUDT_VFDConfig.VFDRampUpTime;
+	        ELSE
+	            // Calculate the ramp down time if the actual speed is greater than 0 and the configuration has changed durning process
+	            // or the VFD perform the first deceleration
+	            
+	            IF #si_ActualSpeed <> 0 THEN
+	                IF #sdi_LastRampTimeDown <> #iUDT_VFDConfig.VFDRampDownTime
+	                THEN
+	                    #si_ActualRamp := REAL_TO_UINT(UDINT_TO_REAL(#iUDT_VFDConfig.VFDRampDownTime) / UDINT_TO_REAL(#cudi_DefaultRampDownTime) * #cr_MaximumValueRampWord / (#sr_RPMSetpoint / #iUDT_VFDConfig.ReferenceRPM));
+	                    #si_ActualRampDownTime := #si_ActualRamp;
+	                    
+	                ELSE
+	                    #si_ActualRamp := #si_ActualRampDownTime;
+	                END_IF;
+	                #sdi_LastRampTimeDown := #iUDT_VFDConfig.VFDRampDownTime;
+	            ELSE
+	                #sdi_LastRampTimeDown := 0;
+	                #sdi_LastRampTimeUp := 0;
+	            END_IF;
+	            
+	        END_IF;
+	        
+	        // If the ramp value exceeds the maximum value, then the maximum value is sent to the VFD
+	        IF UINT_TO_REAL(#si_ActualRamp) > #cr_MaximumValueRampWord
+	        THEN
+	            #qUDT_VFDOutputs.RampTimeSetPoint := REAL_TO_INT(#cr_MaximumValueRampWord);
+	        ELSE
+	            #qUDT_VFDOutputs.RampTimeSetPoint := REAL_TO_INT(UINT_TO_REAL(#si_ActualRamp));
+	        END_IF;
+	        
+	        
+	    END_REGION
+	END_REGION
+	
+	REGION 8 - Auto Commmissioning 
+	    
+	    REGION 8.1 Initialize 
+	        IF #iqx_StartCommissioning THEN
+	            
+	            //Caclulate theoretical reference Hz. Necessary for NORD drives cause the setpoint is given at Hz
+	            //Variation of motor slip from 50Hz to reference Hz is not taken into account. That means there will always be a variantion between Setpoint and actual speed
+	            #sr_ReferenceFrequency := (#iUDT_VFDConfig.ReferenceRPM / 1500) * 50; //1500 for 4 pole motor 
+	            
+	            // Get hardware adres of "SK-TU4-PNS~Head" submodule
+	            #si_Log2GeoReturn := LOG2GEO(LADDR := "DB_ProfinetDiagnostic".ProfinetNetworks[#sUDT_PNDevice.PNNetworknumber].DeviceStatus[#sUDT_PNDevice.PNDeviceNumber].DeviceState.HW_ID, GEOADDR := #sv_VFDGeoStruct);       // "LOG2GEO" to get profinet network number
+	            #sv_VFDGeoStruct.AREA := #ci_VFDArea;                                                                                                                                                                               // Set IO Profinet devices area ID
+	            #sv_VFDGeoStruct.HWTYPE := #ci_SubmoduleHWType;                                                                                                                                                                     // Set submodule HW_type number
+	            #sv_VFDGeoStruct.STATION := INT_TO_UINT(#sUDT_PNDevice.PNDeviceNumber);                                                                                                                                            // Set device's profinet number
+	            #sv_VFDGeoStruct.SLOT := #ci_TelegramSlot;                                                                                                                                                                          // Set free telegram slot
+	            #sv_VFDGeoStruct.SUBSLOT := #ci_TelegramSubslot;                                                                                                                                                                    // Set free telegram subslot
+	            
+	            #si_Geo2LogReturn := GEO2LOG(GEOADDR := #sv_VFDGeoStruct, LADDR => #sp_VFDTelegram);                                                                                                                              // "GEO2LOG" to get free telegram's HW_ID
+	            
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 8.2 Run - auto commissioning 
+	        
+	        #sFB_VfdNORDCommissiong(ix_VFDReadyToRun := #sx_400vOk AND #iUDT_VFDInputs.ZSW.EmergencyStop AND NOT #iUDT_VFDInputs.ZSW.Fault,
+	                                qx_24VCommissioningDone => #sFB_VfdNORDCommissiong.qx_24VCommissioningDone,
+	                                iqx_Enable := #iqx_StartCommissioning,
+	                                ir_ReferenceFrequency := #sr_ReferenceFrequency,
+	                                ihw_HardwareID := #sp_VFDTelegram,
+	                                iudt_MotorData := #iUDT_MotorData,
+	                                qi_HWAdress => #qUDT_commisioning.HWAdress,
+	                                qx_Busy => #sFB_VfdNORDCommissiong.qx_Busy,
+	                                qx_Done => #sFB_VfdNORDCommissiong.qx_Done,
+	                                qx_Error => #sFB_VfdNORDCommissiong.qx_Error);
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 9 - Write outputs to VFD  
+	    
+	    REGION 9.1 - Write control word 1
+	        
+	        #qUDT_VFDOutputs.STW.ReadyForOperation := #sx_RunVFDReverse OR #sx_RunVFDForward;
+	        #qUDT_VFDOutputs.STW.DisableVoltage := TRUE;
+	        #qUDT_VFDOutputs.STW.EmergencyStop := #ix_QuickStopDisable;
+	        #qUDT_VFDOutputs.STW.EnableOperation := TRUE;
+	        #qUDT_VFDOutputs.STW.EnablePulsles := TRUE;
+	        #qUDT_VFDOutputs.STW.EnableRamp := TRUE;
+	        #qUDT_VFDOutputs.STW.EnableSetpoint := TRUE;
+	        #qUDT_VFDOutputs.STW.Acknowledge := #sFB_TimerOnOffDelayVFDReset.qx_DelayedSignal;
+	        #qUDT_VFDOutputs.STW."StartFunction408.11" := FALSE;
+	        #qUDT_VFDOutputs.STW."StartFunction408.12" := FALSE;
+	        #qUDT_VFDOutputs.STW.ControlDataValid := TRUE;
+	        #qUDT_VFDOutputs.STW.RotationRightOn := TRUE; //direction reversal via the speed setpoint
+	        #qUDT_VFDOutputs.STW.RotationLeftOn := FALSE;
+	        #qUDT_VFDOutputs.STW.Reserved := FALSE;
+	        #qUDT_VFDOutputs.STW.ParameterSetBit0 := FALSE; //Parameter set 1
+	        #qUDT_VFDOutputs.STW.ParameterSetBit1 := FALSE; //Parameter set 1
+	        
+	        IF (NOT #sx_VfdAvailable OR NOT #sx_400vOk) //AND NOT #sx_StartMeasuring
+	        THEN
+	            #qUDT_VFDOutputs.STW.ReadyForOperation := FALSE;
+	            #qUDT_VFDOutputs.STW.EmergencyStop := FALSE;
+	            #qUDT_VFDOutputs.STW.EnableSetpoint := FALSE;
+	            #qUDT_VFDOutputs.STW."StartFunction408.11" := FALSE;
+	            #qUDT_VFDOutputs.STW."StartFunction408.12" := FALSE;
+	        END_IF;
+	    END_REGION
+	    
+	    REGION 9.2 - Write speed setpoint to drive
+	        
+	        // Calculate normalized speed setpoint
+	        #qUDT_VFDOutputs.FrequencySetPoint := REAL_TO_INT((#sr_RPMSetpoint / #iUDT_VFDConfig.ReferenceRPM) * #cr_MaximumFrequency);
+	        
+	        IF #qUDT_VFDOutputs.FrequencySetPoint > #cr_MaximumFrequency
+	        THEN
+	            #qUDT_VFDOutputs.FrequencySetPoint := REAL_TO_INT(#cr_MaximumFrequency);
+	        END_IF;
+	        
+	        // The conveyor stopped and may now run in reverse direction
+	        IF (#sx_RunVFDReverse AND NOT #iUDT_VFDConfig.DirectionReversal)
+	            OR (#sx_RunVFDForward AND #iUDT_VFDConfig.DirectionReversal)
+	        THEN
+	            #qUDT_VFDOutputs.FrequencySetPoint := #qUDT_VFDOutputs.FrequencySetPoint * -1;
+	        END_IF;
+	        
+	        // Clear speed setpoint when no run request or above direction request or is configuration error
+	        IF (NOT #sx_RunVFDForward AND NOT #sx_RunVFDReverse)
+	            OR #sx_ConfigurationError
+	        THEN
+	            #qUDT_VFDOutputs.FrequencySetPoint := 0;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 10 - Check if motor is running
+	    
+	    //The motor should start running after specific time. If not the VFDRunningFeedback error occured
+	    #sFB_TimerOnOffDelayVFDRunningFeedbackError(iudi_OnDelayTime := #iUDT_VFDConfig.VFDStartupTime,
+	                                                ix_SignalToDelay := #sx_EnableOperation AND NOT (#si_ActualSpeed <> 0));
+	    
+	    IF #sFB_TimerOnOffDelayVFDRunningFeedbackError.qx_DelayedSignal THEN
+	        
+	        #sUDT_Status.VFDRunningFeedbackError := TRUE;
+	        
+	    END_IF;
+	    
+	    
+	    
+	END_REGION
+	
+	REGION 11 - Copy signals to interface DB and to status output UDT
+	    
+	    // Create internal error status
+	    #sx_ErrorActive := #sUDT_Status.PNSlaveNotonline
+	    OR #sUDT_Status.VFDRunningFeedbackError
+	    OR #sUDT_Status.PNSlaveError //Commented out BY AST TO allow run in ring topology v3.12
+	    OR #sUDT_Status.InternalError;
+	    
+	    // Write interface bits - AST Check thoses statuses
+	    #iqUDT_ConveyorInterface.VFDRunning := #sx_VfdAvailable AND (#iqUDT_ConveyorInterface.ActualSpeed <> 0 OR #qUDT_VFDOutputs.STW.ReadyForOperation);   // Write true on output Conveyor interface structure if VFD is in operation and motor is turning 
+	    #iqUDT_ConveyorInterface.VFDatSpeed := #sx_SpeedSetpointReached AND #sx_VfdAvailable AND #si_ActualSpeed <> 0;                                                                                                  // Copy setpoint speed reached state from static to the output conveyor interface structure
+	    #iqUDT_ConveyorInterface.InternalWarningVFD := #iUDT_VFDInputs.ZSW.WarningActive;                                                                                                      // Set the internal VFD warning bit if any warning is active
+	    #iqUDT_ConveyorInterface.InternalErrorVFD := #sx_ErrorActive;                                                                                                                           // Set the internal VFD error bit if any fault is active 
+	    #iqUDT_ConveyorInterface.ActualSpeed := #si_ActualSpeed;                                                                                                                                // Copy the calculated value to the output
+	    #iqUDT_ConveyorInterface.ConfigurationError := #iqUDT_ConveyorInterface.ConfigurationError OR #sx_ConfigurationError;
+	    
+	    // Copy error status to output
+	    #qUDT_HMIStatus := #sUDT_Status;
+	    
+	END_REGION
+	
+	REGION 12 - Statistic
+	    // Create trigger on error and create statistics for profinet slave not online
+	    #sR_TRIG_PNSlaveNotOnline(CLK := #sUDT_Status.PNSlaveNotonline);                                        // Detect the rising edge of the error
+	    
+	    IF #iqUDT_ConveyorInterface.ResetStatistics OR #sUDT_Status.PNSlaveNotonline
+	    THEN
+	        
+	        "FC_Statistics"(ix_Reset := #iqUDT_ConveyorInterface.ResetStatistics,
+	                        ix_Activate := #sUDT_Status.PNSlaveNotonline,
+	                        ix_RTrigActivate := #sR_TRIG_PNSlaveNotOnline.Q,
+	                        iqUDT_Statistics := #iqUDT_VFDStatistics.PNSlaveNotOnline);
+	    END_IF;
+	    
+	    // Create trigger on error and create statistics for profinet slave error
+	    #sR_TRIG_PNSlaveError(CLK := #sUDT_Status.PNSlaveError);                                        // Detect the rising edge of the error
+	    
+	    IF #iqUDT_ConveyorInterface.ResetStatistics OR #sUDT_Status.PNSlaveError
+	    THEN
+	        
+	        "FC_Statistics"(ix_Reset := #iqUDT_ConveyorInterface.ResetStatistics,
+	                        ix_Activate := #sUDT_Status.PNSlaveError,
+	                        ix_RTrigActivate := #sR_TRIG_PNSlaveError.Q,
+	                        iqUDT_Statistics := #iqUDT_VFDStatistics.PNSlaveError);
+	    END_IF;
+	    
+	    // Create trigger on error and create statistics for internal VFD Error
+	    #sR_TRIG_VFDInternalError(CLK := #sUDT_Status.InternalError);                                        // Detect the rising edge of the error
+	    
+	    IF #iqUDT_ConveyorInterface.ResetStatistics OR #sUDT_Status.InternalError
+	    THEN
+	        
+	        "FC_Statistics"(ix_Reset := #iqUDT_ConveyorInterface.ResetStatistics,
+	                        ix_Activate := #sUDT_Status.InternalError,
+	                        ix_RTrigActivate := #sR_TRIG_VFDInternalError.Q,
+	                        iqUDT_Statistics := #iqUDT_VFDStatistics.VFDInternalError);
+	    END_IF;
+	    
+	    // Create trigger on running signal and create statistics for running status
+	    #sR_TRIG_Running(CLK := #iqUDT_ConveyorInterface.VFDRunning);                                        // Detect the rising edge of the signal
+	    
+	    IF #iqUDT_ConveyorInterface.ResetStatistics OR #iqUDT_ConveyorInterface.VFDRunning
+	    THEN
+	        
+	        "FC_Statistics"(ix_Reset := #iqUDT_ConveyorInterface.ResetStatistics,
+	                        ix_Activate := #iqUDT_ConveyorInterface.VFDRunning,
+	                        ix_RTrigActivate := #sR_TRIG_Running.Q,
+	                        iqUDT_Statistics := #iqUDT_VFDStatistics.Running);
+	    END_IF;
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

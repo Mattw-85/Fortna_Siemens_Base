@@ -1,0 +1,70 @@
+﻿TYPE "UDT_XBSChuteInterfaceSend"
+VERSION : 0.1
+   STRUCT
+      ReadyToReceive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Chute is ready to receive
+      Running { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Downstream line is running
+      Fault { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Fault on the downstream line
+      Warning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Warning on the downstream line
+      HalfFull { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Chute is half full
+      Full { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Chute is Full
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_XBSInductInterfaceRcv"
+VERSION : 0.1
+   STRUCT
+      Watchdog { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;   // Watchdog counter
+      RunConsent { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Ready to receive
+      Running { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // The IDS is moving
+      Fault { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // The IDS is in fault status
+      Enabled { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // The IDS is allowed to laod packages on Sorter
+      Throughput { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Production target
+      LastConveyorSpeedSP { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Maximum Speed setpoint for the last conveyor of the upstream line (mm/sec)
+      MinimumGap { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Minimum gap between the head and the tail of parcels
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_XBSInductInterfaceSend"
+VERSION : 0.1
+   STRUCT
+      WatchDog { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;   // Watch dog counter
+      IncomingParcel { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Parcel found in 2-meter distance from the induct line
+      Discharge { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Transfer in Progress
+      ParcelOnBoard { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Number of parcels in 2-meter distance from the induct line
+      ParcelID { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // ParcelID of the parcel in transfer
+      ObjectID { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // ObjectID Of the parcel in the transfer
+      LastConveyorSpeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Actual speed of the last conveyor (mm/sec)
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_XBSChuteInterface"
+VERSION : 0.1
+   STRUCT
+      StatusCode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[3];   // Chute status code for High level
+      Full { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Chute is Full
+      HalfFull { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Chute is half full
+      Disable { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Chute is disable
+      ChuteSensorsIncongruence { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Chute full sensor occupied and chute half full sensor not occupied
+      ReadyToReceive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Chute is ready to receive
+      Running { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Downstream line is running
+      Fault { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Fault on the downstream line
+      Warning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Warning on the downstream line
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_XBSChuteInterfaceRcv"
+VERSION : 0.1
+   STRUCT
+      ChuteFull { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      ChuteHalfFull { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      ChuteSensorIncongruence { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      ChuteDisabled { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      ChuteJam { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+   END_STRUCT;
+
+END_TYPE
+

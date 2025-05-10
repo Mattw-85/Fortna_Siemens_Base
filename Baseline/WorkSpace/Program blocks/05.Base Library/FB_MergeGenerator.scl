@@ -1,0 +1,331 @@
+﻿FUNCTION_BLOCK "FB_MergeGenerator"
+TITLE = FB_BasicEquipment
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : Equipment
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 17
+// END_ATTRIBUTES
+//Function block to control basic equipment.
+   VAR_INPUT 
+      iUDT_MergeGenConfig { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_MergeGeneratorConfig";   // Merge configuration structure
+      ii_ConveyorDisplacement { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Displacement of merge conveyor
+   END_VAR
+
+   VAR_IN_OUT 
+      iqa_TrackingData : Array[*] of Int;   //  UDT Equipment Control
+      iqUDT_Merge : "UDT_Merge";   // UDT Mergedata
+      iqUDT_Induct : Array[*] of "UDT_Induct";   // UDT induct
+   END_VAR
+
+   VAR 
+      sR_TRIG_Full {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;
+      sdi_DeactivateDistance { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //  Distance to go before generator deactivates
+      si_LoopCounterZero { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //  Loop Counter to delete empty positons
+      si_GenerationGapCounter { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //  Generate the gap unit in the trackind DB
+      si_LastInductNumberUsed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //  Last Induct number used
+      si_ReturnValue { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //  Info Code of Move Block Siemens
+      si_GenerationPoint { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //  Position in tracking at which the window will be generated
+      si_NumerOfInduct { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //  Number of inducts connected to the merge
+      si_PositionsPerInduct { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //  Number of positions each induct has
+      si_LoopCounter { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Loopcounter number of inducts
+      si_SecondLoopCounter { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Loopcounter number of inducts
+      si_LastInductNumber { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Last induct number
+      sx_LoopAgain { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Last used position was removed, loop again to find next
+      sx_ShiftRequest { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Request to Shift
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	26/09/2019  | 1.0       | M.Roijen      | first release TIA 15.1
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	07/01/2020  | 3.1       | F.Baten       | Added RequesetInFifo handshake 
+	13/01/2020  | 3.2       | F.Baten       | Removed i_UDT_ConveyorConfiguration as it was not used anymore
+	23/01/2020  | 3.3       | F.Baten       | Renumber region 5-4 to 4-5
+	                                        | Removed deletion off negative GIN 
+	                                        | Added 1cm to GenerationGapCounter as it has to set the desired gap, before it set the start position of the next parcel
+	                                        | Removed i_UDT_ConveyorConfiguration and i_UDT_PECConfiguration as they were not used anymore
+	30/03/2022  | 3.4       | H.Rutkowski   | Mode 2 handling
+	22/07/2022  | 3.5       | M.Piela       | Check number of induct and numer of positions in induct every cycle
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	//  
+	//  This block generates gaps and windows for merge principles
+	// 
+	REGION 1 - Mode Change Gap Mode / Window Mode
+	    
+	    // CHeck number of induct and numer of positions in induct 
+	    #si_NumerOfInduct := "FC_GetNrOfArrayEl"(#iqUDT_Induct);
+	    #si_PositionsPerInduct := "FC_GetNrOfArrayEl"(#iqUDT_Induct[1].Position);
+	    
+	    #si_GenerationPoint := DINT_TO_INT(#iUDT_MergeGenConfig.GenerationPoint / 10);
+	    
+	    // activate generation when request from induct is received
+	    IF #iqUDT_Merge.ReactivateReq
+	    THEN
+	        #iqUDT_Merge.GenerationInactive := FALSE;
+	        #iqUDT_Merge.ReactivateReq := FALSE;
+	        #sdi_DeactivateDistance := #iUDT_MergeGenConfig.ChangeWindowModeDistance / 10;
+	    END_IF;
+	    
+	    //Deactivate generation mode when no generation request or distance traveled to disable mode 
+	    //********************************************
+	    // #iq_UDT_Merge.GenerationInactive := (#sdi_DeactivateDistance <= 0)
+	    // AND NOT #iq_UDT_Merge.ReactivateReq; 
+	    
+	    IF #iqUDT_Merge.GenerationInactive
+	    THEN
+	        #si_GenerationGapCounter := #iUDT_MergeGenConfig.GapHeadToHead;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 2 - Update/shift FIFO
+	    //Get size of FIFO array (without the zero)
+	    #iqUDT_Merge.MaxNumberofEntries := ("FC_GetNrOfArrayEl"(#iqUDT_Merge.FIFO) - 1);
+	    
+	    // Handle shift request merge (FIFO entry is handled induct code is generated in tracking DB)
+	    IF #sx_ShiftRequest
+	    THEN
+	        #si_ReturnValue := MOVE_BLK_VARIANT(SRC := #iqUDT_Merge.FIFO,
+	                                            COUNT := INT_TO_UDINT(#iqUDT_Merge.MaxNumberofEntries),
+	                                            SRC_INDEX := 1,
+	                                            DEST_INDEX := 0,
+	                                            DEST => #iqUDT_Merge.FIFO);
+	        // reset the last entry and shift request
+	        #iqUDT_Merge.FIFO[#iqUDT_Merge.MaxNumberofEntries].GapSize := 0;
+	        #iqUDT_Merge.FIFO[#iqUDT_Merge.MaxNumberofEntries].InductNumber := 0;
+	        #sx_ShiftRequest := False;
+	        
+	        //Update last used position of FIFO.    
+	        #iqUDT_Merge.LastUsed -= 1;
+	        IF #iqUDT_Merge.LastUsed < 0           // value can not be smaller than '0'
+	        THEN
+	            #iqUDT_Merge.LastUsed := 0;
+	        END_IF;
+	    END_IF;
+	END_REGION
+	
+	REGION 3 - FIFO checks
+	    
+	    REGION 3.1 - Remove '0' entry
+	        IF NOT (#iUDT_MergeGenConfig.ModeSelection = 2)
+	        THEN
+	            // There was an entry removed by one of the inducts (remove is true)
+	            // now the 'RemoveEntry' is searched for and if found deleted from the FIFO by shifting up
+	            IF #iqUDT_Merge.Remove OR #sx_LoopAgain
+	            THEN
+	                // Loop again bit will be false until a RemoveEntry is found
+	                #sx_LoopAgain := FALSE;
+	                
+	                // check all entries for RemoveEntry = true 
+	                FOR #si_LoopCounterZero := 1 TO #iqUDT_Merge.MaxNumberofEntries BY 1 DO
+	                    IF #iqUDT_Merge.FIFO[#si_LoopCounterZero].RemoveEntry
+	                    THEN
+	                        #si_ReturnValue := MOVE_BLK_VARIANT(SRC := #iqUDT_Merge.FIFO,
+	                                                            COUNT := INT_TO_UDINT(#iqUDT_Merge.MaxNumberofEntries - #si_LoopCounterZero),
+	                                                            SRC_INDEX := #si_LoopCounterZero + 1,
+	                                                            DEST_INDEX := #si_LoopCounterZero,
+	                                                            DEST => #iqUDT_Merge.FIFO);
+	                        // reset the last entry if shift is executed 
+	                        #iqUDT_Merge.FIFO[#iqUDT_Merge.MaxNumberofEntries].GapSize := 0;
+	                        #iqUDT_Merge.FIFO[#iqUDT_Merge.MaxNumberofEntries].InductNumber := 0;
+	                        #iqUDT_Merge.FIFO[#iqUDT_Merge.MaxNumberofEntries].RemoveEntry := FALSE;
+	                        
+	                        //Update Last Used position of FIFO.
+	                        #iqUDT_Merge.LastUsed -= 1;
+	                        #iqUDT_Merge.Remove := FALSE;
+	                        #sx_LoopAgain := TRUE;
+	                    END_IF;
+	                    IF #si_LoopCounterZero = #iqUDT_Merge.MaxNumberofEntries
+	                        AND #iqUDT_Merge.Remove
+	                    THEN
+	                        #iqUDT_Merge.Remove := FALSE;
+	                    END_IF;
+	                END_FOR;
+	                // Checking if last used value does not go below 0, if so, write back to 0
+	                IF #iqUDT_Merge.LastUsed < 0
+	                THEN
+	                    #iqUDT_Merge.LastUsed := 0;
+	                END_IF;
+	            END_IF;
+	        END_IF;
+	    END_REGION
+	    
+	    REGION 3.2 - Check if last used bit is accurate and correct if it is not.
+	        // Last used can't be an empty entry unless it is equal to '0'
+	        IF #iqUDT_Merge.FIFO[#iqUDT_Merge.LastUsed].InductNumber = 0
+	            AND #iqUDT_Merge.LastUsed <> 0
+	        THEN
+	            #iqUDT_Merge.LastUsed -= 1;
+	        END_IF;
+	        
+	        // When the next entry is filled then the number has to be increased
+	        IF #iqUDT_Merge.LastUsed < #iqUDT_Merge.MaxNumberofEntries
+	        THEN
+	            IF #iqUDT_Merge.FIFO[#iqUDT_Merge.LastUsed].InductNumber <> 0
+	                AND #iqUDT_Merge.FIFO[#iqUDT_Merge.LastUsed + 1].InductNumber <> 0
+	            THEN
+	                #iqUDT_Merge.LastUsed += 1;
+	            END_IF;
+	        END_IF;
+	    END_REGION
+	END_REGION
+	
+	REGION 4 - Update on displacement
+	    // decrease the gap counter as long the gap counter is bigger than '0'
+	    IF #si_GenerationGapCounter > 0
+	    THEN
+	        #si_GenerationGapCounter -= #ii_ConveyorDisplacement;
+	        
+	        // check if value does not go negative
+	        IF #si_GenerationGapCounter < 0
+	        THEN
+	            #si_GenerationGapCounter := 0;
+	        END_IF;
+	    END_IF;
+	    
+	    // decrease the deactivation distance counter as long as it is bigger than '0'
+	    IF #sdi_DeactivateDistance > 0
+	    THEN
+	        #sdi_DeactivateDistance -= #ii_ConveyorDisplacement;
+	        
+	        // check if value does not go negative
+	        IF #sdi_DeactivateDistance < 0
+	        THEN
+	            #sdi_DeactivateDistance := 0;
+	        END_IF;
+	    END_IF;
+	    
+	    IF (#iUDT_MergeGenConfig.ModeSelection = 2)
+	        AND NOT #iqUDT_Merge.GenerationInactive
+	        AND #ii_ConveyorDisplacement > 0
+	    THEN
+	        FOR #si_LoopCounter := 1 TO #si_NumerOfInduct DO
+	            #iqUDT_Induct[#si_LoopCounter].DistanceLastReserved -= #ii_ConveyorDisplacement;
+	            IF #iqUDT_Induct[#si_LoopCounter].DistanceLastReserved < 0
+	            THEN
+	                #iqUDT_Induct[#si_LoopCounter].DistanceLastReserved := 0;
+	            END_IF;
+	        END_FOR;
+	    END_IF;
+	END_REGION
+	
+	REGION 5 - Put Value in Tracking array
+	    // check if required gap is reached and if the generation is active
+	    REGION Mode 0 and 1
+	        IF (#si_GenerationGapCounter = 0)
+	            AND NOT #iqUDT_Merge.GenerationInactive
+	            AND NOT (#iUDT_MergeGenConfig.ModeSelection = 2)
+	        THEN
+	            // check if FIFO does contain requests to generate induct codes
+	            IF #iqUDT_Merge.FIFO[1].InductNumber = 0 AND #iUDT_MergeGenConfig.ModeSelection = 0
+	            THEN
+	                // If no request generate value -100 in tracking DB with the correpondent fixed window, and set counter to create gap.
+	                #iqa_TrackingData[#si_GenerationPoint] := -100;
+	                #si_GenerationGapCounter := #iUDT_MergeGenConfig.GapHeadToHead;
+	            END_IF;
+	            
+	            IF #iqUDT_Merge.FIFO[1].InductNumber > 0
+	                AND NOT #sx_ShiftRequest
+	            THEN
+	                // If there is assigned a induct number add 100 and negate the value.
+	                // Move the position value into the tracking request variable
+	                // Inform that the request was handled.
+	                #iqa_TrackingData[#si_GenerationPoint] := - (#iqUDT_Merge.FIFO[1].InductNumber + 100);
+	                #iqUDT_Merge.TrackingPointerForInduct[#iqUDT_Merge.FIFO[1].InductNumber] := #si_GenerationPoint;
+	                #iqUDT_Merge.RequestInFIFO[#iqUDT_Merge.FIFO[1].InductNumber] := FALSE;
+	                
+	                // Compares the last entry to be different to 0 and to the actual entry , if they are set the distance.
+	                IF (#si_LastInductNumberUsed <> #iqa_TrackingData[#si_GenerationPoint])
+	                THEN
+	                    #sdi_DeactivateDistance := #iUDT_MergeGenConfig.ChangeWindowModeDistance / 10;
+	                END_IF;
+	                
+	                // write last induct number used to static for next compare
+	                #si_LastInductNumberUsed := #iqa_TrackingData[#si_GenerationPoint];
+	                
+	                // initiate gap counter and set shift request
+	                #si_GenerationGapCounter := (#iqUDT_Merge.FIFO[1].GapSize + 1);
+	                #sx_ShiftRequest := TRUE;
+	                
+	            END_IF;
+	        END_IF;
+	    END_REGION
+	    
+	    REGION Mode = 2
+	        // Statement section REGION
+	        IF (#iUDT_MergeGenConfig.ModeSelection = 2)
+	            AND NOT #iqUDT_Merge.GenerationInactive
+	            AND (#si_GenerationGapCounter = 0)
+	        THEN
+	            
+	            //generate window from last induct to 1st induct 
+	            FOR #si_SecondLoopCounter := 1 TO #si_NumerOfInduct DO
+	                
+	                IF #si_LastInductNumber <= 1
+	                THEN
+	                    #si_LastInductNumber := #si_NumerOfInduct + 1;
+	                    
+	                END_IF;
+	                
+	                #si_LastInductNumber := #si_LastInductNumber - 1;
+	                
+	                
+	                // Check induct buffer conveyor for which window need to be reserved
+	                
+	                IF #iqUDT_Induct[#si_LastInductNumber].DistanceLastReserved <= 0 AND
+	                    NOT #iqUDT_Induct[#si_LastInductNumber].DisableWindowReservation
+	                THEN
+	                    FOR #si_LoopCounter := 1 TO #si_PositionsPerInduct DO
+	                        IF #iqUDT_Induct[#si_LastInductNumber].Position[#si_LoopCounter].GapRequired > 0
+	                            AND #iqUDT_Induct[#si_LastInductNumber].Position[#si_LoopCounter].GINNumber > 0
+	                            AND NOT #iqUDT_Induct[#si_LastInductNumber].Position[#si_LoopCounter].WindowReserved
+	                        THEN
+	                            #iqa_TrackingData[#si_GenerationPoint] := - (#si_LastInductNumber + 100);
+	                            #iqa_TrackingData[#si_GenerationPoint + 1] := #iqUDT_Induct[#si_LastInductNumber].Position[#si_LoopCounter].GapRequired;
+	                            //Test code, write GIN number into tracking array
+	                            #iqa_TrackingData[#si_GenerationPoint + 2] := #iqUDT_Induct[#si_LastInductNumber].Position[#si_LoopCounter].GINNumber;
+	                            
+	                            #iqUDT_Induct[#si_LastInductNumber].Position[#si_LoopCounter].WindowPosition := #si_GenerationPoint;
+	                            #iqUDT_Induct[#si_LastInductNumber].Position[#si_LoopCounter].WindowReserved := TRUE;
+	                            #si_GenerationGapCounter := #iqUDT_Induct[#si_LastInductNumber].Position[#si_LoopCounter].GapRequired;
+	                            #iqUDT_Induct[#si_LastInductNumber].DistanceLastReserved := #iUDT_MergeGenConfig.DelayDistance;
+	                            
+	                            // Compares the last entry to be different to 0 and to the actual entry , if they are set the distance.
+	                            IF (#si_LastInductNumberUsed <> #si_LastInductNumber)
+	                            THEN
+	                                #sdi_DeactivateDistance := #iUDT_MergeGenConfig.ChangeWindowModeDistance / 10;
+	                            END_IF;
+	                            
+	                            // write last induct number used to static for next compare
+	                            #si_LastInductNumberUsed := #si_LastInductNumber;
+	                            
+	                            EXIT;
+	                        END_IF;
+	                        IF #iqUDT_Induct[#si_LastInductNumber].Position[#si_LoopCounter].GINNumber = 0
+	                        THEN
+	                            EXIT;
+	                        END_IF;
+	                    END_FOR;
+	                END_IF;
+	                IF #si_GenerationGapCounter > 0
+	                THEN
+	                    EXIT;
+	                END_IF;
+	            END_FOR;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

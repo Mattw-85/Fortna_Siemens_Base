@@ -1,0 +1,51 @@
+﻿TYPE "UDT_EventStatistic"
+TITLE = UDT_EventStatistic
+VERSION : 0.1
+//User-defined structure of event statistic data.
+   STRUCT
+      NumberOfTimes : DInt;   // Number of times the event occurred since last reset
+      LastEventSeconds : DInt;   // Number of seconds of the current or last event
+      TotalEventSeconds : DInt;   // Total number of seconds the event occurred since last reset
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_TCPIPReceiveStatistics"
+TITLE = UDT_TCPIPReceiveStatistics
+VERSION : 0.1
+//User-defined structure of FB_TCPIPReceive function block statistics.
+   STRUCT
+      InvalidMsg : UInt;   // Invalid message received
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_TCPIPConnectStatus"
+TITLE = UDT_TCPIPConnectStatus
+VERSION : 0.1
+//User-defined structure of FB_TCPIPConnect function block status.
+   STRUCT
+      Status : Int;   // Status number
+      Specific : Struct   // Specific status structure
+         ErrorCode : Struct   // Error code structure
+            TCON : Word;   // Siemens TCON error code - Check documetation
+            TDISCON : Word;   // Siemens TDISCON error code - Check documetation
+            TDIAG : Word;   // Siemens TDIAG error code - Check documetation
+         END_STRUCT;
+         Connected { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Connected
+         CommunicationFault { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Communication fault
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_TCPIPConnectStatistics"
+TITLE = UDT_TCPIPConnectStatistics
+VERSION : 0.1
+//User-defined structure of FB_TCPIPConnect function block statistics.
+   STRUCT
+      ConnectionLost { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Connection lost statistics
+   END_STRUCT;
+
+END_TYPE
+

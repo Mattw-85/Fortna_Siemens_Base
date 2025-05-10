@@ -1,0 +1,13 @@
+﻿DATA_BLOCK "DB_AreaConfiguration"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+NON_RETAIN
+   VAR 
+      DelayHardwareOK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;
+   END_VAR
+
+
+BEGIN
+
+END_DATA_BLOCK
+

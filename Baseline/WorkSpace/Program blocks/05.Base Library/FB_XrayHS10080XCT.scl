@@ -1,0 +1,1373 @@
+﻿FUNCTION_BLOCK "FB_XrayHS10080XCT"
+TITLE = FB_Xray_HS10080XCT
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : Equipment
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 44
+// END_ATTRIBUTES
+//Function block to control X-Ray.
+   VAR_INPUT 
+      iUDT_EquipmentConfiguration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_HS10080XCTConfiguration";   //  Configuration XCT 10080 structure
+      iUDT_HMICommand { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_HS10080XCTHMICommand";   //  Command structure
+      idi_TakeoutConveyorLength { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //  Takeout Conveyor Length [mm]
+      ix_SafetyReset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE Safety reset command is active
+      ix_SafetyOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE when Safety Circuit is healthy
+      ix_24vOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE when 24VDC is healthy
+      ix_400vOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE when 400VAC is healthy
+      ix_ProfinetOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE when the PN node(s) of VSU are OK
+      ix_Interlock { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Contact from XCT . Closed: All doors are closed.Open: One of the doors of the tunnel is opened, machine is stopped
+      ix_TempOutOfRange { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Contact from XCT Closed: XCT doesn’t work because XCT operating temperature isn’t given. Open: XCT is in the right temperature range and it is possible to power on
+      ix_PowerOn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  The power-on acknowledgement. Open: The X-ray is shut down. Closed: The X-ray is turned on.
+      ix_RepairSwitch { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  The main power switch. Open: Mains power on. Closed: Mains power off.
+      ix_ServiceMode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Service mode state. Open: The X-ray is not in service mode. Closed: The X-ray is in service mode.
+      ix_TransitActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Transit mode state. Open: The transit mode is not active. Closed: The transit mode is active.
+      ix_MachineOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  The X-ray is OK. Open: The X-ray has a fatal error; no operation is possible. Closed: The X-ray is initialised and working properly.
+      ix_IQTestActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE when IQ test is active
+      ix_CalReq { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  True when XCT is requesting callibration
+      ix_AllowCalibration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Use to inhibit calibration in heavy flow if necessary
+      ix_XrayReady { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Ready to receive a bag state. Open: Not ready to receive a bag. Closed: X-ray is ready receive a bag.
+      ix_PECInfeedEoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE when the end of section photoeye is not blocked
+      ix_PECOutfeedEoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE when the end of section photoeye is not blocked
+      ix_PECOutfeedPosition { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE when the data acailable at PEC position
+      ix_InfConveyorError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Infeed conveyor error
+      ix_MainSpeedOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Main Conveyor speed OK. Open: The X-ray conveyor is not running or not running at specified speed. Closed: The X-ray conveyor is activated and running at specified speed.
+      ix_OutfConveyorError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Outfeed Conveyor error.
+      ix_NoScanActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Acknowledgement of the no-scan mode. Open: The X-ray is not in the no-scan mode. Closed: The X-ray is in the no-scan mode.
+      ix_ReadyToScan { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Contract from XCT (Gantry Control) Closed: Gantry is ready and have the nominal Speed.
+      ix_GINinMainTrack { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  GIN is detected in the tracking configured area
+      ix_ResetEnergySave { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Reset energy save mode timer
+      ix_TakeoutConveyorRunning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Outfeef conveyor running
+      ix_IQTestSelection { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  IQ test enable
+      ix_IQTestStopPEC { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  IQ test outfeed conveyor stop PEC
+   END_VAR
+
+   VAR_OUTPUT 
+      qUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_HS10080XCTStatus";   //  HMI status structure
+      qUDT_Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_CommonStatus";   //  Common status structure
+      qx_NoScan { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Request for the no-scan mode. Open: X-ray out of no-scan mode (screening mode). Closed: X-ray in no-scan mode.
+      qx_InfeedConveyorOn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  The infeed conveyor control. (HDX only in no-scan mode) Open: The BHS-PLC has no need for running the X-ray infeed conveyor. Closed: Run the X-ray infeed conveyor.
+      qx_MainConveyorOn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  The main conveyor control. (HDX only in no-scan mode) Open: The BHS-PLC has no need for running the X-ray main conveyor. Closed: Run the X-ray main conveyor.
+      qx_OutfeedConveyorOn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  The outfeed conveyor control. (HDX only in no-scan mode) Open: The BHS-PLC has no need for running the X-ray outfeed conveyor. Closed: Run the X-ray outfeed conveyor.
+      qx_ESReset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Emergency stop reset. Open: No action. Closed: Resets the last emergency stop event. Must be closed for approximately 0.5 seconds.
+      qx_PowerOn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Remote power-on for the X-ray. Open: Power down. Closed: Power up and start of initialisation.
+      qx_PrepareToScan { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Control of gantry rotation Closed: Gantry start rotation, acceleration time ~90 sec. Open: Gantry stop,decelerationtime ~100 sec,
+      qx_ReadyForCal { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Accept of Calibration request. Closed: External infeed conveyors are stopped. Waiting for calibration to end.
+      qx_IQTestInfeedHold { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  IQ test infeed belt hold
+      qx_IQTestOutfeedHold { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  IQ test outfeed belt hold
+      qx_IQTestIndication { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  IQ test lamp indication
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_Statistics : "UDT_HS10080XCTStatistics";   //  Statistics structure
+      iqUDT_EquipmentControl : "UDT_EquipmentControl";   //  Equipment control stucture
+      iqUDT_InfeedConveyorInterface : "UDT_ConveyorInterface";   //  Infeed conveyor interface structure
+      iqUDT_MainConveyorInterface : "UDT_ConveyorInterface";   //  Main conveyor interface structure
+      iqUDT_OutfeedConveyorInterface : "UDT_ConveyorInterface";   //  Outfeed conveyor interface structure
+      iqUDT_HandShakeUp : "UDT_ConveyorHandshake";   //  Upstream handshake structure
+      iqUDT_Handshake : "UDT_ConveyorHandshake";   //  Downstream handshake structure
+   END_VAR
+
+   VAR 
+      sUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_HS10080XCTStatus";   //  HMI status structure
+      sUDT_CommonStatusOld { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   //  Common status structure
+      sUDT_CommonStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   //  Common status structure
+      sUDT_InfeedConvCommonStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   //  Common status for infeed conveyor
+      sUDT_MainConvCommonStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   //  Common status for main conveyor
+      sUDT_OutfeedConvCommonStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   //  Common status for outfeed conveyor
+      sUDT_InfeedConvCommonStatusOld { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   //  Common status for infeed conveyor
+      sUDT_MainConvCommonStatusOld { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   //  Common status for main conveyor
+      sUDT_OutfeedConvCommonStatusOld { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   //  Common status for outfeed conveyor
+      s_OutfeedPECEoSFiltered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   //  Filtering end of section photo eye signal
+      s_InfeedPECEoSFiltered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   //  Filtering end of section photo eye signal
+      s_CascadeModeTimer { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   //  Timer to cascade start
+      s_CallibrationForceDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   //  Delay before callibration is forced on
+      s_MainConvRunFeedback { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   //  Conveyor run feeback
+      s_IQTestRealese { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   //  Conveyor run feeback
+      s_EntryEncoderFault { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   //  Entry encoder fault
+      s_MainEncoderFault { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   //  Main encoder fault
+      s_ExitEncoderFault { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   //  Exit encoder fault
+      R_TRIG_Stop {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge trigger to stop conveyor
+      R_TRIG_Running {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge trigger running
+      R_TRIG_MainRunning {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge trigger running
+      R_TRIG_OutfeedRunning {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge trigger running
+      R_TRIG_XRayMode {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge trigger in X-ray mode
+      R_TRIG_ServiceMode {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge trigger in service mode
+      R_TRIG_TransitMode {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge trigger in transitmode
+      R_TRIG_Estop {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge trigger E-stop active
+      R_TRIG_RepairSwitch {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge trigger Repairswitch
+      R_TRIG_TempOutOfRange {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge trigger Temperature Out Of Range
+      R_TRIG_TailToBegin {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge trigger Tail arrive at the beginning of next conveyor
+      R_TRIG_Calibrating {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge trigger Calibrating
+      R_TRIG_CalibrationForce {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge trigger Callibration is forced
+      R_TRIG_InfConvErr {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge trigger Infeed conveyor error
+      R_TRIG_OutfConvErr {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge trigger Outfeed conveyor error
+      R_TRIG_EncoderErr {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge trigger encoder error
+      F_TRIG_Callibrating {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   //  Falling edge trigger Callibrating
+      F_TRIG_Interlock {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   //  Falling edge trigger Interlock
+      R_TRIG_PEC_EoSFiltered {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge trigger end of section photo eye filtered
+      F_TRIG_PEC_EosFiltered {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   //  Falling edge PEC EOS
+      F_TRIG_SignalingRequest {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   //  Falling edge signaling request
+      F_TRIG_EnergySaveActive {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   //  Falling edge Energy save active
+      F_TRIG_AuxHeadToEnd {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   //  Falling edge trigger Aux head to end bit
+      R_TRIG_TakeoutConveyorRuning {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Falling edge trigger takeout conveyors running
+      R_TRIG_IQTest {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Falling edge trigger takeout conveyors running
+   END_VAR
+   VAR RETAIN
+      sdi_DistanceStopping { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //  Actual distance after stop signal (cm)
+   END_VAR
+   VAR 
+      sdi_PECOutfeedDistanceOffset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //  Distance offset between photo eye and the end of conveyor [mm]
+   END_VAR
+   VAR RETAIN
+      sdi_DistanceRunEmptyMain { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //  Actual distance running empty
+      sdi_DistanceRunEmptyOutfeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //  Actual distance running empty
+   END_VAR
+   VAR 
+      sdi_ClearDistance { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //  Distance on takeout conveyor to clear before start
+      si_IQTestEmptyDistance { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;
+   END_VAR
+   VAR RETAIN
+      si_GapTailToHead { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //  Actual size gap tail to head
+      si_OutfeedAuxJamDisplacement { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //  Auxiliary variable to calculate displacement when PEC is blocked
+      si_InfeedAuxJamDisplacement { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //  Auxiliary variable to calculate displacement when PEC is blocked
+      si_AuxEnergySave { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //  Auxiliary variable to calculate energy save displacement
+      si_TailToBegin { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //  Count tail to next conveyor distance
+      si_HeadToEnd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //  Count head to end distance
+      sx_AuxHeadToEnd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Aux bit to control head to end positioning
+      sx_AuxHeadAtEnd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Aux bit to memorise head at end positioning
+      sx_TailToBegin { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Trail to begin done
+      sx_EnergySaveActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Active energy save mode
+   END_VAR
+   VAR 
+      sx_PEC_OutfeedEoSFiltered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  End of section photo eye filtered
+      sx_PEC_InfeedEoSFiltered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  End of section photo eye filtered
+      sx_MainConvReady { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Conveyor Ready to operate in Automatic mode
+      sx_StartReceived { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Start command received from system
+      sx_MainAutomaticActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Running in automatic
+      sx_OutfeedAutomaticActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Running in automatic
+      sx_ManualModeActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Manual mode active
+      sx_RunningEmptyMain { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  X-Ray main is running empty
+      sx_RunningEmptyOutfeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  X-Ray outfeed is running empty
+      sx_ReqToCal { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Request to calibrate received
+      sx_ParcelAtEnd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Parcel is detected in window at end of main conveyor
+      sx_Stopping { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Stopping seuence is activated
+      sx_Stopped { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Stopping sequence is ended
+      sx_Gapping { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  The outfeed conveyor is creating a gap downstream
+      sx_calibrating { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  XCT Calibration is ongoing
+      sx_CallibrateForceOn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  XCT Callibration is forced on because wating timed out
+      sx_MainConvRunFeedbackError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Main conveyor running feedback error
+      sx_MachineHealthy { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Machine healthy status
+      sx_ResetRunEmptyESave { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Resent energy save to run empty
+      sx_MainConveyorOn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Main conveyor control
+      sx_ReadyForCal { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Ready for calibration
+      sx_TakeoutConveyorClear { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Takeout conveyor clear
+      sx_IQTestReady { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      sx_InfeedConveyorOn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Infeed conveyor control
+      sx_OutfeedConveyorOn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Oufeed conveyor control
+   END_VAR
+
+   VAR_TEMP 
+      tx_PowerOn : Bool;   //  Startup the machine
+      tx_PrepareToScan : Bool;   //  Power on X-Ray generator
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	29/05/2019  | 0.1       | Frank Baten   | first release TIA 15
+	24/07/2019  | 2.0       | L.Klar        | 2.0 MHS library release TIA 15.1
+	07/08/2019  | 2.1       | S.Theocharis  | 2.1 Updates during test at SMITHS Detection
+	09/08/2019  | 2.2       | Frank Baten   | 2.2 Add control of infeed conveyor
+	13/08/2019  | 2.3       | S.Theocharis  | 2.3 Updated with interface of infeed conveyor
+	20/08/2019  | 2.4       | S.Theocharis  | 2.4 Add the internal tracking error
+	26/08/2019  | 2.5       | S.Theocharis  | Update the "UDT_HS10080XCT_Configuration"
+	25/09/2019  | 2.6       | S. Deulkar    | Created 3 different entity for 3 conveyor, automatic active, error etc.
+	                                        | Added infeed PEC blockage logic
+	                                        | Modified logic for Infeed and outfeed conveyor run
+	                                        | Adeed 3 status and report block call for 3 xray belts
+	                                        | No scan HMI command is added,ON commands output activates  
+	11/10/2019  | 2.7       | S.Deulkar     | Update new status structure   
+	04/11/2019  | 2.8       | L.Klar        | First scan bit changed from memory bit to DB variable
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	13/01/2020  | 3.2       | F.Baten       | Changed length related tags from Int to Dint 
+	11/01/2021  | 3.3       | L.Klar        | Sinput safety ok added to stop conveyor condition
+	09/02/2021  | 3.4       | L.Klar        | IQ test added
+	04/03/2021  | 3.5       | M.Kurpiers    | HMI status updated - xray ready warning added
+	13/03/2021  | 3.6       | L.Klar        | HMI status updated- warning commented, energy save added, diaback added when machine in startup
+	20/03/2021  | 3.7       | L.Klar        | Encoders errors added
+	09/06/2021  | 3.8       | M.Kurpiers    | E-Stop Active statistics changed
+	04/04/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 - Initial and Calibration
+	    
+	    // First PLC cycle
+	    IF "DB_Memory".FirstScan
+	    THEN
+	        #sx_MainAutomaticActive := FALSE;                                                                           // switch of automatic activ
+	        #iqUDT_HandShakeUp.RTR := False;                                                                           // Reset RTR signal
+	        #iqUDT_HandShakeUp.CascadeStartUp := FALSE;                                                                // Reset cascade start signal
+	        #sx_Stopping := FALSE;                                                                                      // Reset stopping sequence
+	        #sx_Stopped := TRUE;                                                                                        // Set machine is stopped
+	    END_IF;
+	    
+	    // Calibrating Condition 
+	    (* Xray do not share calibrating status with PLC, hence follwoing condtions are used to check if machine is calibrating)*)
+	    #sx_calibrating := #ix_CalReq AND #sx_ReadyForCal AND NOT #ix_XrayReady;
+	    
+	END_REGION
+	
+	REGION 2 - Triggers
+	    // Statement section REGION
+	    
+	    #R_TRIG_XRayMode(CLK := NOT #sUDT_CommonStatus.Stopped AND NOT #ix_ServiceMode AND NOT #ix_TransitActive);      // Rising edge trigger X-Ray mode
+	    
+	    #R_TRIG_ServiceMode(CLK := NOT #sUDT_CommonStatus.Stopped AND #ix_ServiceMode);                                 // Rising edge trigger in service mode
+	    
+	    #R_TRIG_TransitMode(CLK := NOT #sUDT_CommonStatus.Stopped AND #ix_TransitActive);                               // Rising edge trigger in transitmode
+	    
+	    #R_TRIG_Estop(CLK := NOT #ix_SafetyOk);                                                                          // Rising edge trigger E-stop active
+	    
+	    #R_TRIG_RepairSwitch(CLK := #ix_RepairSwitch);                                                                   // Rising edge trigger Repairswitch
+	    
+	    #R_TRIG_TempOutOfRange(CLK := #ix_TempOutOfRange);                                                               // Rising edge trigger Temperature Out Of Range
+	    
+	    #R_TRIG_Calibrating(CLK := #sx_calibrating);                                                                     // Rising edge trigger Calibrating
+	    
+	    #F_TRIG_Interlock(CLK := #ix_Interlock);                                                                         // Falling edge trigger interlock (1=ok)
+	    
+	    #R_TRIG_Running(CLK := #sUDT_CommonStatus.Running);                                                             // Rising edge trigger running X-Ray system
+	    
+	    #R_TRIG_Stop(CLK := #sUDT_CommonStatus.Stopped);                                                                // Rising edge trigger x-ray stopped
+	    
+	    #R_TRIG_MainRunning(CLK := #ix_MainSpeedOk);                                                                     // Rising edge trigger running main conveyor
+	    
+	    #F_TRIG_Callibrating(CLK := #sx_calibrating);                                                                    // Falling edge trigger callibrating
+	    
+	    #R_TRIG_PEC_EoSFiltered(CLK := #sx_PEC_OutfeedEoSFiltered);                                                      // Rising edge trigger PEC EOS
+	    
+	    #F_TRIG_PEC_EosFiltered(CLK := #sx_PEC_OutfeedEoSFiltered);                                                      // Falling edge trigger PEC EOS
+	    
+	    #F_TRIG_SignalingRequest(CLK := #iqUDT_EquipmentControl.Request.SignalingRequest); // Falling edge trigger signaling request
+	    
+	    #R_TRIG_TakeoutConveyorRuning(CLK := #ix_TakeoutConveyorRunning);
+	    
+	    
+	    // PEC Filter
+	    #s_OutfeedPECEoSFiltered(iudi_OnDelayTime := #iUDT_EquipmentConfiguration.PEC_OutfeedTimeOnDelay,
+	                             iudi_OffDelayTime := #iUDT_EquipmentConfiguration.PEC_OutfeedTimeOffDelay,
+	                             ix_SignalToDelay := #ix_PECOutfeedEoS,
+	                             ix_Enable := TRUE,
+	                             qx_DelayedSignal => #sx_PEC_OutfeedEoSFiltered);
+	    
+	    #s_InfeedPECEoSFiltered(iudi_OnDelayTime := #iUDT_EquipmentConfiguration.PEC_InfeedTimeOnDelay,
+	                            iudi_OffDelayTime := #iUDT_EquipmentConfiguration.PEC_InfeedTimeOffDelay,
+	                            ix_SignalToDelay := #ix_PECInfeedEoS,
+	                            ix_Enable := TRUE,
+	                            qx_DelayedSignal => #sx_PEC_InfeedEoSFiltered);
+	    
+	END_REGION
+	
+	REGION 3 - Error handling         
+	    REGION 3.1 - Reset Errors
+	        IF #iqUDT_EquipmentControl.Command.Reset                                                                   // If Reset command appeared from system control
+	        THEN
+	            
+	            IF #sUDT_HMIStatus.OutfeedConvSpecific.PEC_EoSJam                                                          // If Outfeed EOS PEC Jammed error is active
+	                AND ((#iUDT_EquipmentConfiguration.ResetWithPECBlocked)                                            // And Reset with PEC blocked is enabled
+	                OR (NOT #iUDT_EquipmentConfiguration.ResetWithPECBlocked AND #sx_PEC_OutfeedEoSFiltered))          // Or reset is not enabled and PEC is unblocked
+	            THEN                                                                                                    // Then 
+	                #sUDT_HMIStatus.OutfeedConvSpecific.PEC_EoSJam := FALSE;                                               // reset PEC jam error
+	            END_IF;
+	            
+	            IF #sUDT_HMIStatus.InfeedConvSpecific.PEC_EoSJam                                                           // If Infeed EOS PEC Jammed error is active
+	                AND ((#iUDT_EquipmentConfiguration.ResetWithPECBlocked)                                            // And Reset with PEC blocked is enabled
+	                OR (NOT #iUDT_EquipmentConfiguration.ResetWithPECBlocked AND #sx_PEC_InfeedEoSFiltered))           // Or reset is not enabled and PEC is unblocked
+	            THEN                                                                                                    // Then 
+	                #sUDT_HMIStatus.InfeedConvSpecific.PEC_EoSJam := FALSE;                                                // reset PEC jam error
+	            END_IF;
+	            #sx_MainConvRunFeedbackError := FALSE;
+	            #sUDT_HMIStatus.InfeedConvSpecific.Conv_ERR := FALSE;                                                      // Reset infeed conveyor feedback error
+	            #sUDT_HMIStatus.MainConvSpecific.Conv_ERR := FALSE;                                                        // Reset main conveyor feedback error
+	            #sUDT_HMIStatus.OutfeedConvSpecific.Conv_ERR := FALSE;
+	            #sUDT_HMIStatus.InfeedConvSpecific.Encoder_ERR := FALSE;                                                      // Reset infeed conveyor feedback error
+	            #sUDT_HMIStatus.MainConvSpecific.Encoder_ERR := FALSE;                                                        // Reset main conveyor feedback error
+	            #sUDT_HMIStatus.OutfeedConvSpecific.Encoder_ERR := FALSE;     // Reset outfeed conveyor feedback error    
+	        END_IF;
+	    END_REGION
+	    
+	    REGION 3.2 - Xray Errors
+	        // Xray machine errors / Warnings
+	        #sUDT_HMIStatus.XraySpecific.DoorInterlockNotOk := NOT #ix_Interlock;                                 // One of the doors of the in or outfeed tunnel is opend
+	        #sUDT_HMIStatus.XraySpecific.RepairSwitch := #ix_RepairSwitch;                                        // X-ray mains are powered off
+	        #sUDT_HMIStatus.XraySpecific.ServiceMode := #ix_ServiceMode;                                          // The X-ray is in service mode.
+	        #sUDT_HMIStatus.XraySpecific.TempOutOfRange := #ix_TempOutOfRange;                                    // XCT doesn’t work because XCT operating temperature isn’t given
+	        #sUDT_HMIStatus.XraySpecific.GantrySpeedNotOk := NOT #ix_ReadyToScan;                                 // Gantry speed is not Ok
+	        #sUDT_HMIStatus.XraySpecific.IQTestActive := #ix_IQTestSelection OR #ix_IQTestActive;                                        // IQ test is active on XRAY
+	        #sUDT_HMIStatus.XraySpecific.XrayPowerNotOn := NOT #ix_PowerOn;                                       // Power is not switched on
+	        #sUDT_HMIStatus.XraySpecific.MachineNotOk := NOT #ix_MachineOk;                                       // Machine is not ok
+	        #sUDT_HMIStatus.XraySpecific.XRayNotReady := NOT #ix_XrayReady;                                       // X-Ray is not ready to operate
+	        #sUDT_HMIStatus.XraySpecific.TransitActive := #ix_TransitActive;                                      // The transit mode is active
+	        #sUDT_HMIStatus.XraySpecific.NoScanActive := #ix_NoScanActive;                                        // The X-ray is in the no-scan mode.
+	        
+	        // Xray Common "Error"
+	        #sUDT_CommonStatus.Error := NOT #ix_24vOk                                                                  // 24v signalling not OK
+	        OR NOT #ix_400vOk                                                                                           // 400v signalling not OK
+	        OR NOT #ix_ProfinetOk                                                                                       // Profinet signalling not OK
+	        OR NOT #ix_SafetyOk
+	        OR #sUDT_HMIStatus.XraySpecific.MachineNotOk                                                                                         // Safety signalling NOT OK
+	        // changed onsite
+	        OR NOT #sUDT_HMIStatus.XraySpecific.RepairSwitch                                                                   // X-ray mains are powered off
+	        OR #sUDT_InfeedConvCommonStatus.Error                                                                          // Or error is active on main conveyor            
+	        OR #sUDT_MainConvCommonStatus.Error                                                                            // Or error is active on main conveyor            
+	        OR #sUDT_OutfeedConvCommonStatus.Error
+	        OR (#sUDT_HMIStatus.XraySpecific.ServiceMode AND NOT #ix_IQTestSelection)                                                                    // The X-ray is in service mode.
+	        OR #sUDT_HMIStatus.XraySpecific.TempOutOfRange;                                                                // XCT doesn’t work because XCT operating temperature isn’t given
+	        //OR #s_StatusUDT.XraySpecific.GantrySpeedNotOk                                                             // Xraay gantry speed is not ok 
+	        
+	    END_REGION
+	    
+	    REGION 3.3 - Infeed conveyor errors
+	        
+	        IF #ix_InfConveyorError OR #iqUDT_InfeedConveyorInterface.InternalErrorTracking THEN                                                                        // If main conveyor feedback error active then
+	            #sUDT_HMIStatus.InfeedConvSpecific.Conv_ERR := TRUE;                                                       // Create infeed conveyor feedback error
+	        END_IF;
+	        
+	        #s_EntryEncoderFault(iudi_OnDelayTime := 5000,
+	                             ix_SignalToDelay := #sx_InfeedConveyorOn AND #iqUDT_InfeedConveyorInterface.Displacement = 0,                         //If Main conveyor speed not Ok
+	                             ix_Enable := TRUE);
+	        
+	        IF #s_EntryEncoderFault.qx_DelayedSignal THEN
+	            #sUDT_HMIStatus.InfeedConvSpecific.Encoder_ERR := TRUE;
+	        END_IF;
+	        
+	        IF NOT #sx_PEC_InfeedEoSFiltered                                                                            // PEC is blocked
+	        THEN
+	            #si_InfeedAuxJamDisplacement += #iqUDT_InfeedConveyorInterface.Displacement;                          // Increase memory with actual displacement
+	        ELSE
+	            #si_InfeedAuxJamDisplacement := 0;                                                                     // Reset memory (PEC was free)
+	        END_IF;
+	        
+	        IF #si_InfeedAuxJamDisplacement > #iUDT_EquipmentConfiguration.InfeedPECJamDisplacementLimit THEN         // If memory is bigger than setpoint, set error
+	            #sUDT_HMIStatus.InfeedConvSpecific.PEC_EoSJam := TRUE;
+	        END_IF;
+	        
+	        #sUDT_InfeedConvCommonStatus.Error := #sUDT_HMIStatus.InfeedConvSpecific.PEC_EoSJam                               // Infeed conveyor PEC Jammed
+	        OR #sUDT_HMIStatus.InfeedConvSpecific.Conv_ERR                                                                 // Infeed conveyor is in error
+	        OR #sUDT_HMIStatus.InfeedConvSpecific.Encoder_ERR;                                                             // Infeed conveyor has encoder error
+	        
+	    END_REGION
+	    
+	    REGION 3.4 - Main conveyor Errors
+	        
+	        #s_MainEncoderFault(iudi_OnDelayTime := 5000,
+	                            ix_SignalToDelay := #sx_MainConveyorOn AND #ix_MainSpeedOk AND #iqUDT_MainConveyorInterface.Displacement = 0,                         //If Main conveyor speed not Ok
+	                            ix_Enable := TRUE);
+	        
+	        IF #s_MainEncoderFault.qx_DelayedSignal THEN
+	            #sUDT_HMIStatus.MainConvSpecific.Encoder_ERR := TRUE;
+	        END_IF;                                            // The Main conveyor encoder is faulted
+	        
+	        #s_MainConvRunFeedback(iudi_OnDelayTime := #iUDT_EquipmentConfiguration.MainConvFeedbackDelayTime,
+	                               ix_SignalToDelay := #sx_MainConveyorOn AND NOT #ix_MainSpeedOk,                         //If Main conveyor speed not Ok
+	                               ix_Enable := TRUE,                                                                       // Enable timer when run command to main conveyor is ON 
+	                               qx_DelayedSignal => #sx_MainConvRunFeedbackError);
+	        
+	        IF #sx_MainConvRunFeedbackError OR #iqUDT_MainConveyorInterface.InternalErrorTracking THEN                                                                        // If main conveyor feedback error active then
+	            #sUDT_HMIStatus.MainConvSpecific.Conv_ERR := TRUE;                                                         // Create main conveyor feedback error
+	        END_IF;
+	        
+	        #sUDT_MainConvCommonStatus.Error :=
+	        #sUDT_HMIStatus.MainConvSpecific.Conv_ERR                                                                      // Outfeed conveyor is in error
+	        OR #sUDT_HMIStatus.MainConvSpecific.Encoder_ERR;
+	        
+	    END_REGION
+	    
+	    REGION 3.5 - Outfeed conveyor errors
+	        
+	        IF #ix_OutfConveyorError OR #iqUDT_OutfeedConveyorInterface.InternalErrorTracking THEN                                                                        // If main conveyor feedback error active then
+	            #sUDT_HMIStatus.OutfeedConvSpecific.Conv_ERR := TRUE;                                                      // Create infeed conveyor feedback error
+	        END_IF;
+	        
+	        #s_ExitEncoderFault(iudi_OnDelayTime := 5000,
+	                            ix_SignalToDelay := #sx_OutfeedConveyorOn AND #iqUDT_OutfeedConveyorInterface.Displacement = 0,                         //If Main conveyor speed not Ok
+	                            ix_Enable := TRUE);
+	        
+	        IF #s_ExitEncoderFault.qx_DelayedSignal THEN
+	            #sUDT_HMIStatus.OutfeedConvSpecific.Encoder_ERR := TRUE;
+	        END_IF;                                       // The Infeed conveyor encoder is faulted
+	        
+	        IF NOT #sx_PEC_OutfeedEoSFiltered                                                                           // PEC is blocked
+	        THEN
+	            #si_OutfeedAuxJamDisplacement += #iqUDT_OutfeedConveyorInterface.Displacement;                        // Increase memory with actual displacement
+	        ELSE
+	            #si_OutfeedAuxJamDisplacement := 0;                                                                    // Reset memory (PEC was free)
+	        END_IF;
+	        
+	        IF #si_OutfeedAuxJamDisplacement > #iUDT_EquipmentConfiguration.OutfeedPECJamDisplacementLimit THEN       // If memory is bigger than setpoint, set error
+	            #sUDT_HMIStatus.OutfeedConvSpecific.PEC_EoSJam := TRUE;
+	        END_IF;
+	        
+	        #sUDT_OutfeedConvCommonStatus.Error := #sUDT_HMIStatus.OutfeedConvSpecific.PEC_EoSJam                             // Outfeed conveyor PEC Jammed
+	        OR #sUDT_HMIStatus.OutfeedConvSpecific.Conv_ERR                                                                // Outfeed conveyor is in error
+	        OR #sUDT_HMIStatus.OutfeedConvSpecific.Encoder_ERR;                                                            // Outfeed conveyor has encoder error
+	    END_REGION
+	    
+	    // Common warning
+	    #sUDT_CommonStatus.Warning :=
+	    #sUDT_HMIStatus.XraySpecific.TransitActive                                                                         // The transit mode is active
+	    OR #sUDT_HMIStatus.XraySpecific.NoScanActive                                                                      // The X-ray is in the no-scan mode.
+	    OR #sUDT_HMIStatus.XraySpecific.DoorInterlockNotOk // Interlock open
+	    OR #sUDT_HMIStatus.XraySpecific.XRayNotReady;
+	    //Conditions to set bit sx_Ready to operate 
+	    #sx_MainConvReady := NOT #sUDT_CommonStatus.Error AND NOT #sUDT_MainConvCommonStatus.Error;
+	    
+	END_REGION
+	
+	REGION 4 - Stop Equipment
+	    (* When a stop command is received the machine will transport the parcels to the end of the machine
+	       so clearing the main conveyor. If the main conveyor is stopped (because of a parcel in the last position) 
+	       or the main conveyor has run its emptying distance the machine will stop.*)
+	    
+	    IF NOT #iqUDT_EquipmentControl.Command.AutomaticOn                                                             // if Stop active from system control ( Means Not automatic ON)
+	        AND NOT #iqUDT_EquipmentControl.Command.Start                                                              // And no start command from system control
+	        AND #sx_MainAutomaticActive                                                                                 // And system is Automatic active
+	    THEN                                                                                                            // Then
+	        IF NOT #sx_Stopping THEN                                                                                    // If Stopping sequence is not activated
+	            #sdi_DistanceStopping := 0; //((#i_UDT_EquipmentConfiguration.InfeedConveyor.Length +
+	            // #i_UDT_EquipmentConfiguration.MainConveyor.Length +
+	            // #i_UDT_EquipmentConfiguration.OutfeedConveyor.Length + 1000) / 10);                                            // Calculate stopping distance in cm
+	        END_IF;
+	        #sx_Stopping := TRUE;                                                                                       // Activate stop sequence
+	    END_IF;
+	    
+	    IF #sx_Stopping THEN                                                                                            // If stopping sequence is activated then
+	        #sdi_DistanceStopping -= #iqUDT_MainConveyorInterface.Displacement;                                         // Calculate stopping distance 
+	        
+	        IF #sdi_DistanceStopping < 0                                                                                 // And if stopping distance is done
+	            OR NOT #ix_MainSpeedOk                                                                                  // or if main conveyor is not already stopped
+	        THEN                                                                                                        // Then
+	            #sx_Stopped := TRUE;                                                                                    // make Stopped status TRUE
+	            #sx_Stopping := FALSE;                                                                                  // and Reset stopping sequence
+	        END_IF;
+	    END_IF;
+	    
+	    //Main and outfeed conveyor
+	    IF #sx_Stopped                                                                                                  // If Stop command received and both conveyors are stopped
+	        OR #sUDT_CommonStatus.Error                                                                                // Or an error is active on Xray Or error is active on main conveyor       
+	        OR (#ix_TransitActive AND NOT #sx_IQTestReady)                                                                                   // AND Xray is not in transit mode
+	        //OR (#ix_ServiceMode AND NOT #ix_IQTestSelection)                                                                                          // AND Xray is not in service mode
+	        OR NOT #ix_SafetyOk
+	        //OR (#i_UDT_HMICommand.NoScanMode AND NOT #ix_ReadyToScan)
+	    THEN                                                                                                            // Then 
+	        #iqUDT_HandShakeUp.RTR := FALSE;                                                                           // Reset RTR signal
+	        #iqUDT_HandShakeUp.CascadeStartUp := FALSE;                                                                // Reset cascade start signal
+	        #sx_MainAutomaticActive := FALSE;                                                                           // Switch off automatic active
+	        #sx_OutfeedAutomaticActive := FALSE;                                                                        // Switch off automatic active
+	        #sx_StartReceived := FALSE;                                                                                 // Reset start command received from system     
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 5 - Start Automatic mode
+	    // if start (OS) is received from system, this is memorised until started in cascade 
+	    IF #iqUDT_EquipmentControl.Command.Start                                                                       // If Start command from from system received 
+	        
+	    THEN                                                                                                            // Then
+	        #sx_StartReceived := TRUE;                                                                                  // Set Start command received from system
+	        #sx_Stopping := FALSE;                                                                                      // Stop stopping sequence
+	        #sx_Stopped := FALSE;                                                                                       // Reset stopped bit        
+	    END_IF;
+	    
+	    IF #sx_StartReceived                                                                                            // If Start command received from system
+	        AND (#iqUDT_Handshake.CascadeStartUp                                                                       // Handshake from downstream conveyor to cascade start
+	        OR #iUDT_EquipmentConfiguration.FirstConveyorToStart)                                                      // of if this is the first conveyor to start in the cascade 
+	    THEN                                                                                                            // THEN
+	        #sx_MainAutomaticActive := TRUE;                                                                            // Set Automatic active
+	        #sx_OutfeedAutomaticActive := TRUE;                                                                         // Set Automatic active
+	        #sx_StartReceived := FALSE;                                                                                 // and reset start received bit
+	    END_IF;
+	    
+	    // Cascade mode
+	    #s_CascadeModeTimer(iudi_OnDelayTime := #iUDT_EquipmentConfiguration.CascadeTimeOnDelay,                       //Timer to cascade mode--Outfeed Conveyor
+	                        ix_SignalToDelay := #sx_MainAutomaticActive,
+	                        ix_Enable := #sUDT_InfeedConvCommonStatus.Running,
+	                        qx_DelayedSignal => #iqUDT_HandShakeUp.CascadeStartUp);
+	    
+	    #sx_ManualModeActive := FALSE;                                                                                  // No manual mode available for Xray machine hence disabled it.
+	END_REGION
+	
+	REGION 6 - Automatic mode active    
+	    REGION 6.1 - Head to End       
+	        (*  Function to calculate when the head of the parcel reaches the end of the conveyor
+	            When the PEC detects the parcels head, the functionality increments the displacement
+	            of the conveyor until it reaches the value of the distance between PEC and the end of the conveyor. 
+	            After that, the counter is reset and the bit #sx_AuxHeadToEnd is triggered to inform the system. *)
+	        #sdi_PECOutfeedDistanceOffset := #iUDT_EquipmentConfiguration.PEC_OutfeedDistanceOffset;
+	        
+	        IF #sdi_PECOutfeedDistanceOffset >= #iUDT_EquipmentConfiguration.PEC_OutfeedDistance
+	        THEN
+	            #sdi_PECOutfeedDistanceOffset := #iUDT_EquipmentConfiguration.PEC_OutfeedDistance - 1;
+	        END_IF;
+	        
+	        IF #F_TRIG_PEC_EosFiltered.Q THEN                                                                           // If the product's head is detected then
+	            #si_HeadToEnd := (#iUDT_EquipmentConfiguration.PEC_OutfeedDistance                                     // Move PEC distand minus PEC offset to static variable in cm
+	            - #iUDT_EquipmentConfiguration.PEC_OutfeedDistanceOffset) / 10;                                        // (Static variable is virtual distance between PEC and end of the conveyor) 
+	            
+	            #sx_AuxHeadToEnd := TRUE;                                                                               //And active head to end function
+	            #iqUDT_Handshake.RTS := TRUE;                                                                          //And Set Ready TO Send true when a parcel is detected in the PEC 
+	        END_IF;
+	        
+	        IF #sx_AuxHeadToEnd                                                                                         // If the product's head is detected then
+	            AND (#si_HeadToEnd > 0)                                                                                 //And Parcel's head did not arrive in the end of the conveyor yet
+	        THEN                                                                                                        // Then
+	            #si_HeadToEnd -= #iqUDT_OutfeedConveyorInterface.Displacement;                                         // then Count displacement until it arrives at the end of the conveyor
+	        ELSE                                                                                                        // Else
+	            #sx_AuxHeadToEnd := FALSE;                                                                              // Stop function head to end
+	        END_IF;
+	        
+	        // Falling edge trigger Aux Head to End bit
+	        #F_TRIG_AuxHeadToEnd(CLK := #sx_AuxHeadToEnd);
+	        IF #F_TRIG_AuxHeadToEnd.Q
+	        THEN
+	            #sx_AuxHeadAtEnd := TRUE;
+	        END_IF;
+	    END_REGION
+	    
+	    REGION 6.2 - Tail to Begin       
+	        (*   This function tracks when the parcels tail reaches the begin of the downstream conveyor
+	             When the PEC is clear, the function starts to increase the displacement until reaches the distance
+	             between PEC and the end of conveyor. *)
+	        
+	        IF #R_TRIG_PEC_EoSFiltered.Q THEN                                                                           // If product's tail is detected then
+	            #si_TailToBegin := (#iUDT_EquipmentConfiguration.PEC_OutfeedDistance / 10);                            // Move distance of the PEC to the end of the conveyor TO auxiliar static variable
+	        END_IF;
+	        
+	        IF #si_TailToBegin > 0 THEN                                                                                 // While the products tail doesn't reach the beginning of next conveyor
+	            #si_TailToBegin -= #iqUDT_OutfeedConveyorInterface.Displacement;                                       // count displacement until the product's tail arrives on the next conveyor
+	            #sx_TailToBegin := FALSE;                                                                               // Reset Tail to begin bit
+	        ELSE
+	            #sx_TailToBegin := TRUE;                                                                                // Product's tail arrived at the begin of the next conveyor
+	        END_IF;
+	        
+	        // Rising edge trigger Aux Tail to Begin bit
+	        #R_TRIG_TailToBegin(CLK := #sx_TailToBegin);
+	        
+	    END_REGION
+	    
+	    REGION 6.3 - Transfer in progress
+	        
+	        IF #iqUDT_Handshake.RTS                                                                                    // If it is Ready to send
+	            AND #iqUDT_Handshake.RTR                                                                               // AND Ready TO receive from downstream is available
+	            AND #sx_AuxHeadAtEnd                                                                                    // And Parcel is at end of conveyor
+	            AND NOT #sx_Gapping                                                                                     // And Not recovering from a dieback
+	        THEN                                                                                                        // Then
+	            #iqUDT_Handshake.TIP := TRUE;                                                                          // Set Transfer in progress bit
+	            #iqUDT_Handshake.RTS := FALSE;                                                                         // And reset Ready to send bit
+	            #sx_AuxHeadAtEnd := FALSE;                                                                              // And reset Parcel is at end of conveyor static bit
+	            
+	        END_IF;
+	        
+	        IF #R_TRIG_TailToBegin.Q THEN                                                                               // If the parcel tails transffered to downstream conveyor then 
+	            #iqUDT_Handshake.TIP := FALSE;                                                                         // Reset Transfer in progress bit
+	            #si_GapTailToHead := #iUDT_EquipmentConfiguration.Gap;                                                 // move required Gap to static variable
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 6.4 - Takeout conveyor clear
+	        (* Before machine startup downstream (takeout) conveyor must be cleard*)
+	        
+	        IF NOT #ix_ReadyToScan AND #R_TRIG_TakeoutConveyorRuning.Q
+	        THEN
+	            
+	            #sdi_ClearDistance := #idi_TakeoutConveyorLength / 10;
+	            
+	            #sx_TakeoutConveyorClear := FALSE;
+	            
+	        END_IF;
+	        
+	        IF #sdi_ClearDistance > 0 AND #ix_TakeoutConveyorRunning
+	        THEN
+	            
+	            #sdi_ClearDistance -= #iqUDT_Handshake.DownstreamDisplacement;
+	            
+	            IF #sdi_ClearDistance <= 0 THEN
+	                
+	                #sx_TakeoutConveyorClear := TRUE;
+	                #sdi_ClearDistance := 0;
+	                
+	            END_IF;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 6.5 - Startup squence
+	        (* If conditions are met, the machine is requested to power on. When started and the machine is powered on the prepare to scan command is given *)
+	        // Power on XRay generator
+	        #tx_PowerOn := #ix_24vOk                                                                                    // If harware inputs 24V, 400V and Profinet IO device is Ok the Power ON Xray.
+	        AND #ix_400vOk
+	        AND #ix_ProfinetOk;
+	        
+	        #sx_MachineHealthy := #tx_PowerOn                                                                           // IF Xray is power ON command is active from PLC
+	        AND #ix_PowerOn                                                                                             // AND Xray power on feedback is active 
+	        AND #ix_MachineOk;                                                                                          // And Machine is OK.
+	        
+	        // Prepare to Scan 
+	        #tx_PrepareToScan := #sx_MachineHealthy
+	        AND #sx_MainAutomaticActive                                                                                 // And Automatic activated
+	        AND NOT #sx_EnergySaveActive                                                                                // X-Ray is in energy save
+	        AND (#sx_TakeoutConveyorClear OR #ix_ReadyToScan);                                                     // And if downstream is clear or machine is ready to scan then send prepare to scan command to machine
+	        
+	    END_REGION
+	    
+	    REGION 6.6 - Run X-RAY belts
+	        
+	        // Start the outfeed Conveyor 
+	        #sx_OutfeedConveyorOn := #tx_PrepareToScan// Gantry start rotation, acceleration time ~90 sec. 
+	        AND #ix_Interlock
+	        AND NOT #sUDT_CommonStatus.Error                                                                           // Equipment has no errors and is ready to operate
+	        AND ((#ix_ReadyToScan                                                                                      // Gantry is ready and have the nominal Speed.
+	        AND (#ix_XrayReady                                                                                      // X-ray is ready to receive a bag.
+	        OR #sx_calibrating)                                                                                 // outfeed conveyor needs to keep running during calibration since main conveyor is running 
+	        ))
+	        AND (NOT #sx_Gapping                                                                                        // No Dieback
+	        OR #iqUDT_Handshake.TIP)                                                                               // OR transfer in progress
+	        AND (#iqUDT_Handshake.RTR                                                                                  // Ready to receive from upsteam 
+	        OR (NOT #sx_AuxHeadAtEnd                                                                                // or end position is Empty
+	        AND NOT #iqUDT_Handshake.TIP))                                                                         // Transfer is not in progress
+	        AND NOT #ix_TransitActive                                                                                   // AND Xray is not in transit mode
+	        AND NOT #ix_ServiceMode
+	        AND NOT #qx_IQTestInfeedHold;                                                                                    // AND Xray is not in service mode
+	        
+	        // Start the main conveyor
+	        #sx_MainConveyorOn := #tx_PrepareToScan// Gantry start rotation, acceleration time ~90 sec. 
+	        AND #ix_Interlock
+	        AND #sx_MainConvReady                                                                                       // Equipment has no errors and is ready to operate
+	        AND ((#ix_ReadyToScan                                                                                       // Gantry is ready and have the nominal Speed.
+	        AND (#ix_XrayReady                                                                                    // X-ray is ready receive a bag.
+	        OR #sx_calibrating)                                                                                     // main conveyor needs to keep running during calibration
+	        ))
+	        AND NOT #sx_ParcelAtEnd                                                                                     // No parcel at end of the conveyor
+	        AND ((#iqUDT_Handshake.RTR                                                                                 // Downstream conveyor is ready to receive
+	        OR (NOT #iqUDT_Handshake.RTS                                                                           // Position at outfeed is free, not detected yet
+	        AND #sx_OutfeedConveyorOn)                                                                          // and outfeed conveyor is on
+	        OR NOT #sx_ParcelAtEnd))                                                                                // or parcel is not detected in the window
+	        AND NOT #ix_TransitActive                                                                                   // AND Xray is not in transit mode
+	        AND NOT #ix_ServiceMode
+	        AND NOT #qx_IQTestInfeedHold;                                                                                    // AND Xray is not in service mode
+	        
+	        // Start the infeed conveyor
+	        #sx_InfeedConveyorOn :=
+	        #sx_MainConveyorOn
+	        AND #ix_MainSpeedOk;
+	        
+	    END_REGION
+	    
+	    REGION 6.9 - Dieback recovery
+	        IF NOT #iqUDT_Handshake.RTR                                                                                // no RTR
+	            AND #sx_MainAutomaticActive                                                                                 // Automatic activated
+	            AND NOT #sx_OutfeedConveyorOn                                                                           // outfeed is stopped
+	            AND NOT #iqUDT_Handshake.TIP                                                                           // TIP is not active
+	            AND #si_GapTailToHead > 0
+	        THEN
+	            #sx_Gapping := TRUE;
+	            
+	        END_IF;
+	        
+	        IF #si_GapTailToHead > 0                                                                                    // Gap is bigger than 0
+	            OR #sx_Gapping = TRUE                                                                                   // Bit is still high 
+	        THEN
+	            
+	            #si_GapTailToHead -= #iqUDT_Handshake.DownstreamDisplacement;                                          // decrease distance with actual displacement 
+	            
+	            IF #si_GapTailToHead <= 0                                                                               // Gap is smaller/equal to 0
+	            THEN
+	                
+	                #si_GapTailToHead := 0;                                                                             // reset Gapcounter
+	                #sx_Gapping := FALSE;                                                                               // reset dieback memory
+	                
+	            END_IF;
+	        END_IF;
+	    END_REGION
+	    
+	    REGION 6.10 - Interface with upstream conveyor
+	        
+	        // Move displacement TO upstream
+	        #iqUDT_HandShakeUp.DownstreamDisplacement := #iqUDT_MainConveyorInterface.Displacement;                  // Downstream displacement is moved to upstream conveyor to calculate gap
+	        
+	        // Scanning mode
+	        #iqUDT_HandShakeUp.RTR := (#sx_InfeedConveyorOn
+	        AND NOT #sx_RunningEmptyMain                                                                               // If not running conveyor empty
+	        AND NOT #sx_RunningEmptyOutfeed                                                                            // If not running conveyor empty
+	        AND NOT #ix_TransitActive                                                                                  // The transit mode is active.
+	        AND NOT #ix_ServiceMode)
+	        OR (#ix_IQTestSelection AND #sx_IQTestReady AND #ix_ReadyToScan AND #ix_MainSpeedOk);
+	        
+	    END_REGION
+	    
+	    REGION 6.11 - Check parcel at end function
+	        (* When the outfeed of the machine is stopped the main conveyor will continue to
+	        run until, if there is a parcel still on this conveyor, the parcel reaches the
+	        "ix_GINinMainTrack" position.
+	         *)
+	        
+	        IF NOT #sx_OutfeedConveyorOn AND #ix_GINinMainTrack                                                        // outfeed is not running and a GIN is detected in the tracking configured area
+	        THEN
+	            #sx_ParcelAtEnd := TRUE;                                                                               // Set parcel at end
+	        END_IF;
+	        
+	        IF #sx_OutfeedConveyorOn                                                                                   // Outfeed conveyor is running
+	            AND NOT #sx_RunningEmptyOutfeed                                                                        // Running empty is active
+	        THEN
+	            #sx_ParcelAtEnd := FALSE;                                                                              // Reset parcel at end
+	        END_IF;
+	    END_REGION
+	    
+	    REGION 6.12 - Calibration
+	        // Delay before the callibration is forced on. Normally the system waits for a gap in the flow to start. If this is timed out the callibration is forced on. 
+	        #s_CallibrationForceDelay(iudi_OnDelayTime := #iUDT_EquipmentConfiguration.CallibrationTimeout,
+	                                  iudi_OffDelayTime := 0,
+	                                  ix_SignalToDelay := (#ix_CalReq AND NOT #ix_AllowCalibration),
+	                                  ix_Enable := (#iUDT_EquipmentConfiguration.CallibrationTimeout > 0),
+	                                  qx_DelayedSignal => #sx_CallibrateForceOn);
+	        
+	        
+	        IF #ix_CalReq                                                                                               // IF  External calibration request is ON 
+	            AND (#ix_AllowCalibration                                                                               // And External callibration allow (a gap in flow present)
+	            OR #sx_CallibrateForceOn)                                                                               // Or There was no allow callibration in time, callibration is forced on
+	        THEN
+	            #sx_ReqToCal := TRUE;                                                                                   // Set request for calibration
+	        END_IF;
+	        
+	        IF NOT #ix_CalReq THEN                                                                                      // input request calibration will reset when calibraiton is done
+	            #sx_ReqToCal := FALSE;                                                                                  // Then reset calibration request
+	        END_IF;
+	        
+	        //set ready for calibration 
+	        IF #sx_ReqToCal                                                                                             // IF Request to calibration is active
+	            AND NOT #iqUDT_HandShakeUp.RTR                                                                         // And ready to receive to upstream is not active
+	            AND NOT #iqUDT_HandShakeUp.RTS                                                                         // And it is not ready to send
+	            AND NOT #iqUDT_HandShakeUp.TIP                                                                         // And not in transfer in progress
+	        THEN                                                                                                        // Then
+	            #sx_ReadyForCal := TRUE;                                                                                // Set ready for calibration 
+	        END_IF;
+	        
+	        //reset reday for calibration     
+	        IF NOT #ix_CalReq AND #ix_XrayReady THEN                                                                    // If Calibration request is not active and XRAY is ready then 
+	            #sx_ReadyForCal := FALSE;                                                                               // Reset ready for calibration
+	        END_IF;
+	        
+	        #qx_ReadyForCal := #sx_ReadyForCal;
+	        
+	    END_REGION
+	    
+	    REGION 6.13 - IQ Test sequence
+	        
+	        #R_TRIG_IQTest(CLK := #ix_IQTestSelection);
+	        
+	        IF #R_TRIG_IQTest.Q THEN
+	            #si_IQTestEmptyDistance := 1600;
+	        END_IF;
+	        
+	        IF #ix_IQTestSelection THEN
+	            
+	            IF #si_IQTestEmptyDistance > 0 AND #ix_TakeoutConveyorRunning AND #ix_MainSpeedOk THEN
+	                #si_IQTestEmptyDistance -= #iqUDT_MainConveyorInterface.Displacement;
+	            ELSE
+	                #sx_IQTestReady := TRUE;
+	            END_IF;
+	            
+	            IF #sx_IQTestReady AND #iqUDT_EquipmentControl.Command.AutomaticOn THEN
+	                
+	                #qx_IQTestInfeedHold := FALSE;
+	                #qx_IQTestOutfeedHold := FALSE;
+	                
+	                #qx_IQTestInfeedHold := NOT (#ix_ReadyToScan AND #ix_MainSpeedOk);
+	                
+	                #s_IQTestRealese(iudi_OnDelayTime := 0,
+	                                 iudi_OffDelayTime := 5000,
+	                                 ix_SignalToDelay := NOT #ix_IQTestStopPEC,
+	                                 qx_DelayedSignal => #qx_IQTestOutfeedHold);
+	                
+	            END_IF;
+	            
+	        ELSE
+	            #si_IQTestEmptyDistance := 0;
+	            #sx_IQTestReady := FALSE;
+	            #qx_IQTestInfeedHold := FALSE;
+	            #qx_IQTestOutfeedHold := FALSE;
+	        END_IF;
+	        
+	        #qx_IQTestIndication := (#ix_IQTestSelection AND "DB_Memory".Clock_1Hz) OR #sx_IQTestReady;
+	        
+	    END_REGION
+	    
+	    REGION 6.14 - Energy save
+	        
+	        IF #iUDT_EquipmentConfiguration.Energy THEN                                                                // If Energy save functionality is enable from configuration then
+	            
+	            IF #si_AuxEnergySave >= #iUDT_EquipmentConfiguration.EnergySaveLenght THEN                              // If energy save counter is greater than configigure energy save lenth then
+	                #sx_EnergySaveActive := TRUE; // Set energy save active
+	                #sx_ResetRunEmptyESave := TRUE; // Set to daisable run empty in case of energy save
+	            END_IF;
+	            
+	            IF (NOT (#sx_PEC_OutfeedEoSFiltered OR #sx_PEC_InfeedEoSFiltered)                                       // If Photo eye detects a parcel
+	                AND NOT #sx_EnergySaveActive)                                                                       // And Energy save is not active
+	                OR #ix_ResetEnergySave                                                                              // Or external Reset energy save request occured
+	                OR #iqUDT_HandShakeUp.ResetEnergySave                                                              // Or if Reset energy save request occur from upstream conveyor 
+	                OR #sx_Stopped                                                                                      // Or it is stopped signal
+	                // OR #iq_UDT_HandShakeUp.RTS                                                                          // Or upstream is ready to send
+	                OR (#sx_EnergySaveActive                                                                            // OR if Energy save active and Signaling request is done and PEC is covered
+	                AND (#sx_PEC_OutfeedEoSFiltered OR #sx_PEC_InfeedEoSFiltered)
+	                AND #F_TRIG_SignalingRequest.Q)
+	            THEN                                                                                                    // Then
+	                #si_AuxEnergySave := 0;                                                                             // Reset energy save counter
+	                #sx_EnergySaveActive := FALSE;                                                                      // Set energy save active to false
+	            ELSE                                                                                                    // Else
+	                #si_AuxEnergySave += #iqUDT_MainConveyorInterface.Displacement;                                    // Increament displacement Counter
+	            END_IF;
+	            
+	            
+	            
+	            // If energy save is active and a photo eye is triggered, signaling is request before start run again
+	            
+	            IF #sx_EnergySaveActive                                                                                 // Energy save active
+	                AND #F_TRIG_PEC_EosFiltered.Q                                                                       // ANd Photo eye detecting a parcel
+	                AND NOT #iqUDT_EquipmentControl.Request.SignalingRequest                                           // And Signaling not request
+	            THEN
+	                #iqUDT_EquipmentControl.Request.SignalingRequest := TRUE;                                          // Set signaling request true
+	            END_IF;
+	            
+	        ELSE                                                                                                        // If energy save functionality is disabled from configuration
+	            #si_AuxEnergySave := 0;                                                                                 // Reset energy save counter
+	            #sx_EnergySaveActive := FALSE;                                                                          // Set energy save false
+	        END_IF;
+	        
+	        //move energy save to downstream 
+	        #iqUDT_Handshake.ResetEnergySave :=
+	        #ix_ResetEnergySave                                                                                         // External reset energy save
+	        OR NOT #ix_PECOutfeedPosition                                                                                   // Outfeed conveyor PEC is covered 
+	        OR NOT #ix_PECInfeedEoS                                                                                    // Infeed conveyor PEC is covered 
+	        OR #iqUDT_HandShakeUp.ResetEnergySave                                                                      // Request from upstream to reset energysave
+	        OR #ix_CalReq;                                                                                              // Calibration request is active
+	        
+	    END_REGION
+	    
+	    REGION 6.15 - Move to outputs
+	        // Move temporary bits to output
+	        #qx_PowerOn := #tx_PowerOn;
+	        #qx_PrepareToScan := #tx_PrepareToScan;
+	        #qx_InfeedConveyorOn := #sx_InfeedConveyorOn;
+	        #qx_MainConveyorOn := #sx_MainConveyorOn;
+	        #qx_OutfeedConveyorOn := #sx_OutfeedConveyorOn;
+	        #qx_ESReset := #ix_SafetyReset;
+	        #qx_NoScan := #iUDT_HMICommand.NoScanMode;
+	    END_REGION
+	    
+	    REGION 6.16 - Update Interface
+	        
+	        //Infeed conveyor 
+	        #iqUDT_InfeedConveyorInterface.VFDRunning := #sx_InfeedConveyorOn;
+	        #iqUDT_InfeedConveyorInterface.RunFwd := #sx_InfeedConveyorOn;
+	        #iqUDT_InfeedConveyorInterface.VFDatSpeed := #sx_InfeedConveyorOn;
+	        #iqUDT_InfeedConveyorInterface.ResetStatistics := #iqUDT_EquipmentControl.Command.ResetData;
+	        #iqUDT_InfeedConveyorInterface.InternalErrorReset := #iqUDT_EquipmentControl.Command.Reset;
+	        
+	        // main conveyor
+	        #iqUDT_MainConveyorInterface.VFDRunning := #ix_MainSpeedOk;
+	        #iqUDT_MainConveyorInterface.RunFwd := #ix_MainSpeedOk;
+	        #iqUDT_MainConveyorInterface.VFDatSpeed := #ix_MainSpeedOk;
+	        #iqUDT_MainConveyorInterface.ResetStatistics := #iqUDT_EquipmentControl.Command.ResetData;
+	        #iqUDT_MainConveyorInterface.InternalErrorReset := #iqUDT_EquipmentControl.Command.Reset;
+	        
+	        // Outfeed conveyor
+	        #iqUDT_OutfeedConveyorInterface.VFDRunning := #sx_OutfeedConveyorOn;
+	        #iqUDT_OutfeedConveyorInterface.RunFwd := #sx_OutfeedConveyorOn;
+	        #iqUDT_OutfeedConveyorInterface.VFDatSpeed := #sx_OutfeedConveyorOn;
+	        #iqUDT_OutfeedConveyorInterface.ResetStatistics := #iqUDT_EquipmentControl.Command.ResetData;
+	        #iqUDT_OutfeedConveyorInterface.InternalErrorReset := #iqUDT_EquipmentControl.Command.Reset;
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 7 - Statistics
+	    // X-Ray mode active
+	    IF (NOT #sUDT_CommonStatus.Stopped AND NOT #ix_ServiceMode AND NOT #ix_TransitActive)
+	        OR #iqUDT_EquipmentControl.Command.ResetData
+	    THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := (NOT #sUDT_CommonStatus.Stopped AND NOT #ix_ServiceMode AND NOT #ix_TransitActive),
+	                        ix_RTrigActivate := #R_TRIG_XRayMode.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.XRayMode);
+	    END_IF;
+	    
+	    // Service mode active
+	    IF NOT #sUDT_CommonStatus.Stopped AND #ix_ServiceMode
+	        OR #iqUDT_EquipmentControl.Command.ResetData
+	    THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := NOT #sUDT_CommonStatus.Stopped AND #ix_ServiceMode,
+	                        ix_RTrigActivate := #R_TRIG_ServiceMode.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.ServiceMode);
+	    END_IF;
+	    
+	    // Transit mode active   
+	    IF NOT #sUDT_CommonStatus.Stopped AND #ix_TransitActive
+	        OR #iqUDT_EquipmentControl.Command.ResetData
+	    THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := NOT #sUDT_CommonStatus.Stopped AND #ix_TransitActive,
+	                        ix_RTrigActivate := #R_TRIG_TransitMode.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.TransitMode);
+	    END_IF;
+	    
+	    // Safety not Ok
+	    IF #ix_SafetyOk
+	        OR #iqUDT_EquipmentControl.Command.ResetData
+	    THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := NOT #ix_SafetyOk,
+	                        ix_RTrigActivate := #R_TRIG_Estop.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.EStopActive);
+	    END_IF;
+	    
+	    // Repairswitch
+	    IF #ix_RepairSwitch
+	        OR #iqUDT_EquipmentControl.Command.ResetData
+	    THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := NOT #ix_RepairSwitch,
+	                        ix_RTrigActivate := #R_TRIG_RepairSwitch.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.RepairSwitch);
+	    END_IF;
+	    
+	    // Temperature out OF range
+	    IF #ix_TempOutOfRange
+	        OR #iqUDT_EquipmentControl.Command.ResetData
+	    THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #ix_TempOutOfRange,
+	                        ix_RTrigActivate := #R_TRIG_TempOutOfRange.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.TempOutOfRange);
+	    END_IF;
+	    
+	    // Stopped
+	    IF #sUDT_CommonStatus.Stopped
+	        OR #iqUDT_EquipmentControl.Command.ResetData
+	    THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #sUDT_CommonStatus.Stopped,
+	                        ix_RTrigActivate := #R_TRIG_Stop.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.Stopped);
+	    END_IF;
+	    
+	    // Calibrating
+	    IF #sx_calibrating
+	        OR #iqUDT_EquipmentControl.Command.ResetData
+	    THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #sx_calibrating,
+	                        ix_RTrigActivate := #R_TRIG_Calibrating.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.Calibrating);
+	    END_IF;
+	    
+	    // Callibration forced
+	    #R_TRIG_CalibrationForce(CLK := #sx_CallibrateForceOn);
+	    
+	    IF #sx_CallibrateForceOn
+	        OR #iqUDT_EquipmentControl.Command.ResetData
+	    THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #sx_CallibrateForceOn,
+	                        ix_RTrigActivate := #R_TRIG_CalibrationForce.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.CallibrationForced);
+	    END_IF;
+	    
+	    // Interlock
+	    IF NOT #ix_Interlock
+	        OR #iqUDT_EquipmentControl.Command.ResetData
+	    THEN
+	        
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := NOT #ix_Interlock,
+	                        ix_RTrigActivate := #F_TRIG_Interlock.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.Interlock);
+	    END_IF;
+	    
+	    // Infeed conveyor "Error"
+	    #R_TRIG_InfConvErr(CLK := #sUDT_HMIStatus.InfeedConvSpecific.Conv_ERR);
+	    
+	    IF #sUDT_HMIStatus.InfeedConvSpecific.Conv_ERR
+	        OR #iqUDT_EquipmentControl.Command.ResetData
+	    THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #sUDT_HMIStatus.InfeedConvSpecific.Conv_ERR,
+	                        ix_RTrigActivate := #R_TRIG_InfConvErr.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.InfeedConveyorError);
+	    END_IF;
+	    
+	    // Outfeed conveyor "Error"
+	    #R_TRIG_OutfConvErr(CLK := #sUDT_HMIStatus.OutfeedConvSpecific.Conv_ERR);
+	    
+	    IF #sUDT_HMIStatus.OutfeedConvSpecific.Conv_ERR
+	        OR #iqUDT_EquipmentControl.Command.ResetData
+	    THEN
+	        
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #sUDT_HMIStatus.OutfeedConvSpecific.Conv_ERR,
+	                        ix_RTrigActivate := #R_TRIG_OutfConvErr.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.OutfeedConveyorError);
+	    END_IF;
+	    
+	    // Encoder "Error"
+	    #R_TRIG_EncoderErr(CLK := #sUDT_HMIStatus.InfeedConvSpecific.Encoder_ERR
+	                       OR #sUDT_HMIStatus.MainConvSpecific.Encoder_ERR
+	                       OR #sUDT_HMIStatus.OutfeedConvSpecific.Encoder_ERR);
+	    
+	    IF #sUDT_HMIStatus.InfeedConvSpecific.Encoder_ERR
+	        OR #sUDT_HMIStatus.MainConvSpecific.Encoder_ERR
+	        OR #sUDT_HMIStatus.OutfeedConvSpecific.Encoder_ERR
+	        OR #iqUDT_EquipmentControl.Command.ResetData
+	    THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #sUDT_HMIStatus.InfeedConvSpecific.Encoder_ERR
+	                        OR #sUDT_HMIStatus.MainConvSpecific.Encoder_ERR
+	                        OR #sUDT_HMIStatus.OutfeedConvSpecific.Encoder_ERR,
+	                        ix_RTrigActivate := #R_TRIG_EncoderErr.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.EncoderError);
+	    END_IF;
+	    
+	    // Move statistics to statistics output
+	    
+	END_REGION
+	
+	REGION 8 - Status    
+	    REGION 8.1 - Infeed conveyor common status
+	        #sUDT_InfeedConvCommonStatus.Stopped := NOT #sx_MainAutomaticActive OR #sUDT_InfeedConvCommonStatus.Error;
+	        #sUDT_InfeedConvCommonStatus.Halted := FALSE;
+	        #sUDT_InfeedConvCommonStatus.Running := #sx_InfeedConveyorOn;
+	        #sUDT_InfeedConvCommonStatus.Dieback := #sx_MainAutomaticActive AND NOT #sx_InfeedConveyorOn AND NOT #sx_EnergySaveActive;
+	        #sUDT_InfeedConvCommonStatus.Manual := FALSE;
+	        #sUDT_InfeedConvCommonStatus.EnergySave := #sx_EnergySaveActive;
+	        #sUDT_InfeedConvCommonStatus.Warning := FALSE;
+	        #sUDT_InfeedConvCommonStatus.SafetyStop := NOT #ix_SafetyOk;
+	        
+	        IF #sUDT_InfeedConvCommonStatus <> #sUDT_InfeedConvCommonStatusOld THEN
+	            
+	            // Set status to status number
+	            #sUDT_HMIStatus.InfeedConvSpecific.Status := 0;                                        // Initialise status number              
+	            
+	            IF #sUDT_InfeedConvCommonStatus.EnergySave                                                 // Energy save
+	            THEN
+	                
+	                #sUDT_HMIStatus.InfeedConvSpecific.Status := "DB_HMIStatusConfiguration".EnergySave;
+	                
+	            END_IF;
+	            
+	            IF #sUDT_InfeedConvCommonStatus.Running                                                    // Running
+	            THEN
+	                
+	                #sUDT_HMIStatus.InfeedConvSpecific.Status := "DB_HMIStatusConfiguration".Running;
+	                
+	            END_IF;
+	            
+	            IF #sUDT_InfeedConvCommonStatus.Stopped                                                    // Stopped
+	            THEN
+	                
+	                #sUDT_HMIStatus.InfeedConvSpecific.Status := "DB_HMIStatusConfiguration".Stopped;
+	                
+	            END_IF;
+	            
+	            IF #sUDT_InfeedConvCommonStatus.Dieback                                                    // Dieback
+	            THEN
+	                
+	                #sUDT_HMIStatus.InfeedConvSpecific.Status := "DB_HMIStatusConfiguration".Dieback;
+	                
+	            END_IF;
+	            
+	            IF #sUDT_HMIStatus.InfeedConvSpecific.Conv_ERR                                         // Conveyor error
+	            THEN
+	                
+	                #sUDT_HMIStatus.InfeedConvSpecific.Status := "DB_HMIStatusConfiguration".Error;
+	                
+	            END_IF;
+	            
+	            IF #sUDT_HMIStatus.InfeedConvSpecific.Encoder_ERR                                      // Encoder error
+	            THEN
+	                
+	                #sUDT_HMIStatus.InfeedConvSpecific.Status := "DB_HMIStatusConfiguration".EncoderError;
+	                
+	            END_IF;
+	            
+	            IF #sUDT_HMIStatus.InfeedConvSpecific.PEC_EoSJam                                       // EOS PEC jam
+	            THEN
+	                
+	                #sUDT_HMIStatus.InfeedConvSpecific.Status := "DB_HMIStatusConfiguration".PECJam;
+	                
+	            END_IF;
+	            
+	            IF #sUDT_InfeedConvCommonStatus.SafetyStop                                                // Safety stop
+	            THEN
+	                
+	                #sUDT_HMIStatus.InfeedConvSpecific.Status := "DB_HMIStatusConfiguration".SafetyStop;
+	                
+	            END_IF;
+	            #qUDT_HMIStatus := #sUDT_HMIStatus;                                                  // Copy status to output
+	            #sUDT_InfeedConvCommonStatusOld := #sUDT_InfeedConvCommonStatus;                             // Copy status TO memory
+	            
+	        END_IF;
+	    END_REGION
+	    
+	    
+	    REGION 8.2 - Main conveyor common status
+	        
+	        #sUDT_MainConvCommonStatus.Stopped := NOT #sx_MainAutomaticActive OR #sUDT_MainConvCommonStatus.Error;
+	        #sUDT_MainConvCommonStatus.Halted := FALSE;
+	        #sUDT_MainConvCommonStatus.Running := #sx_MainConveyorOn;
+	        #sUDT_MainConvCommonStatus.Dieback := #sx_MainAutomaticActive AND NOT #sx_MainConveyorOn AND NOT #sx_EnergySaveActive;
+	        #sUDT_MainConvCommonStatus.Manual := FALSE;
+	        #sUDT_MainConvCommonStatus.EnergySave := #sx_EnergySaveActive;
+	        #sUDT_MainConvCommonStatus.Warning := FALSE;
+	        #sUDT_MainConvCommonStatus.SafetyStop := NOT #ix_SafetyOk;
+	        
+	        IF #sUDT_MainConvCommonStatus <> #sUDT_MainConvCommonStatusOld THEN
+	            // Set status to status number
+	            #sUDT_HMIStatus.MainConvSpecific.Status := 0;                                        // Initialise status number              
+	            
+	            IF #sUDT_MainConvCommonStatus.EnergySave                                                 // Energy save
+	            THEN
+	                
+	                #sUDT_HMIStatus.MainConvSpecific.Status := "DB_HMIStatusConfiguration".EnergySave;
+	                
+	            END_IF;
+	            
+	            IF #sUDT_MainConvCommonStatus.Running                                                    // Running
+	            THEN
+	                
+	                #sUDT_HMIStatus.MainConvSpecific.Status := "DB_HMIStatusConfiguration".Running;
+	                
+	            END_IF;
+	            
+	            IF #sUDT_MainConvCommonStatus.Stopped                                                    // Stopped
+	            THEN
+	                
+	                #sUDT_HMIStatus.MainConvSpecific.Status := "DB_HMIStatusConfiguration".Stopped;
+	                
+	            END_IF;
+	            
+	            IF #sUDT_MainConvCommonStatus.Dieback                                                    // Dieback
+	            THEN
+	                
+	                #sUDT_HMIStatus.MainConvSpecific.Status := "DB_HMIStatusConfiguration".Dieback;
+	                
+	            END_IF;
+	            
+	            IF #sUDT_HMIStatus.MainConvSpecific.Conv_ERR                                         // Conveyor error
+	            THEN
+	                
+	                #sUDT_HMIStatus.MainConvSpecific.Status := "DB_HMIStatusConfiguration".Error;
+	                
+	            END_IF;
+	            
+	            IF #sUDT_HMIStatus.MainConvSpecific.Encoder_ERR                                      // Encoder error
+	            THEN
+	                
+	                #sUDT_HMIStatus.MainConvSpecific.Status := "DB_HMIStatusConfiguration".EncoderError;
+	                
+	            END_IF;
+	            
+	            IF #sUDT_MainConvCommonStatus.SafetyStop                                                // Safety stop
+	            THEN
+	                
+	                #sUDT_HMIStatus.MainConvSpecific.Status := "DB_HMIStatusConfiguration".SafetyStop;
+	                
+	            END_IF;
+	            #sUDT_MainConvCommonStatusOld := #sUDT_MainConvCommonStatus;                               // Copy status TO memory
+	        END_IF;
+	    END_REGION
+	    
+	    
+	    REGION 8.3 - Outfeed conveyor common status
+	        
+	        #sUDT_OutfeedConvCommonStatus.Stopped := NOT #sx_MainAutomaticActive OR #sUDT_OutfeedConvCommonStatus.Error;
+	        #sUDT_OutfeedConvCommonStatus.Halted := FALSE;
+	        #sUDT_OutfeedConvCommonStatus.Running := #sx_OutfeedConveyorOn;
+	        #sUDT_OutfeedConvCommonStatus.Dieback := #sx_MainAutomaticActive AND NOT #sx_OutfeedConveyorOn AND NOT #sx_EnergySaveActive;
+	        #sUDT_OutfeedConvCommonStatus.Manual := FALSE;
+	        #sUDT_OutfeedConvCommonStatus.EnergySave := #sx_EnergySaveActive;
+	        #sUDT_OutfeedConvCommonStatus.Warning := FALSE;
+	        #sUDT_OutfeedConvCommonStatus.SafetyStop := NOT #ix_SafetyOk;
+	        
+	        IF #sUDT_OutfeedConvCommonStatus <> #sUDT_OutfeedConvCommonStatusOld THEN
+	            
+	            // Set status to status number
+	            #sUDT_HMIStatus.OutfeedConvSpecific.Status := 0;                                     // Initialise status number              
+	            
+	            IF #sUDT_OutfeedConvCommonStatus.EnergySave                                              // Energy save
+	            THEN
+	                
+	                #sUDT_HMIStatus.OutfeedConvSpecific.Status := "DB_HMIStatusConfiguration".EnergySave;
+	                
+	            END_IF;
+	            
+	            IF #sUDT_OutfeedConvCommonStatus.Running                                                 // Running
+	            THEN
+	                
+	                #sUDT_HMIStatus.OutfeedConvSpecific.Status := "DB_HMIStatusConfiguration".Running;
+	                
+	            END_IF;
+	            
+	            IF #sUDT_OutfeedConvCommonStatus.Stopped                                                 // Stopped
+	            THEN
+	                
+	                #sUDT_HMIStatus.OutfeedConvSpecific.Status := "DB_HMIStatusConfiguration".Stopped;
+	                
+	            END_IF;
+	            
+	            IF #sUDT_OutfeedConvCommonStatus.Dieback                                                 // Dieback
+	            THEN
+	                
+	                #sUDT_HMIStatus.OutfeedConvSpecific.Status := "DB_HMIStatusConfiguration".Dieback;
+	                
+	            END_IF;
+	            
+	            IF #sUDT_HMIStatus.OutfeedConvSpecific.Conv_ERR                                      // Conveyor error
+	            THEN
+	                
+	                #sUDT_HMIStatus.OutfeedConvSpecific.Status := "DB_HMIStatusConfiguration".Error;
+	                
+	            END_IF;
+	            
+	            IF #sUDT_HMIStatus.OutfeedConvSpecific.Encoder_ERR                                   // Encoder error
+	            THEN
+	                
+	                #sUDT_HMIStatus.OutfeedConvSpecific.Status := "DB_HMIStatusConfiguration".EncoderError;
+	                
+	            END_IF;
+	            
+	            IF #sUDT_HMIStatus.OutfeedConvSpecific.PEC_EoSJam                                    // EOS PEC jam
+	            THEN
+	                
+	                #sUDT_HMIStatus.OutfeedConvSpecific.Status := "DB_HMIStatusConfiguration".PECJam;
+	                
+	            END_IF;
+	            
+	            IF #sUDT_OutfeedConvCommonStatus.SafetyStop                                              // Safety stop
+	            THEN
+	                
+	                #sUDT_HMIStatus.OutfeedConvSpecific.Status := "DB_HMIStatusConfiguration".SafetyStop;
+	                
+	            END_IF;
+	            #sUDT_OutfeedConvCommonStatusOld := #sUDT_OutfeedConvCommonStatus;                          // Copy status TO memory
+	        END_IF;
+	    END_REGION
+	    
+	    
+	    REGION 8.4 - Xray Common status
+	        
+	        #sUDT_CommonStatus.Stopped := NOT #sx_MainAutomaticActive;                                                // stopped
+	        #sUDT_CommonStatus.Running := #sx_MainAutomaticActive AND #tx_PrepareToScan AND #iqUDT_HandShakeUp.RTR AND NOT #sx_EnergySaveActive;         // Running
+	        #sUDT_CommonStatus.Halted := FALSE;                                                                       // Halted
+	        #sUDT_CommonStatus.Dieback := #sx_MainAutomaticActive AND #tx_PrepareToScan AND NOT #iqUDT_HandShakeUp.RTR AND NOT #sx_EnergySaveActive;     // Die back
+	        #sUDT_CommonStatus.Manual := #sx_ManualModeActive;                                                        // Manual
+	        #sUDT_CommonStatus.EnergySave := #sx_EnergySaveActive;                                                    // Energy save active
+	        #sUDT_CommonStatus.SafetyStop := NOT #ix_SafetyOk;                                                        // Safety not ok
+	        
+	        IF #sUDT_CommonStatusOld <> #sUDT_CommonStatus                                          // update on change
+	        THEN
+	            
+	            // Set status to status number
+	            #sUDT_HMIStatus.Status := 0;                                                         // Initialise status number              
+	            
+	            IF #sUDT_CommonStatus.EnergySave                                                     // Energy save
+	            THEN
+	                
+	                #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".EnergySave;
+	                
+	            END_IF;
+	            
+	            IF #sUDT_CommonStatus.Running                                                        // Running
+	            THEN
+	                
+	                #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Running;
+	                
+	            END_IF;
+	            
+	            IF #sUDT_CommonStatus.Stopped                                                       // Stopped
+	            THEN
+	                
+	                #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Stopped;
+	                
+	            END_IF;
+	            
+	            IF #sUDT_MainConvCommonStatus.Dieback                                                    // Dieback
+	            THEN
+	                
+	                #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Dieback;
+	                
+	            END_IF;
+	            
+	            IF #sUDT_CommonStatus.Manual                                                       // Manual
+	            THEN
+	                
+	                #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Manual;
+	                
+	            END_IF;
+	            
+	(*            IF #s_UDT_CommonStatus.Warning                                                      // Warning
+	            THEN
+	                
+	                #s_UDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Warning;
+	                
+	            END_IF; *)
+	            
+	            IF #sUDT_CommonStatus.Error                                                       // Manual
+	            THEN
+	                
+	                #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Error;
+	                
+	            END_IF;
+	            
+	            IF #sUDT_CommonStatus.SafetyStop                                                  // Safety stop
+	            THEN
+	                
+	                #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".SafetyStop;
+	                
+	            END_IF;
+	            
+	            #sUDT_CommonStatusOld := #sUDT_CommonStatus;                                     // Copy status TO memory
+	            
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    #qUDT_HMIStatus := #sUDT_HMIStatus;
+	    
+	END_REGION
+	
+	REGION 9 - Report to control block
+	    //Xray
+	    "FC_EquipmentReport"(iUDT_Status := #sUDT_CommonStatus,
+	                         iqUDT_Control := #iqUDT_EquipmentControl);
+	    //Outfeed conveyor
+	    "FC_EquipmentReport"(iUDT_Status := #sUDT_OutfeedConvCommonStatus,
+	                         iqUDT_Control := #iqUDT_EquipmentControl);
+	    //Main conveyor
+	    "FC_EquipmentReport"(iUDT_Status := #sUDT_MainConvCommonStatus,
+	                         iqUDT_Control := #iqUDT_EquipmentControl);
+	    // Infeed conveyor
+	    "FC_EquipmentReport"(iUDT_Status := #sUDT_InfeedConvCommonStatus,
+	                         iqUDT_Control := #iqUDT_EquipmentControl);
+	END_REGION
+END_FUNCTION_BLOCK
+

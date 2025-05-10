@@ -1,0 +1,118 @@
+﻿FUNCTION_BLOCK "FB_MergeCapacity"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 218
+// END_ATTRIBUTES
+   VAR_INPUT 
+      ix_PEC_Merge { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      iUDT_FlowConfig { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_FlowConfiguration" := ([6(1.0)], (), (), (), (), ());
+      ix_XBSInductAvailable { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+   END_VAR
+
+   VAR_OUTPUT 
+      qr_FlowCountMerge { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_EquipmentControl : "UDT_EquipmentControl";
+   END_VAR
+
+   VAR 
+      s_R_TRIG_ParcelDetect_Merge {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge of PEC signal
+      ss_CountingRegMerge { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[1..50] of Real;   //  Counting registers parcels
+      s_FB_Pulse_TimerEndMergePeriod { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_Pulse";
+      sr_FlowMerge { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;
+   END_VAR
+
+   VAR_TEMP 
+      tx_EndMergePeriod : Bool;
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	|                                                                                      |
+	|  Copyright  2022             MHS                                                     |
+	|  All Rights Reserved         Larenweg 90                                             |
+	|                              5234 KC 's-Hertogenbosch,                               |
+	|                              Netherlands                                             |
+	|                                                                                      |
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author       | Remark
+	----------------------------------------------------------------------------------------
+	20/04/2022  | 3.0       | M.Roijen     | first release MHS TIA 15.1
+	13/03/2024  | 4.1       | S.Nieswiec   | first release MHS TIA 18
+	
+	*)
+	
+	REGION 1 - Obtain capacity of Merge
+	    
+	    // Rising edge PEC signal
+	    #s_R_TRIG_ParcelDetect_Merge(CLK := #ix_PEC_Merge);
+	    
+	    // Increase first counting register when new parcel detect
+	    // 
+	    IF (#s_R_TRIG_ParcelDetect_Merge.Q)
+	    THEN
+	        #ss_CountingRegMerge[1] += 1;
+	    END_IF;
+	    
+	    
+	    #s_FB_Pulse_TimerEndMergePeriod(iudi_PulseTime := #iUDT_FlowConfig.PeriodMergeCapacity * 1000,
+	                                    qx_Pulse => #tx_EndMergePeriod);
+	    
+	    //Save capacity at the end of the period to array
+	    
+	    IF (#tx_EndMergePeriod)
+	    THEN
+	        
+	        #sr_FlowMerge := (#ss_CountingRegMerge[1] / UDINT_TO_REAL(#iUDT_FlowConfig.PeriodMergeCapacity) * 3600);
+	        
+	        IF NOT #ix_XBSInductAvailable THEN
+	            #sr_FlowMerge := 0;
+	        END_IF;
+	        
+	        // Shifted counting register by one element down  
+	        MOVE_BLK(IN := #ss_CountingRegMerge[1],
+	                 COUNT := 49,
+	                 OUT => #ss_CountingRegMerge[2]);
+	        
+	        // Reset first register
+	        #ss_CountingRegMerge[1] := 0;
+	        
+	    END_IF;
+	    
+	    
+	    
+	END_REGION
+	
+	
+	REGION 2 - Flow count reset
+	    
+	    IF #iqUDT_EquipmentControl.Command.ResetData
+	        
+	    THEN
+	        FILL_BLK(IN := 0,
+	                 COUNT := 50,
+	                 OUT => #ss_CountingRegMerge[1]);
+	        #sr_FlowMerge := 0;
+	    END_IF;
+	    
+	    
+	    
+	END_REGION
+	
+	
+	REGION 3 - Write outputs   
+	    
+	    #qr_FlowCountMerge := #sr_FlowMerge;
+	    
+	END_REGION
+	
+END_FUNCTION_BLOCK
+

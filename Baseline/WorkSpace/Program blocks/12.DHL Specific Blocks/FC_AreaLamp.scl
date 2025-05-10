@@ -1,0 +1,71 @@
+﻿FUNCTION "FC_AreaLamp" : Void
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 37
+// END_ATTRIBUTES
+   VAR_INPUT 
+      ix_SystemStartup : Bool;
+      ix_SystemManualStatus : Bool;
+      ix_SystemError : Bool;
+   END_VAR
+
+   VAR_OUTPUT 
+      qx_OrangeLamp : Bool;
+      qx_Buzzer : Bool;
+   END_VAR
+
+   VAR_TEMP 
+      tx_SystemStartup : Bool;
+      tx_ManualMode : Bool;
+      tx_SystemError : Bool;
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	|                                                                                      |
+	|  Copyright  2023             FORTNA Europe BV                                        |
+	|  All Rights Reserved         Netherlands                                             |
+	|                                                                                      |
+	---------------------------------------------------------------------------------------- 
+	
+	Version history:
+	Date        | Version   | Author          | Remark
+	----------------------------------------------------------------------------------------
+	13/10/2023   | 1.0       | P.Gryszczyk       | First Release | DHL Munich 2023
+	13/03/2024   | 1.1       | S.Nieswiec        | Update to new baseline
+	*)
+	
+	REGION 1 - Static clear
+	    #tx_SystemStartup := FALSE;
+	    #tx_ManualMode := FALSE;
+	END_REGION
+	
+	REGION 2 - All modes
+	    
+	    IF #ix_SystemManualStatus THEN
+	        #tx_ManualMode := TRUE;
+	    END_IF;
+	    
+	    IF #ix_SystemStartup THEN
+	        #tx_SystemStartup := TRUE;
+	    END_IF;
+	    IF #ix_SystemError THEN
+	        #tx_SystemError := TRUE;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 3 - Outputs
+	    
+	    #qx_OrangeLamp := #tx_SystemError
+	    OR "DB_Memory".Clock_1Hz AND (#tx_SystemStartup OR #tx_ManualMode);
+	    
+	    #qx_Buzzer := #tx_SystemStartup;
+	    
+	END_REGION
+END_FUNCTION
+

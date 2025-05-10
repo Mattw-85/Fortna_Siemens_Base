@@ -1,0 +1,1173 @@
+﻿FUNCTION_BLOCK "FB_CrossOver"
+TITLE = FB_CrossOver
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 196
+// END_ATTRIBUTES
+//Function to control a merge left/right/straight. A conveyor, part of the merge, will move up or down to change the direction. Moving up and down control is done by this block. 
+   VAR_INPUT 
+      iUDT_Configuration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_CrossoverConfiguration";   // Configuration structure
+      ii_DisplacementRoller { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Actual displacement of the rollerconveyor
+      ii_DisplacementBelt { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Actual displacement of the beltconveyor
+      ix_HardwareOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when  hardware is Ok
+      ix_400vOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when 400VAC is healthy
+      ix_24vOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when 24VDC is healthy
+      ix_SafetyOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when safety is ok
+      ix_AirPressureOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Air pressure circuit healthy
+      ix_SectionIsDown { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when section is down
+      ix_SectionIsUp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when section is up
+      ix_Conveyor1Auto { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Conveyor is started in auto
+      ix_Conveyor2Auto { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Conveyor is started in auto
+      ix_Conveyor3Auto { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Conveyor is started in auto
+      ix_Conveyor4Auto { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Conveyor is started in auto
+      ix_PECOutfeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True when outfeed PEC is not occupied
+   END_VAR
+
+   VAR_OUTPUT 
+      qUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_Crossoverstatus";   // HMI status structure
+      qUDT_Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_CommonStatus";   // Common status structure
+      qUDT_RollerConveyorInterface { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Interface roller conveyor
+         Hold { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Hold the conveyor
+         RunFwd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Run conveyor forward
+         RunRvs { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Run conveyor reverse
+      END_STRUCT;
+      qUDT_BeltConveyorInterface { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Interface belt conveyor
+         Hold { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Hold the conveyor
+         RunFwd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Run conveyor forward
+         RunRvs { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Run conveyor reverse
+      END_STRUCT;
+      qx_SectionUp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Output to control section up
+      qx_SectionDown { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Output to control section down
+   END_VAR
+
+   VAR_IN_OUT 
+      iqa_TrackingDataRoller : Array[*] of Int;   // Tracking data
+      iqa_TrackingDataBelt : Array[*] of Int;   // Tracking data
+      iqUDT_EquipmentControl : "UDT_EquipmentControl";   // Equipment control structure
+      iqUDT_CrossOverCommand : "UDT_CrossoverCommand";   // Conveyor command stucture
+      iqUDT_Statistics : "UDT_ConveyorStatistics";   // Statistics structure
+      iqUDT_HandShakeRollerConveyor : "UDT_ConveyorHandshake";
+      iqUDT_HandShakeBeltConveyor : "UDT_ConveyorHandshake";
+      iqUDT_HandShakeConveyor1 : "UDT_ConveyorHandshake";   // Handshake structure low level conveyor
+      iqUDT_HandShakeConveyor2 : "UDT_ConveyorHandshake";   // Handshake structure low level conveyor
+      iqUDT_HandShakeConveyor3 : "UDT_ConveyorHandshake";   // Handshake structure high level conveyor
+      iqUDT_HandShakeConveyor4 : "UDT_ConveyorHandshake";   // Handshake structure high level conveyor
+   END_VAR
+
+   VAR 
+      sa_FiFo { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[1..#ci_FiFoLength] of Int;   // FiFo for
+      sUDT_Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   // Common status structure
+      sUDT_StatusOld { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   // Common status structure
+      sFB_UpMonitor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // Timer to monitor divert took too long to move to upper position
+      sFB_DownMonitor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";
+      sFB_PECOutfeedOnOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";
+      sR_TRIG_RTSConveyor1 {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge trigger RTS signal from infeed
+      sR_TRIG_RTSConveyor2 {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge trigger RTS signal from infeed
+      sR_TRIG_RTSConveyor3 {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge trigger RTS signal from infeed
+      sR_TRIG_RTSConveyor4 {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge trigger RTS signal from infeed
+      sF_TRIG_Transport {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   // Falling edge trigger transport
+      sR_TRIG_ManualMode {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge trigger manual mode
+      sF_TRIG_ManualMode {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   // Falling edge trigger manual mode
+      sR_TRIG_PrestartManual {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge of manual prestart
+      sR_TRIG_ManualGoUp {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge run conveyor in manual mode
+      sR_TRIG_ManualGoDown {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge trigger manual jog
+      sR_TRIG_PecOutfeed {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge of reverse direction
+      sF_TRIG_Jog {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   // Falling edge trigger manual mode jog
+      sR_TRIG_DeviceUpTime {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge trigger conveyor up time
+      sR_TRIG_DeviceStopped {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge of stop
+      sR_TRIG_DeviceDownTime {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge trigger conveyor down
+      si_Step { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;
+      si_Conveyor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Active infeed
+      si_LoopArrayCount { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // FiFo process counter
+      si_Gin { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // New GIN found
+      si_Length { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Length of the product
+      si_Stopposition { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Position to stop
+      si_Position { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Position counter
+      sx_PECOutfeedFiltered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Signal filtered with on and off delay
+      sx_PECLeftFiltered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Signal filtered with on and off delay
+      sx_PECRightFiltered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Signal filtered with on and off delay
+      sx_Active { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Device sequence is activated for parcel
+      sx_DataReceived { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Handshake from upstream conveyor
+      sx_InfeedCHK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Step Infeed check
+      sx_MoveSectionUpinfeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Step move device to upper position
+      sx_MoveSectionUpOutfeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Step move device to upper position
+      sx_MoveSectionUpEnd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Step move device to upper position
+      sx_MoveSectionDownInfeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Step move device to lower position
+      sx_MoveSectionDownOutfeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Step move device to lower position
+      sx_MoveSectiondownEnd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Step move device to lower position
+      sx_BeltTransportIn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Step transport is activated
+      sx_BeltTransportOut { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Step transport is activated
+      sx_RollerTransportIn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Step transport is activated
+      sx_RollerTransportOut { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Step transport is activated
+      sx_RollerRTR { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Lower deck RTR signal
+      sx_BeltRTR { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Upper deck RTR signal
+      sx_Ready { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Conveyor Ready to operate in Automatic mode
+      sx_AutomaticActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Running in automatic
+      sx_PreStartManual { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Pre conditions to run conveyor in manual mode
+      sx_ManualModeActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Manual mode active
+      sx_ManualRunning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Conveyor running in manual mode
+      sx_ManualGoUp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Manual control go Up
+      sx_ManualGoDown { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Manual control go down
+      sx_ManUP { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Manual go up
+      sx_ManDown { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Manual go down
+      sx_ConfigurationError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Commissioning: configuration of parameters is wrong
+      sx_OutfeedLowlevel { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // The outfeedis low level
+      sx_OutfeedHighlevel { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // The outfeedis high level
+      sx_NoHighLevelInfeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // None of the high level conveyors isinfeed
+      sx_NoLowLevelInfeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // None of the low level conveyors isinfeed
+      sx_LeftRequest { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Request left outfeed position for actual parcel
+      sx_RightRequest { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Request right outfeed position for actual parcel
+      sx_DivertUpRunTimeErr { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // It is taking too long to move divert up
+      sx_DivertDownRunTimeErr { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // It is taking too long to move divert down
+      sx_UpTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Device is up
+      sx_DownTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Device is down
+      sx_StoppedTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Device is stopped
+   END_VAR
+
+   VAR_TEMP 
+      ta_ConfigErr : Array[0..10] of Bool;
+   END_VAR
+
+   VAR CONSTANT 
+      ci_FiFoLength : Int := 10;
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	01/03/2023  | 1.0       | F.Baten       | Initial version
+	*)
+	
+	REGION 1 - Initial
+	    REGION 1.1 - First PLC cycle
+	        
+	        IF "DB_Memory".FirstScan
+	        THEN
+	            #sx_AutomaticActive := FALSE;                                       // switch of automatic activ
+	            
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 1.2 - Triggers
+	        
+	        // Rising edge trigger manual mode
+	        #sR_TRIG_ManualMode(CLK := #iqUDT_CrossOverCommand.ManualMode
+	                            OR #iqUDT_EquipmentControl.Command.ManualMode);
+	        
+	        // Falling edge trigger manual mode
+	        #sF_TRIG_ManualMode(CLK := #iqUDT_CrossOverCommand.ManualMode
+	                            OR #iqUDT_EquipmentControl.Command.ManualMode);
+	        
+	        // Rising edge trigger to start in manual mode
+	        #sR_TRIG_ManualGoUp(CLK := #iqUDT_CrossOverCommand.ManualUp);
+	        
+	        // Rising edge trigger manual mode jog
+	        #sR_TRIG_ManualGoDown(CLK := #iqUDT_CrossOverCommand.ManualDown);
+	        
+	        // Rising edge PEC outfeed
+	        #sR_TRIG_PecOutfeed(CLK := #sx_PECOutfeedFiltered);
+	        
+	        // Infeed conveyor is ready to send
+	        #sR_TRIG_RTSConveyor1(CLK := #iUDT_Configuration.Conveyor1.IsInfeed AND #iqUDT_HandShakeConveyor1.RTS AND #ix_Conveyor1Auto);
+	        #sR_TRIG_RTSConveyor2(CLK := #iUDT_Configuration.Conveyor2.IsInfeed AND #iqUDT_HandShakeConveyor2.RTS AND #ix_Conveyor2Auto);
+	        #sR_TRIG_RTSConveyor3(CLK := #iUDT_Configuration.Conveyor3.IsInfeed AND #iqUDT_HandShakeConveyor3.RTS AND #ix_Conveyor3Auto);
+	        #sR_TRIG_RTSConveyor4(CLK := #iUDT_Configuration.Conveyor4.IsInfeed AND #iqUDT_HandShakeConveyor4.RTS AND #ix_Conveyor4Auto);
+	        
+	        // Rising edge equipment uptime
+	        #sR_TRIG_DeviceUpTime(CLK := #sx_UpTime);
+	        
+	        //Rising edge equipment stopped
+	        #sR_TRIG_DeviceStopped(CLK := #sx_StoppedTime);
+	        
+	        // Rising edge equipment conveyor downtime
+	        #sR_TRIG_DeviceDownTime(CLK := #sx_DownTime);
+	    END_REGION
+	    
+	    REGION 1.3 - Timers
+	        // Statement section REGION
+	        #sFB_PECOutfeedOnOffDelay(iudi_OnDelayTime := #iUDT_Configuration.OutfeedTimeOnDelay,         // Off delay time to filter PEC signal
+	                                  iudi_OffDelayTime := #iUDT_Configuration.OutfeedTimeOffDelay,     // On delay time to filter PEC signal
+	                                  ix_SignalToDelay := #ix_PECOutfeed,                               // PEC input signal
+	                                  ix_Enable := TRUE,
+	                                  qx_DelayedSignal => #sx_PECOutfeedFiltered);                      // PEC signal filtered
+	        
+	        #sFB_UpMonitor(iudi_OnDelayTime := #iUDT_Configuration.LiftRuntimeUpOnDelay,                // Off delay time
+	                       iudi_OffDelayTime := #iUDT_Configuration.LiftRuntimeUpOffDelay,              // On delay time
+	                       ix_SignalToDelay := #sx_AutomaticActive
+	                       AND #sx_MoveSectionUpinfeed
+	                       AND NOT #ix_SectionIsUp,                                                     // input signal
+	                       ix_Enable := TRUE,
+	                       qx_DelayedSignal => #sx_DivertUpRunTimeErr);                                 // Signal filtered
+	        
+	        #sFB_DownMonitor(iudi_OnDelayTime := #iUDT_Configuration.LiftRuntimeDownOnDelay,            // Off delay time to filter PEC signal
+	                         iudi_OffDelayTime := #iUDT_Configuration.LiftRuntimeDownOffDelay,          // On delay time to filter PEC signal
+	                         ix_SignalToDelay := #sx_MoveSectionDownInfeed AND NOT #ix_SectionIsDown,   // Input signal
+	                         ix_Enable := TRUE,
+	                         qx_DelayedSignal => #sx_DivertDownRunTimeErr);                             // Signal filtered
+	        
+	    END_REGION
+	    
+	    REGION 1.4 - Conditions Up - Down - Stopped
+	        //Used for statistics
+	        
+	        #sx_UpTime := (#sx_AutomaticActive                                  // Automatic active
+	        AND #sx_Ready);                                                     // Ready active
+	        
+	        #sx_DownTime := (NOT #sx_ManualModeActive                           // Not in manual mode
+	        AND #sUDT_Status.Error                                              // in error 
+	        AND NOT #sx_Ready);                                                 // Conveyor not ready
+	        
+	        #sx_StoppedTime := (NOT #sx_AutomaticActive AND #sx_Ready);
+	        
+	    END_REGION
+	END_REGION
+	
+	
+	REGION 2 - Error / warning
+	    
+	    REGION 2.1 - Reset errors
+	        
+	        IF #iqUDT_EquipmentControl.Command.Reset                        // Reset
+	        THEN
+	            
+	            IF #qUDT_HMIStatus.Specific.ErrRuntime                      // It took too long to move divert up or down
+	            THEN
+	                
+	                #qUDT_HMIStatus.Specific.ErrRuntime := FALSE;            // reset error
+	                
+	            END_IF;
+	            
+	            IF #qUDT_HMIStatus.Specific.ErrAirpressureNotOk             // Airpressure is not ok
+	            THEN
+	                
+	                #qUDT_HMIStatus.Specific.ErrAirpressureNotOk := FALSE; // reset error
+	                
+	            END_IF;
+	        END_IF;
+	    END_REGION
+	    
+	    REGION 2.2 - Set errors
+	        
+	        // Runtime delay error
+	        IF #sx_DivertUpRunTimeErr                                       // It took too long to move up
+	            OR #sx_DivertDownRunTimeErr                                 // It took too long to move down
+	        THEN
+	            #qUDT_HMIStatus.Specific.ErrRuntime := TRUE;                // Set error runtime error
+	        END_IF;
+	        
+	        // Airpressure not ok
+	        IF NOT #ix_AirPressureOk                                        // Airpressure is not signalling              
+	            AND (#sx_LeftRequest OR #sx_RightRequest)                   // If there is request to move to the left or right position      
+	        THEN
+	            #qUDT_HMIStatus.Specific.ErrAirpressureNotOk := TRUE;       // Set error airpressure
+	        END_IF;
+	        
+	        // configuration errors
+	        #ta_ConfigErr[1] := 1 <> (BOOL_TO_INT(#iUDT_Configuration.Conveyor1.IsOutfeed) + BOOL_TO_INT(#iUDT_Configuration.Conveyor2.IsOutfeed) + BOOL_TO_INT(#iUDT_Configuration.Conveyor3.IsOutfeed) + BOOL_TO_INT(#iUDT_Configuration.Conveyor4.IsOutfeed));
+	        #sx_ConfigurationError := (#ta_ConfigErr[1] OR #ta_ConfigErr[2] OR #ta_ConfigErr[3] OR #ta_ConfigErr[4] OR #ta_ConfigErr[5] OR #ta_ConfigErr[6]);
+	        
+	    END_REGION
+	    
+	    REGION 2.3 - Warning
+	        
+	        #qUDT_HMIStatus.Specific.WarnAirPressure := NOT #ix_AirPressureOk;  // Airpressure is not signalling
+	        
+	    END_REGION
+	    
+	    
+	    REGION 2.4 - Common Error
+	        
+	        #sUDT_Status.Error := #qUDT_HMIStatus.Specific.ErrRuntime           // Direction verification found the Direction fault, stop the parcel
+	        OR #qUDT_HMIStatus.Specific.ErrAirpressureNotOk                     // Upper jam PEC detected WHILE going Up
+	        OR #qUDT_HMIStatus.Specific.ErrOverrun                              // Parcel travelled too far to divert
+	        OR #sx_ConfigurationError;                                          // Configuration error, check values
+	        
+	    END_REGION
+	    
+	    REGION 2.5 - Common Warning
+	        
+	        #sUDT_Status.Warning := #qUDT_HMIStatus.Specific.WarnAirPressure;   // Airpressure is not signalling
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 3 - Check conditions to set Equipment ready
+	    
+	    //Conditions to set bit sx_Ready to operate 
+	    
+	    #sx_Ready := NOT #sUDT_Status.Error                                 // Error present
+	    AND #ix_SafetyOk                                                    // Safety signalling OK
+	    AND #ix_24vOk                                                       // 24V signalling OK
+	    AND #ix_400vOk;                                                     // 400v signalling OK 
+	    
+	END_REGION
+	
+	REGION 4 - Stop Equipment
+	    
+	    // Conditions to stop conveyor
+	    IF (#sF_TRIG_Jog.Q                                                  // Trigger when conveyor stops jogging by HMI
+	        AND #sx_ManualModeActive)                                       // Manual mode is active
+	        
+	        OR (NOT #iqUDT_EquipmentControl.Command.AutomaticOn             // Conveyor stops if the bit AutomaticOn from control block is false
+	        AND NOT #sx_ManualModeActive)                                   // Manual mode active bit
+	        
+	        OR (NOT #sx_Ready                                               // Bit conveyor ready to run in automatic mode
+	        AND NOT #sx_ManualModeActive)                                   // Manual mode active
+	        
+	        OR #sR_TRIG_ManualMode.Q                                        // Trigger when manual mode is set on
+	        OR #sF_TRIG_ManualMode.Q                                        // Trigger when manual mode is set off
+	        
+	        OR NOT #ix_SafetyOk
+	        
+	    THEN
+	        //  Order to stop VFD
+	        #qUDT_RollerConveyorInterface.RunFwd := FALSE;                       // Set false order to VFD run in forward direction
+	        #qUDT_RollerConveyorInterface.RunRvs := FALSE;                       // Set false order to VFD run in reverse direction
+	        
+	        #sx_AutomaticActive := FALSE;                                   // Automatic mode is disable
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 5 - Start
+	    
+	    REGION 5.1 - Set Automatic active
+	        
+	        // The conditions to set the bit "startReceived" are: 
+	        // - Divert not in manual mode.
+	        // - Divert ready to run.
+	        // - Bit AutomaticOn from control block must be on.
+	        // - Bit start form control block on.
+	        
+	        IF #iqUDT_EquipmentControl.Command.Start
+	            AND #iqUDT_EquipmentControl.Command.AutomaticOn
+	            AND NOT #sx_ManualModeActive
+	            AND #sx_Ready
+	        THEN
+	            #sx_AutomaticActive := TRUE;                                // Diverter active automatic mode
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 5.2 - Restart request
+	        #iqUDT_EquipmentControl.Request.RestartRequired := NOT #sx_AutomaticActive
+	        AND NOT #sx_ManualModeActive
+	        AND #sx_Ready;
+	        
+	    END_REGION
+	    
+	    
+	END_REGION
+	
+	REGION 6 - Manual mode
+	    
+	    REGION 6.1 - Manual mode force disable
+	        
+	        // Manual mode bits inputs can be reset in case of malfunction
+	        IF #iqUDT_EquipmentControl.Command.DisableManualMode
+	        THEN
+	            #iqUDT_CrossOverCommand.ManualMode := FALSE;
+	            #iqUDT_EquipmentControl.Command.ManualMode := False;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 6.2 - Manual mode activation 
+	        
+	        // Manual mode is active if it is active from hmi or by control block  
+	        #sx_ManualModeActive := #iqUDT_CrossOverCommand.ManualMode
+	        OR #iqUDT_EquipmentControl.Command.ManualMode;
+	        
+	    END_REGION
+	    
+	    REGION 6.3 - Reset manual commands 
+	        //When the system is not any more in manual mode or when fatal error occurs the HMI commands should be reset
+	        IF NOT #ix_SafetyOk
+	            OR NOT #ix_24vOk                                            // 24V error status
+	            OR NOT #ix_400vOk                                           // 400V error status
+	            OR NOT #ix_HardwareOk                                       // Profinet error status
+	            OR NOT #sx_ManualModeActive
+	        THEN
+	            #iqUDT_CrossOverCommand.ManualDown := FALSE;
+	            #iqUDT_CrossOverCommand.ManualUp := FALSE;
+	            
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 6.4 - Start/Stop
+	        
+	        // Pre start conditions to run in manual mode
+	        #sx_PreStartManual := #sx_ManualModeActive                      // Manual mode active bit
+	        AND #ix_SafetyOk                                                // Safety healthy bit
+	        AND #ix_HardwareOk;                                             // Profinet comunication 
+	        
+	        
+	        
+	        #sR_TRIG_PrestartManual(CLK := #sx_PreStartManual);
+	        // If manual command is active to one side, first button ha sto be released to accept new
+	        #sx_ManUP := (#sR_TRIG_ManualGoUp.Q AND NOT #sx_ManDown) OR
+	        (#sx_ManUP AND #iqUDT_CrossOverCommand.ManualUp);
+	        
+	        #sx_ManDown := (#sR_TRIG_ManualGoDown.Q AND NOT #sx_ManUP) OR
+	        (#sx_ManDown AND #iqUDT_CrossOverCommand.ManualDown);
+	        
+	        // Do signal request (horn sounding before movement)
+	        IF #sx_PreStartManual                                           // Pre start conditions to run in manual mode
+	            AND (#sR_TRIG_ManualGoUp.Q AND #sx_ManUP)                  // Trigger when conveyor start running in manual mode
+	            OR (#sR_TRIG_ManualGoDown.Q AND #sx_ManDown)
+	        THEN
+	            
+	            #iqUDT_EquipmentControl.Request.SignalingRequest := TRUE;   // Request signaling to control block before conveyor run in manual mode
+	            
+	        END_IF;
+	        
+	        // Go up in manual mode
+	        #sx_ManualGoUp := #sx_PreStartManual                            // Pre start conditions to run in manual mode
+	        AND (NOT #iqUDT_EquipmentControl.Request.SignalingRequest       // Signaling request done
+	        OR #sx_ManualRunning)
+	        AND #sx_ManUP; // #iqUDT_CrossOverCommand.ManualUp;                           // Manual mode start TO run
+	        
+	        // Go down in manual mode
+	        #sx_ManualGoDown := #sx_PreStartManual                          // Pre start conditions to run in manual mode
+	        AND (NOT #iqUDT_EquipmentControl.Request.SignalingRequest       // Signaling request done
+	        OR #sx_ManualRunning)
+	        AND #sx_ManDown;//#iqUDT_CrossOverCommand.ManualDown;                         // Manual mode start to run
+	        
+	        #sx_ManualRunning := #sx_ManualGoUp
+	        OR #sx_ManualGoDown;
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	
+	REGION 7 - Automatic mode
+	    REGION 7.1 - Determine outfeed level and update FiFo
+	        
+	        #sx_OutfeedLowlevel := #iUDT_Configuration.Conveyor1.IsOutfeed OR #iUDT_Configuration.Conveyor2.IsOutfeed;
+	        #sx_OutfeedHighlevel := #iUDT_Configuration.Conveyor3.IsOutfeed OR #iUDT_Configuration.Conveyor3.IsOutfeed;
+	        #sx_NoHighLevelInfeed := NOT #iUDT_Configuration.Conveyor3.IsInfeed AND NOT #iUDT_Configuration.Conveyor4.IsInfeed;
+	        #sx_NoLowLevelInfeed := NOT #iUDT_Configuration.Conveyor1.IsInfeed AND NOT #iUDT_Configuration.Conveyor2.IsInfeed;
+	        
+	        FOR #si_LoopArrayCount := 1 TO (#ci_FiFoLength - 1) BY 1 DO     // Set loop to process
+	            IF #sa_FiFo[#si_LoopArrayCount] = 0                         // Do when actual value is '0'
+	            THEN
+	                #sa_FiFo[#si_LoopArrayCount] := #sa_FiFo[#si_LoopArrayCount + 1];   // copy next entry to actual
+	                #sa_FiFo[#si_LoopArrayCount + 1] := 0;                  // Reset next entry
+	            END_IF;
+	        END_FOR;
+	        // Get double entry out 
+	        IF #sx_Active                                                   // When Sequence is activated
+	        THEN
+	            IF (#sa_FiFo[2] <> 0)                                       // Entry 2 is not equal to '0'
+	                AND (#sa_FiFo[2] = #sa_FiFo[3])                         // Entry 2 is equal to 3
+	            THEN
+	                #sa_FiFo[3] := 0;                                       // remove entry 3
+	            ELSIF
+	                (#sa_FiFo[2] <> 0)                                      // Entry 2 is not equal to '0'
+	                AND (#sa_FiFo[2] = #sa_FiFo[4])                         // Entry 2 is equal to 4
+	            THEN
+	                #sa_FiFo[4] := 0;                                       // Remove entry 4
+	            END_IF;
+	        END_IF;
+	    END_REGION
+	    
+	    
+	    REGION 7.2 - FiFo handling
+	        // When an infeed signals RTS it is put in the FiFo then the FiFo is shifted.
+	        
+	        IF #sR_TRIG_RTSConveyor1.Q                                      // Signal received from infeed 1
+	        THEN
+	            #sa_FiFo[#ci_FiFoLength] := 1;                              // Set last FiFo entry to 1
+	            
+	            FOR #si_LoopArrayCount := 1 TO (#ci_FiFoLength - 1) BY 1 DO // Set loop to process
+	                IF #sa_FiFo[#si_LoopArrayCount] = 0                     // Do when actual value is '0'
+	                THEN
+	                    #sa_FiFo[#si_LoopArrayCount] := #sa_FiFo[#si_LoopArrayCount + 1];   // copy next entry to actual
+	                    #sa_FiFo[#si_LoopArrayCount + 1] := 0;              // Reset next entry
+	                END_IF;
+	            END_FOR;
+	        END_IF;
+	        
+	        IF #sR_TRIG_RTSConveyor2.Q                                      // Signal received from infeed 2
+	        THEN
+	            #sa_FiFo[#ci_FiFoLength] := 2;                              // Set last FiFo entry to 2
+	            
+	            FOR #si_LoopArrayCount := 1 TO (#ci_FiFoLength - 1) BY 1 DO // Set loop to process
+	                IF #sa_FiFo[#si_LoopArrayCount] = 0                     // Do when actual value is '0'
+	                THEN
+	                    #sa_FiFo[#si_LoopArrayCount] := #sa_FiFo[#si_LoopArrayCount + 1];   // copy next entry to actual
+	                    #sa_FiFo[#si_LoopArrayCount + 1] := 0;              // Reset next entry
+	                END_IF;
+	            END_FOR;
+	        END_IF;
+	        
+	        IF #sR_TRIG_RTSConveyor3.Q                                      // Signal received from infeed 3
+	        THEN
+	            #sa_FiFo[#ci_FiFoLength] := 3;                              // Set last FiFo entry to 3
+	            
+	            FOR #si_LoopArrayCount := 1 TO (#ci_FiFoLength - 1) BY 1 DO // Set loop to process
+	                IF #sa_FiFo[#si_LoopArrayCount] = 0                     // Do when actual value is '0'
+	                THEN
+	                    #sa_FiFo[#si_LoopArrayCount] := #sa_FiFo[#si_LoopArrayCount + 1];   // copy next entry to actual
+	                    #sa_FiFo[#si_LoopArrayCount + 1] := 0;              // Reset next entry
+	                END_IF;
+	            END_FOR;
+	        END_IF;
+	        
+	        IF #sR_TRIG_RTSConveyor4.Q                                      // Signal received from infeed 4
+	        THEN
+	            #sa_FiFo[#ci_FiFoLength] := 4;                              // Set last FiFo entry to 4
+	            
+	            FOR #si_LoopArrayCount := 1 TO (#ci_FiFoLength - 1) BY 1 DO // Set loop to process
+	                IF #sa_FiFo[#si_LoopArrayCount] = 0                     // Do when actual value is '0'
+	                THEN
+	                    #sa_FiFo[#si_LoopArrayCount] := #sa_FiFo[#si_LoopArrayCount + 1];   // copy next entry to actual
+	                    #sa_FiFo[#si_LoopArrayCount + 1] := 0;              // Reset next entry
+	                END_IF;
+	            END_FOR;
+	        END_IF;
+	    END_REGION
+	    
+	    REGION 7.3.1 - Start sequence, infeed conveyor request 
+	        // If FiFo has an entry which is matching request, the request is rewarded and the sequence is started  
+	        IF NOT #sx_Active                                               // Not activated yet
+	            AND #sa_FiFo[1] <> 0                                        // There is a request in FiFo 1
+	        THEN // Save GIN from active infeed
+	            IF #sa_FiFo[1] = 1                                          // Conveyor 1 is infeed
+	                AND #iqUDT_HandShakeConveyor1.RTS
+	            THEN
+	                #iqUDT_HandShakeConveyor1.NrOfPosToShift := 0;          // reset number of positions to shift
+	                #sx_InfeedCHK := TRUE;                                  // Infeed is checked
+	                #sx_Active := TRUE;                                     // Sequence is started
+	                #si_Conveyor := 1;                                      // Set active infeed
+	                #sa_FiFo[1] := 0;                                       // Reset entry 1
+	                #si_Step := 1;
+	                
+	            ELSIF #sa_FiFo[1] = 2                                       // Conveyor 2 is infeed
+	                AND #iqUDT_HandShakeConveyor2.RTS
+	            THEN
+	                #iqUDT_HandShakeConveyor2.NrOfPosToShift := 0;          // reset number of positions to shift
+	                #sx_InfeedCHK := TRUE;                                  // Infeed is checked
+	                #sx_Active := TRUE;                                     // Sequence is started
+	                #si_Conveyor := 2;                                      // Set active infeed
+	                #sa_FiFo[1] := 0;                                       // Reset entry 1
+	                #si_Step := 1;
+	                
+	            ELSIF #sa_FiFo[1] = 3                                       // Conveyor 3 is infeed
+	                AND #iqUDT_HandShakeConveyor3.RTS
+	            THEN
+	                #iqUDT_HandShakeConveyor3.NrOfPosToShift := 0;          // reset number of positions to shift
+	                #sx_InfeedCHK := TRUE;                                  // Infeed is checked
+	                #sx_Active := TRUE;                                     // Sequence is started
+	                #si_Conveyor := 3;                                      // Set active infeed
+	                #sa_FiFo[1] := 0;                                       // Reset entry 1
+	                #si_Step := 1;
+	                
+	            ELSIF #sa_FiFo[1] = 4                                       // Conveyor 4 is infeed
+	                AND #iqUDT_HandShakeConveyor4.RTS
+	            THEN
+	                #iqUDT_HandShakeConveyor4.NrOfPosToShift := 0;          // reset number of positions to shift
+	                #sx_InfeedCHK := TRUE;                                  // Infeed is checked
+	                #sx_Active := TRUE;                                     // Sequence is started
+	                #si_Conveyor := 4;                                      // Set active infeed
+	                #sa_FiFo[1] := 0;                                       // Reset entry 1
+	                #si_Step := 1;
+	                
+	            ELSE
+	                #sa_FiFo[1] := 0;                                       // No infeed request was matching
+	            END_IF;
+	        END_IF;
+	        
+	        // As Gin is received when tip starts, length then is looked-up.  At first it is filled with a default length.
+	        IF NOT #sx_DataReceived THEN
+	            #si_Length := (#iUDT_Configuration.ParcelDefaultLength / 10);
+	        END_IF;
+	        
+	        IF #si_Conveyor = 1                                         // Conveyor 1 is infeed
+	            AND (#iqUDT_HandShakeConveyor1.GIN <> 0)                // Gin in handshake is not empty
+	            AND NOT #sx_DataReceived
+	        THEN
+	            #si_Gin := #iqUDT_HandShakeConveyor1.GIN;               // Memorise GIN
+	            #si_Length := "DB_GIN".GIN[#si_Gin].General.Length;     // Get length from Gin
+	            IF #si_Length > 0 THEN
+	                #sx_DataReceived := TRUE;
+	            END_IF;
+	            
+	        ELSIF #si_Conveyor = 2                                      // Conveyor 1 is infeed
+	            AND (#iqUDT_HandShakeConveyor2.GIN <> 0)                // Gin in handshake is not empty
+	            AND NOT #sx_DataReceived
+	        THEN
+	            #si_Gin := #iqUDT_HandShakeConveyor2.GIN;               // Memorise GIN
+	            #si_Length := "DB_GIN".GIN[#si_Gin].General.Length;     // Get length from Gin
+	            IF #si_Length > 0 THEN
+	                #sx_DataReceived := TRUE;
+	            END_IF;
+	            
+	        ELSIF #si_Conveyor = 3                                      // Conveyor 1 is infeed
+	            AND (#iqUDT_HandShakeConveyor3.GIN <> 0)                // Gin in handshake is not empty
+	            AND NOT #sx_DataReceived
+	        THEN
+	            #si_Gin := #iqUDT_HandShakeConveyor3.GIN;               // Memorise GIN
+	            #si_Length := "DB_GIN".GIN[#si_Gin].General.Length;     // Get length from Gin    
+	            IF #si_Length > 0 THEN
+	                #sx_DataReceived := TRUE;
+	            END_IF;
+	            
+	        ELSIF #si_Conveyor = 4                                      // Conveyor 1 is infeed
+	            AND (#iqUDT_HandShakeConveyor4.GIN <> 0)                // Gin in handshake is not empty
+	            AND NOT #sx_DataReceived
+	        THEN
+	            #si_Gin := #iqUDT_HandShakeConveyor4.GIN;               // Memorise GIN
+	            #si_Length := "DB_GIN".GIN[#si_Gin].General.Length;     // Get length from Gin  
+	            IF #si_Length > 0 THEN
+	                #sx_DataReceived := TRUE;
+	            END_IF;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 7.3.2 - Infeed checked, go to infeed level
+	        
+	        IF #sx_AutomaticActive                                          // The device is automaticly started
+	            AND #sx_Ready                                               // The device is ready to opereate
+	            AND #sx_Active                                              // The sequence is started
+	            AND #sx_InfeedCHK                                           // Step infeed check is active
+	            AND ((#si_Conveyor = 1) OR #si_Conveyor = 2)                // Infeed is on low level
+	        THEN
+	            #sx_MoveSectionDownInfeed := TRUE;                          // Move section down
+	            #sx_InfeedCHK := FALSE;                                     // Reset step infeed check
+	            #si_Step := 2;
+	            
+	        ELSIF #sx_AutomaticActive                                       // The device is automaticly started
+	            AND #sx_Ready                                               // The device is ready to opereate
+	            AND #sx_Active                                              // The sequence is started
+	            AND #sx_InfeedCHK                                           // Step infeed check is active
+	            AND ((#si_Conveyor = 3) OR #si_Conveyor = 4)                // Infeed is on high level
+	        THEN
+	            #sx_MoveSectionUpinfeed := TRUE;                            // Move section up
+	            #sx_InfeedCHK := FALSE;                                     // Reset step infeed check
+	            #si_Step := 2;
+	        END_IF;
+	    END_REGION
+	    
+	    REGION 7.3.3 - At infeed level, start infeed transport
+	        
+	        IF #sx_AutomaticActive                                          // The device is automaticly started
+	            AND #sx_Ready                                               // The device is ready to opereate
+	            AND #sx_Active                                              // The sequence is started
+	            AND #ix_SectionIsDown                                       // Section is actual down
+	            AND #sx_MoveSectionDownInfeed                               // Step move down to infeed was activated 
+	        THEN
+	            #sx_MoveSectionDownInfeed := FALSE;                         // Reset step move down to infeed level
+	            #si_Position := 0;                                          // Reset position counter
+	            #si_Stopposition := 2;
+	            #si_Gin := 0;
+	            #sx_RollerTransportIn := TRUE;                              // Start infeed roller transport
+	            #sx_RollerRTR := TRUE;                                      // Set RTR to infeed until TIP gets active
+	            #si_Step := 3;
+	            
+	        ELSIF #sx_AutomaticActive                                       // The device is automaticly started
+	            AND #sx_Ready                                               // The device is ready to opereate
+	            AND #sx_Active                                              // The sequence is started
+	            AND #ix_SectionIsUp
+	            AND #sx_MoveSectionUpinfeed                                 // Step move up to infeed was activated 
+	        THEN
+	            #sx_MoveSectionUpinfeed := FALSE;                           // Reset step move up to infeed level
+	            #si_Position := 0;                                          // Reset position counter
+	            #sx_BeltTransportIn := TRUE;                                // Start infeed belt transport
+	            #sx_BeltRTR := TRUE;                                        // Set RTR to infeed until TIP gets active
+	            #si_Step := 3;
+	            
+	        END_IF;
+	    END_REGION
+	    
+	    REGION 7.3.4 - Stop transport, move to outfeed level
+	        // First stop connveyor position is calculated.
+	        // Half of the length of the conveyor (middle) + or - half of the pack/parcel length (middle) + a factor to adjust.
+	        // The + or - depends on the transporting direction.
+	        IF (#sx_RollerTransportIn OR #sx_BeltTransportIn)
+	        THEN
+	            
+	            IF #si_Conveyor = 1 AND (#si_Gin <> 0)                      // Infeed is from conveyor infeed 1
+	            THEN
+	                IF #iUDT_Configuration.RollerConveyor.Runfwd
+	                THEN
+	                    #si_Stopposition := (((#iUDT_Configuration.RollerConveyor.ConveyorLength / 10 - #si_Length) / 2) - #iUDT_Configuration.RollerConveyor.LengthFrom1);
+	                ELSE
+	                    #si_Stopposition := (((#iUDT_Configuration.RollerConveyor.ConveyorLength / 10 + #si_Length) / 2) + #iUDT_Configuration.RollerConveyor.LengthFrom1);
+	                END_IF;
+	                
+	            ELSIF #si_Conveyor = 2 AND (#si_Gin <> 0)                   // Infeed is from conveyor infeed 2
+	            THEN
+	                IF #iUDT_Configuration.RollerConveyor.Runfwd
+	                THEN
+	                    #si_Stopposition := (((#iUDT_Configuration.RollerConveyor.ConveyorLength / 10 - #si_Length) / 2) - #iUDT_Configuration.RollerConveyor.LengthFrom2);
+	                ELSE
+	                    #si_Stopposition := (((#iUDT_Configuration.RollerConveyor.ConveyorLength / 10 + #si_Length) / 2) + #iUDT_Configuration.RollerConveyor.LengthFrom2);
+	                END_IF;
+	                
+	            ELSIF #si_Conveyor = 3 AND (#si_Gin <> 0)                  // Infeed is from conveyor infeed 2
+	            THEN
+	                IF #iUDT_Configuration.BeltConveyor.Runfwd
+	                THEN
+	                    #si_Stopposition := (((#iUDT_Configuration.BeltConveyor.ConveyorLength / 10 - #si_Length) / 2) - #iUDT_Configuration.BeltConveyor.LengthFrom3);
+	                ELSE
+	                    #si_Stopposition := (((#iUDT_Configuration.BeltConveyor.ConveyorLength / 10 + #si_Length) / 2) + #iUDT_Configuration.BeltConveyor.LengthFrom3);
+	                END_IF;
+	                
+	            ELSIF #si_Conveyor = 4 AND (#si_Gin <> 0)                   // Infeed is from conveyor infeed 2
+	            THEN
+	                IF #iUDT_Configuration.BeltConveyor.Runfwd
+	                THEN
+	                    #si_Stopposition := (((#iUDT_Configuration.BeltConveyor.ConveyorLength / 10 + #si_Length) / 2) + #iUDT_Configuration.BeltConveyor.LengthFrom4);
+	                ELSE
+	                    #si_Stopposition := (((#iUDT_Configuration.BeltConveyor.ConveyorLength / 10 - #si_Length) / 2) - #iUDT_Configuration.BeltConveyor.LengthFrom4);
+	                END_IF;
+	            END_IF;
+	            
+	            // Stop position cant exceed conveyor dimensions
+	            IF #si_Conveyor = 1 OR #si_Conveyor = 2
+	            THEN
+	                IF #si_Stopposition > (#iUDT_Configuration.RollerConveyor.ConveyorLength / 10) - 2
+	                THEN
+	                    #si_Stopposition := (#iUDT_Configuration.RollerConveyor.ConveyorLength / 10) - 2;
+	                END_IF;
+	            ELSIF #si_Conveyor = 3 OR #si_Conveyor = 4
+	            THEN
+	                IF #si_Stopposition > (#iUDT_Configuration.BeltConveyor.ConveyorLength / 10) - 2
+	                THEN
+	                    #si_Stopposition := (#iUDT_Configuration.BeltConveyor.ConveyorLength / 10) - 2;
+	                END_IF;
+	            END_IF;
+	            
+	            IF #si_Stopposition < 2
+	            THEN
+	                #si_Stopposition := 2;
+	            END_IF;
+	        END_IF;
+	        
+	        
+	        IF #sx_AutomaticActive                                          // The device is automaticly started
+	            AND #sx_Ready                                               // The device is ready to opereate
+	            AND #sx_Active                                              // The sequence is started
+	            AND #sx_RollerTransportIn                                   // Step infeed roller transport is active
+	            AND (((#iqa_TrackingDataRoller[#si_Stopposition] <> 0)        // Value is not 0
+	            AND (#iqa_TrackingDataRoller[#si_Stopposition] = #si_Gin))  // The value in the tracking is equal to the GIN
+	            OR (#si_Position >= #iUDT_Configuration.OutfeedLength))    // Actual position counter reached desired position 
+	        THEN
+	            #sx_RollerTransportIn := FALSE;                             // Reset step infeed rollertransport
+	            #si_Position := 0;
+	            #sx_MoveSectionDownOutfeed := #sx_OutfeedLowlevel;          // Depending on outfeed conveyor section is moved to outfeed level
+	            #sx_MoveSectionUpOutfeed := #sx_OutfeedHighlevel;           // Depending on outfeed conveyor section is moved to outfeed level
+	            #si_Step := 4;
+	            
+	            FILL_BLK(IN := 0,                                        // Clear tracking area for divert on main conveyor 
+	                     COUNT := DINT_TO_ULINT(#iUDT_Configuration.RollerConveyor.ConveyorLength / 10),
+	                     OUT => #iqa_TrackingDataRoller[0]);
+	            
+	        ELSIF #sx_AutomaticActive                                       // The device is automaticly started
+	            AND #sx_Ready                                               // The device is ready to opereate
+	            AND #sx_Active                                              // The sequence is started
+	            AND #sx_BeltTransportIn                                     // Step infeed belt transport is active
+	            AND (((#iqa_TrackingDataBelt[#si_Stopposition] <> 0)          // Value is not 0
+	            AND (#iqa_TrackingDataBelt[#si_Stopposition] = #si_Gin))    // The value in the tracking is equal to the GIN
+	            OR (#si_Position >= #iUDT_Configuration.OutfeedLength))    // Actual position counter reached desired position  
+	        THEN
+	            #sx_BeltTransportIn := FALSE;                               // Reset step infeed belttransport
+	            #si_Position := 0;                                          // Reset position counter
+	            #sx_MoveSectionDownOutfeed := #sx_OutfeedLowlevel;          // Depending on outfeed conveyor section is moved to outfeed level
+	            #sx_MoveSectionUpOutfeed := #sx_OutfeedHighlevel;           // Depending on outfeed conveyor section is moved to outfeed level
+	            #si_Step := 4;
+	            
+	            FILL_BLK(IN := 0,                                        // Clear tracking area for divert on main conveyor 
+	                     COUNT := DINT_TO_ULINT(#iUDT_Configuration.BeltConveyor.ConveyorLength / 10),
+	                     OUT => #iqa_TrackingDataBelt[0]);
+	        END_IF;
+	    END_REGION
+	    
+	    REGION 7.3.5 - At outfeed level, start outfeed transport
+	        IF #sx_AutomaticActive                                          // The device is automaticly started
+	            AND #sx_Ready                                               // The device is ready to opereate
+	            AND #sx_Active                                              // The sequence is started
+	            AND #sx_MoveSectionDownOutfeed                              // Step move down to outfeed is active
+	            AND #ix_SectionIsDown                                       // Section is actual down
+	            
+	        THEN
+	            #sx_MoveSectionDownOutfeed := FALSE;                        // Reset step move down to outfeed
+	            #si_Position := 0;                                          // Reset position counter
+	            #sx_RollerTransportOut := TRUE;                             // Start outfeed roller transport
+	            #si_Step := 5;
+	            
+	        ELSIF #sx_AutomaticActive                                       // The device is automaticly started
+	            AND #sx_Ready                                               // The device is ready to opereate
+	            AND #sx_Active                                              // The sequence is startede
+	            AND #sx_MoveSectionUpOutfeed                                // Step move up to outfeed is active
+	            AND #ix_SectionIsUp                                         // Section is actual up
+	        THEN
+	            #sx_MoveSectionUpOutfeed := FALSE;                          // Reset step move up to outfeed
+	            #si_Position := 0;                                          // Reset position counter
+	            #sx_BeltTransportOut := TRUE;                               // Start outfeed belt transport
+	            #si_Step := 5;
+	            
+	        END_IF;
+	    END_REGION
+	    
+	    REGION 7.3.6 - End sequence
+	        IF #sx_AutomaticActive                                          // The device is automaticly started
+	            AND #sx_Ready                                               // The device is ready to opereate
+	            AND #sx_Active                                              // The sequence is started
+	            AND (#sx_RollerTransportOut OR #sx_BeltTransportOut)        // Outfeed transport is active
+	            AND (#sR_TRIG_PecOutfeed.Q OR (#si_Position > #iUDT_Configuration.OutfeedLength)) // Actual position counter reached desired position 
+	            
+	        THEN
+	            IF #sx_NoHighLevelInfeed                                    // If there is no high level infeed configured
+	                AND #ix_SectionIsUp                                     // Section is actual up    
+	            THEN
+	                #sx_MoveSectiondownEnd := TRUE;                         // Then move down to infeed
+	            END_IF;
+	            IF #sx_NoLowLevelInfeed                                     // IF there is no low level infeed configured
+	                AND #ix_SectionIsDown                                   // Section is actual down    
+	            THEN
+	                #sx_MoveSectionUpEnd := TRUE;                           // Then move down to infeed
+	            END_IF;
+	            
+	            #sx_RollerTransportOut := FALSE;                            // Reset step outfeed roller transport
+	            #sx_BeltTransportOut := FALSE;                              // Reset step outfeed belt transport
+	            #si_Gin := 0;                                               // Reset save Gin number
+	            #si_Conveyor := 0;                                          // Reset FiFo to be updated
+	            #sx_Active := FALSE;                                        // Not active anymore
+	            #sx_DataReceived := FALSE;
+	            
+	            #si_Step := 0;
+	        END_IF;
+	        
+	        IF #sx_MoveSectionUpEnd                                         // Reset Up request when up
+	            AND #ix_SectionIsUp
+	        THEN
+	            #sx_MoveSectionUpEnd := False;
+	        END_IF;
+	        
+	        IF #sx_MoveSectiondownEnd                                       // Reset down request when down
+	            AND #ix_SectionIsDown
+	        THEN
+	            #sx_MoveSectiondownEnd := False;
+	        END_IF;
+	    END_REGION
+	    
+	    REGION 7.4 - Calculate position
+	        // When transport is active displacement is added to position counter 
+	        IF #qUDT_RollerConveyorInterface.RunFwd OR #qUDT_RollerConveyorInterface.RunRvs
+	        THEN
+	            #si_Position += ABS(#ii_DisplacementRoller);
+	        END_IF;
+	        
+	        IF #qUDT_BeltConveyorInterface.RunFwd OR #qUDT_BeltConveyorInterface.RunRvs
+	        THEN
+	            #si_Position += ABS(#ii_DisplacementBelt);
+	        END_IF;
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 8 - Output
+	    REGION 8.1 - Lifting device
+	        
+	        #qx_SectionDown := (#sx_AutomaticActive
+	        AND
+	        ((#sx_MoveSectionDownInfeed OR #sx_MoveSectionDownOutfeed OR #sx_MoveSectiondownEnd))
+	        OR (#sx_ManualModeActive AND #sx_ManualGoDown));
+	        
+	        #qx_SectionUp := (#sx_AutomaticActive
+	        AND
+	        ((#sx_MoveSectionUpinfeed OR #sx_MoveSectionUpOutfeed OR #sx_MoveSectionUpEnd))
+	        OR (#sx_ManualModeActive AND #sx_ManualGoUp));
+	        
+	    END_REGION
+	    
+	    REGION 8.2 - Rollerconveyor
+	        // Conveyor receives always RTR signal to run
+	        #iqUDT_HandShakeRollerConveyor.RTR := TRUE;
+	        
+	        // Run forward 
+	        // 
+	        #qUDT_RollerConveyorInterface.RunFwd :=
+	        (#iUDT_Configuration.RollerConveyor.Runfwd                      // Standard direction forward
+	        AND ((#sx_RollerTransportIn AND (#si_Conveyor = 1))             // Transport in and transporting from infeed 1
+	        OR (#sx_RollerTransportOut AND #iUDT_Configuration.Conveyor2.IsOutfeed AND #iqUDT_HandShakeConveyor2.RTR)))   // Transport out and 2 is outfeed
+	        
+	        OR
+	        (NOT #iUDT_Configuration.RollerConveyor.Runfwd                  // Standard direction is reverse
+	        AND ((#sx_RollerTransportIn AND (#si_Conveyor = 2))             // Transport in and transporting from infeed 2
+	        OR (#sx_RollerTransportOut AND #iUDT_Configuration.Conveyor1.IsOutfeed AND #iqUDT_HandShakeConveyor1.RTR)));     // Transport out and 1 is outfeed
+	        
+	        
+	        // Run reverse 
+	        // 
+	        #qUDT_RollerConveyorInterface.RunRvs :=
+	        (#iUDT_Configuration.RollerConveyor.Runfwd                      // Standard direction forward
+	        AND ((#sx_RollerTransportIn AND (#si_Conveyor = 2))             // Transport in and transporting from infeed 2
+	        OR (#sx_RollerTransportOut AND #iUDT_Configuration.Conveyor1.IsOutfeed AND #iqUDT_HandShakeConveyor1.RTR)))     // Transport out and 1 is outfeed
+	        
+	        OR
+	        (NOT #iUDT_Configuration.RollerConveyor.Runfwd                  // Standard direction is reverse
+	        AND ((#sx_RollerTransportIn AND (#si_Conveyor = 1))             // Transport in and transporting from infeed 1
+	        OR (#sx_RollerTransportOut AND #iUDT_Configuration.Conveyor2.IsOutfeed AND #iqUDT_HandShakeConveyor2.RTR)));     // Transport out and 2 is outfeed
+	        
+	        
+	        // Hold signal to conveyor
+	        #qUDT_RollerConveyorInterface.Hold := NOT #qUDT_RollerConveyorInterface.RunFwd AND NOT #qUDT_RollerConveyorInterface.RunRvs;
+	        
+	        // Handshake to rollerconveyor
+	        #iqUDT_HandShakeRollerConveyor.GIN := 0;
+	        #iqUDT_HandShakeRollerConveyor.NrOfPosToShift := 0;
+	        
+	        // When transporting in, corresponding data from infeed is copied to outfeed
+	        IF #sx_RollerTransportIn AND (#si_Conveyor = 1)
+	        THEN
+	            #iqUDT_HandShakeRollerConveyor.GIN := #iqUDT_HandShakeConveyor1.GIN;
+	            #iqUDT_HandShakeRollerConveyor.NrOfPosToShift += #iqUDT_HandShakeConveyor1.NrOfPosToShift;
+	            
+	        ELSIF #sx_RollerTransportIn AND (#si_Conveyor = 2)
+	        THEN
+	            #iqUDT_HandShakeRollerConveyor.GIN := #iqUDT_HandShakeConveyor2.GIN;
+	            #iqUDT_HandShakeRollerConveyor.NrOfPosToShift += #iqUDT_HandShakeConveyor2.NrOfPosToShift;
+	            
+	        END_IF;
+	        #iqUDT_HandShakeConveyor1.NrOfPosToShift := 0;
+	        #iqUDT_HandShakeConveyor2.NrOfPosToShift := 0;
+	    END_REGION
+	    
+	    REGION 8.3 - Beltconveyor
+	        
+	        #iqUDT_HandShakeBeltConveyor.RTR := TRUE;
+	        
+	        // Run forward : When standard direction is forward and receiving transport from direction 3 or outfeed transport to direction 4
+	        //              Or standard direction is reverse and receiving transport from direction 4 or outfeed transport to direction 3
+	        #qUDT_BeltConveyorInterface.RunFwd :=
+	        (#iUDT_Configuration.BeltConveyor.Runfwd
+	        AND ((#sx_BeltTransportIn AND (#si_Conveyor = 3))
+	        OR (#sx_BeltTransportOut AND #iUDT_Configuration.Conveyor4.IsOutfeed AND #iqUDT_HandShakeConveyor4.RTR)))
+	        OR
+	        (NOT #iUDT_Configuration.BeltConveyor.Runfwd
+	        AND ((#sx_BeltTransportIn AND (#si_Conveyor = 4))
+	        OR (#sx_BeltTransportOut AND #iUDT_Configuration.Conveyor3.IsOutfeed AND #iqUDT_HandShakeConveyor3.RTR)));
+	        
+	        
+	        // Run reverse : When standard direction is reverse and receiving transport from direction 3 or outfeed transport to direction 4
+	        //              Or standard direction is forward and receiving transport from direction 4 or outfeed transport to direction 3
+	        #qUDT_BeltConveyorInterface.RunRvs :=
+	        (#iUDT_Configuration.BeltConveyor.Runfwd
+	        AND ((#sx_BeltTransportIn AND (#si_Conveyor = 4))
+	        OR (#sx_BeltTransportOut AND #iUDT_Configuration.Conveyor3.IsOutfeed AND #iqUDT_HandShakeConveyor3.RTR)))
+	        OR
+	        (NOT #iUDT_Configuration.BeltConveyor.Runfwd
+	        AND ((#sx_BeltTransportIn AND (#si_Conveyor = 3))
+	        OR (#sx_BeltTransportOut AND #iUDT_Configuration.Conveyor4.IsOutfeed AND #iqUDT_HandShakeConveyor4.RTR)));
+	        
+	        // Hold signal to conveyor
+	        #qUDT_BeltConveyorInterface.Hold := NOT #qUDT_BeltConveyorInterface.RunFwd AND NOT #qUDT_BeltConveyorInterface.RunRvs;
+	        
+	        
+	        #iqUDT_HandShakeBeltConveyor.GIN := 0;
+	        #iqUDT_HandShakeBeltConveyor.NrOfPosToShift := 0;
+	        
+	        // When transporting in, corresponding data from infeed is copied to outfeed
+	        IF #sx_BeltTransportIn AND (#si_Conveyor = 3)
+	        THEN
+	            #iqUDT_HandShakeBeltConveyor.GIN := #iqUDT_HandShakeConveyor3.GIN;
+	            #iqUDT_HandShakeBeltConveyor.NrOfPosToShift += #iqUDT_HandShakeConveyor3.NrOfPosToShift;
+	            
+	        ELSIF #sx_BeltTransportIn AND (#si_Conveyor = 4)
+	        THEN
+	            #iqUDT_HandShakeBeltConveyor.GIN := #iqUDT_HandShakeConveyor4.GIN;
+	            #iqUDT_HandShakeBeltConveyor.NrOfPosToShift += #iqUDT_HandShakeConveyor4.NrOfPosToShift;
+	            
+	        END_IF;
+	        #iqUDT_HandShakeConveyor3.NrOfPosToShift := 0;
+	        #iqUDT_HandShakeConveyor4.NrOfPosToShift := 0;
+	    END_REGION
+	    
+	    
+	    REGION 8.4 - Handshake in-outfeed conveyors 
+	        
+	        IF #iUDT_Configuration.Conveyor1.IsInfeed
+	        THEN
+	            // Infeed conveyor low level
+	            #iqUDT_HandShakeConveyor1.CascadeStartUp := #sx_AutomaticActive;
+	            #iqUDT_HandShakeConveyor1.RTR := ((#sx_RollerRTR OR #iqUDT_HandShakeConveyor1.TIP) AND (#si_Conveyor = 1));
+	            #iqUDT_HandShakeConveyor1.ResetEnergySave := false;
+	            IF #iqUDT_HandShakeConveyor1.TIP
+	            THEN
+	                #sx_RollerRTR := False;
+	            END_IF;
+	        ELSE
+	            // Outfeed conveyor low level 
+	            #iqUDT_HandShakeConveyor1.RTS := #sx_RollerTransportOut;
+	            #iqUDT_HandShakeConveyor1.TIP := #qUDT_RollerConveyorInterface.RunFwd OR #qUDT_RollerConveyorInterface.RunRvs;
+	            IF #sx_RollerTransportOut
+	            THEN
+	                #iqUDT_HandShakeConveyor1.GIN := #si_Gin;
+	                #iqUDT_HandShakeConveyor1.NrOfPosToShift := 1;
+	            ELSE
+	                #iqUDT_HandShakeConveyor1.GIN := 0;
+	                #iqUDT_HandShakeConveyor1.NrOfPosToShift := 0;
+	            END_IF;
+	        END_IF;
+	        
+	        IF #iUDT_Configuration.Conveyor2.IsInfeed
+	        THEN
+	            // Infeed conveyor low level
+	            #iqUDT_HandShakeConveyor2.CascadeStartUp := #sx_AutomaticActive;
+	            #iqUDT_HandShakeConveyor2.RTR := ((#sx_RollerRTR OR #iqUDT_HandShakeConveyor2.TIP) AND (#si_Conveyor = 2));
+	            #iqUDT_HandShakeConveyor2.ResetEnergySave := false;
+	            IF #iqUDT_HandShakeConveyor2.TIP
+	            THEN
+	                #sx_RollerRTR := False;
+	            END_IF;
+	        ELSE
+	            // Outfeed conveyor low level
+	            #iqUDT_HandShakeConveyor2.RTS := #sx_RollerTransportOut;
+	            #iqUDT_HandShakeConveyor2.TIP := #qUDT_RollerConveyorInterface.RunFwd OR #qUDT_RollerConveyorInterface.RunRvs;
+	            IF #sx_RollerTransportOut
+	            THEN
+	                #iqUDT_HandShakeConveyor2.GIN := #si_Gin;
+	                #iqUDT_HandShakeConveyor2.NrOfPosToShift := 1;
+	            ELSE
+	                #iqUDT_HandShakeConveyor2.GIN := 0;
+	                #iqUDT_HandShakeConveyor2.NrOfPosToShift := 0;
+	            END_IF;
+	        END_IF;
+	        
+	        IF #iUDT_Configuration.Conveyor3.IsInfeed
+	        THEN
+	            // Infeed conveyor high level
+	            #iqUDT_HandShakeConveyor3.CascadeStartUp := #sx_AutomaticActive;
+	            #iqUDT_HandShakeConveyor3.RTR := ((#sx_BeltRTR OR #iqUDT_HandShakeConveyor3.TIP) AND (#si_Conveyor = 3));
+	            #iqUDT_HandShakeConveyor3.ResetEnergySave := false;
+	            IF #iqUDT_HandShakeConveyor3.TIP
+	            THEN
+	                #sx_BeltRTR := False;
+	            END_IF;
+	        ELSE
+	            // Outfeed conveyor high level 
+	            #iqUDT_HandShakeConveyor3.RTS := #sx_BeltTransportOut;
+	            #iqUDT_HandShakeConveyor3.TIP := #qUDT_BeltConveyorInterface.RunFwd OR #qUDT_BeltConveyorInterface.RunRvs;
+	            IF #sx_BeltTransportOut
+	            THEN
+	                #iqUDT_HandShakeConveyor3.GIN := #si_Gin;
+	                #iqUDT_HandShakeConveyor3.NrOfPosToShift := 1;
+	            ELSE
+	                #iqUDT_HandShakeConveyor3.GIN := 0;
+	                #iqUDT_HandShakeConveyor3.NrOfPosToShift := 0;
+	            END_IF;
+	            
+	        END_IF;
+	        
+	        IF #iUDT_Configuration.Conveyor4.IsInfeed
+	        THEN
+	            // Infeed conveyor high level
+	            #iqUDT_HandShakeConveyor4.CascadeStartUp := #sx_AutomaticActive;
+	            #iqUDT_HandShakeConveyor4.RTR := ((#sx_BeltRTR OR #iqUDT_HandShakeConveyor4.TIP) AND (#si_Conveyor = 4));
+	            #iqUDT_HandShakeConveyor4.ResetEnergySave := false;
+	            IF #iqUDT_HandShakeConveyor4.TIP
+	            THEN
+	                #sx_BeltRTR := False;
+	            END_IF;
+	        ELSE
+	            // Outfeed conveyor high level 
+	            #iqUDT_HandShakeConveyor4.RTS := #sx_BeltTransportOut;
+	            #iqUDT_HandShakeConveyor4.TIP := #qUDT_BeltConveyorInterface.RunFwd OR #qUDT_BeltConveyorInterface.RunRvs;
+	            IF #sx_BeltTransportOut
+	            THEN
+	                #iqUDT_HandShakeConveyor4.GIN := #si_Gin;
+	                #iqUDT_HandShakeConveyor4.NrOfPosToShift := 1;
+	            ELSE
+	                #iqUDT_HandShakeConveyor4.GIN := 0;
+	                #iqUDT_HandShakeConveyor4.NrOfPosToShift := 0;
+	            END_IF;
+	            
+	        END_IF;
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 9 - Statistics
+	    
+	    REGION 9.1 - Device up time
+	        
+	        IF #sx_UpTime OR #iqUDT_EquipmentControl.Command.ResetData      // Reset statistics
+	        THEN
+	            
+	            "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,  // Reset statistics input
+	                            ix_Activate := #sx_UpTime,
+	                            ix_RTrigActivate := #sR_TRIG_DeviceUpTime.Q,            // Statistics active trigger
+	                            iqUDT_Statistics := #iqUDT_Statistics.ConveyorUp);      // Statistics values output
+	            
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 9.2 - Device down time
+	        
+	        // Conveyor down is when conveyor is not in manual mode and has an error
+	        IF #sx_DownTime OR #iqUDT_EquipmentControl.Command.ResetData OR #sUDT_Status.SafetyStop     // Reset statistics
+	        THEN
+	            
+	            "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,  // Reset statistics input
+	                            ix_Activate := #sx_DownTime OR #sUDT_Status.SafetyStop, // Activate statistics functions input
+	                            ix_RTrigActivate := #sR_TRIG_DeviceDownTime.Q,          // Statistics active trigger
+	                            iqUDT_Statistics := #iqUDT_Statistics.ConveyorDown);    // Statistics values output
+	            
+	        END_IF;
+	    END_REGION
+	    
+	    REGION 9.3 - Device stop time
+	        
+	        IF #sx_StoppedTime OR #iqUDT_EquipmentControl.Command.ResetData // Reset statistics
+	        THEN
+	            
+	            "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,  // Reset statistics input
+	                            ix_Activate := #sx_StoppedTime,                         // Activate statistics functions input
+	                            ix_RTrigActivate := #sR_TRIG_DeviceStopped.Q,           // Statistics active trigger
+	                            iqUDT_Statistics := #iqUDT_Statistics.ConveyorStop);    // Statistics values output
+	            
+	        END_IF;
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 10 - Report to control block    
+	    // Function to manage report between control block and conveyor block
+	    "FC_EquipmentReport"(iUDT_Status := #sUDT_Status,
+	                         iqUDT_Control := #iqUDT_EquipmentControl);
+	    
+	END_REGION
+	
+	REGION 11 - Internal errors and warnings reset
+	    
+	END_REGION
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+END_FUNCTION_BLOCK
+

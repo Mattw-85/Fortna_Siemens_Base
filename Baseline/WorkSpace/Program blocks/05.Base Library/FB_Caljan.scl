@@ -1,0 +1,875 @@
+﻿FUNCTION_BLOCK "FB_Caljan"
+TITLE = FB_Unloader
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : Equimpent
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 252
+// END_ATTRIBUTES
+//Function block to control unloader.
+   VAR_INPUT 
+      iUDT_CaljanConfiguration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_CaljanConfiguration";   // Caljan configuration structure
+      iUDT_CaljanReceive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_CaljanReceive";   // Caljan receive structure
+      ix_SafetyReset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Safety reset
+      ix_SafetyOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when Safety Circuit of the Conveyor is healthy
+      ix_24vOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when 24VDC is healthy
+      ix_400vOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when 400VAC is healthy
+      ix_HardwareOK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when the PN node(s) are ok
+      ix_ExternalRequestDieBack { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // External request die back
+      ix_ExternalRequestHold { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // External request hold
+      ix_ResetEnergySave { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reset energy save mode timer
+      ix_TooLongParcel { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when Unloader has detected a too long parcel (stopped)
+      ix_SimulationModeActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when simulation mode is active
+   END_VAR
+
+   VAR_OUTPUT 
+      qUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_CaljanStatus";   // HMI status structure
+      qUDT_Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_CommonStatus";   // Common status structure
+      qUDT_CaljanSend { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_CaljanSend";   // Caljan send structure
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_EquipmentControl : "UDT_EquipmentControl";   // Equipment control structure
+      iqUDT_CaljanCommand : "UDT_CaljanCommand";   // Caljan HMI control
+      iqUDT_HandShake : "UDT_ConveyorHandshake";   // Handshake structure
+      iqUDT_HandShakeUp : "UDT_ConveyorHandshake";   // Upstream handshake structure
+      iqUDT_CaljanInterface : "UDT_ConveyorInterface";   // Equipment interface structure
+      iqUDT_Statistics : "UDT_CaljanStatistics";   // Statistics structure
+   END_VAR
+
+   VAR 
+      sUDT_CommonStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   // Common status structure
+      sUDT_CommonStatusOld { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   // Auxiliary status structure
+      sUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CaljanStatus";   // HMI status structure
+      sUDT_PNDevice { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_PNDevice";   // PN device info structure
+      sa_PNPortsStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[1..8] of Bool;   // TRUE when specific port has an error
+      R_TRIG_EnergySave {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge for energy save
+      R_TRIG_ConveyorUp {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge of automatic active
+      R_TRIG_ConveyorDown {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge of automatic not active
+      R_TRIG_NotHealthy {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge trigger if extendable not healthy
+      R_TRIG_TooLongParcel {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge trigger for too long parcel
+      R_TRIG_SafetyOk {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge trigger safety is ok
+      R_TRIG_PEC_UnloaderFiltered {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge trigger end of section photo eye filtered
+      F_TRIG_PEC_UnloaderFiltered {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   // Falling edge trigger end of section photo eye filtered
+      F_TRIG_AuxHeadToEnd {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   // Falling edge trigger Aux head to end bit
+      R_TRIG_TailToBegin {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge trigger tail to begin bit
+      sR_TRIG_PNSlaveError {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge for PN error
+      sR_TRIG_PNSlaveNotOnline {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge for PN not online
+      sFB_PEC { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_PEC";   // FB PEC block for PEC Jam status
+      sFB_ResetPulseTimer { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // Timer on/off delay for reset pulse
+      sFB_CascadeModeTimer { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // Timer on/off delay for cascade mode
+      sFB_TimerOnOffDelayCheck24V { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // Timer on/off delay to allow startup before fault is generated
+      sFB_TimerOnOffDelayCheck400V { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // Timer on/off delay to allow startup before fault is generated
+      sFB_Displacement { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_Displacement";   // Function block to calculate displacement
+      sdi_GapHeadToHeadConfiguration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Preset forward gap head to head with correction [cm]
+      sdi_GapTailToHeadConfiguration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Preset forward gap tail to head with correction [cm]
+   END_VAR
+   VAR RETAIN
+      sdi_HeadToEnd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Count head to end distance
+      sdi_GapHeadToHead { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Head to head between two products
+      sdi_TailToBegin { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Count tail to next conveyor distance
+      sdi_AuxGapHeadToHeadCounter { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Auxiliary variable to count the head to head
+      sdi_AuxGapTailtoHeadCounter { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Auxiliary variable to count the gap
+      sdi_Gap { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Gap between two products
+   END_VAR
+   VAR 
+      si_AuxEnergySave { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Auxiliary energy save
+      sx_Disabled { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Operation is enabled
+      sx_Ready { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Conveyor Ready to operate in Forward mode
+      sx_PEC_EoSFiltered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // End of section photo eye filtered
+      sx_EnergySaveActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Active energy save mode
+      sx_AutomaticActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Forward active
+      sx_CascadeStartUp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Cascade startup auxiliary bit
+      sx_ReverseActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Unloader is running in reverse directon
+   END_VAR
+   VAR RETAIN
+      sx_AuxHeadToEnd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Aux bit to control head to end positioning in forward direction
+      sx_AuxHeadAtEnd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Parcel reach the end of the conveyor in forward direction
+      sx_Gapping { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Gapping in process in forward direction
+      sx_TailToBegin { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Tail to begin done in forward direction
+      sx_RecoveryGap { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Recovery gap activated in forward direction
+   END_VAR
+   VAR 
+      sx_HoldUnloading { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Hold unloading ofter release Hold Reverse button
+      sx_24VOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 24V ok
+      sx_400VOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 400V ok
+   END_VAR
+
+   VAR CONSTANT 
+      ci_OverflowLimit : Int := 32000;   // Limit int overflow
+      ci_NumberOfProfinetPorts : Int := 2;   // Number of Profinet ports in device
+      ci_PowerSupplyDelayTime : UInt := 4000;   // Power supply delay time
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	26/10/2021  | 0.1       | M. Piela      | first release MHS TIA 16
+	11/11/2021  | 0.2       | S. Theocharis | change profinet ok to hardware ok 
+	10/01/2022  | 0.3       | K. Pokorski   | Bug fix/PNPN coupler handling added
+	21/02/2022  | 0.4       | M. Piela      | Status update
+	12/03/2022  | 0.5       | M. Piela      | Add reset energy save via handshake
+	09/05/2022  | 0.6       | M. Piela      | Correct contitions to allow loading and unloading
+	24/06/2022  | 0.7       | M. Kurpiers   | Loader running and dieback status changed
+	27/07/2022  | 0.8       | M. Piela      | Change conditon to energy save for loader
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 - Get Device Profinet information
+	    
+	    "FC_GetDevicePN"(is_PNDeviceName := #iUDT_CaljanConfiguration.PNDeviceName,
+	                     ix_SimulationModeActive := #ix_SimulationModeActive,
+	                     iqUDT_PND := #sUDT_PNDevice);
+	    
+	    "FC_GetPNPortStatus"(ii_NumberOfPorts := #ci_NumberOfProfinetPorts,
+	                         iUDT_DevicePNInfo := #sUDT_PNDevice,
+	                         qa_PortFault => #sa_PNPortsStatus);
+	    
+	END_REGION
+	
+	REGION 2 - Initial
+	    
+	    REGION 2.1 - First PLC cycle
+	        
+	        IF "DB_Memory".FirstScan
+	        THEN
+	            #sx_AutomaticActive := FALSE;
+	            #iqUDT_HandShakeUp.RTR := FALSE;
+	            #iqUDT_HandShakeUp.CascadeStartUp := FALSE;
+	            #sx_Disabled := FALSE;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 2.2 - Triggers
+	        
+	        // Rising edge trigger energy save
+	        #R_TRIG_EnergySave(CLK := #sUDT_CommonStatus.EnergySave);
+	        
+	        // Rising edge extendable up
+	        #R_TRIG_ConveyorUp(CLK := #sx_AutomaticActive AND #sx_Ready);
+	        
+	        // Rising edge extendable down
+	        #R_TRIG_ConveyorDown(CLK := #sx_AutomaticActive AND NOT #sx_Ready);
+	        
+	        // Rising edge extendable not healthy 
+	        #R_TRIG_NotHealthy(CLK := #sUDT_HMIStatus.Specific.NotHealthy);
+	        
+	        // Rising edge for too long parcel 
+	        #R_TRIG_TooLongParcel(CLK := #sUDT_HMIStatus.Specific.TooLongParcel);
+	        
+	        // Rising edge for Profinet error
+	        #sR_TRIG_PNSlaveError(CLK := #sUDT_HMIStatus.Specific.PNSlaveError);
+	        
+	        // Rising edge for Profinet not online
+	        #sR_TRIG_PNSlaveNotOnline(CLK := #sUDT_HMIStatus.Specific.PNSlaveNotOnline);
+	        
+	    END_REGION
+	    
+	    REGION 2.3 - HMI button Disable operation
+	        
+	        // Copy HMI command to static memory
+	        #sx_Disabled := #iqUDT_CaljanCommand.Disable;
+	        
+	        // Copy status to HMI
+	        #sUDT_HMIStatus.Specific.Disabled := #sx_Disabled;
+	        
+	    END_REGION
+	    
+	    REGION 2.4 - Displacement
+	        
+	        // Calculate displacement only when Caljan is running
+	        IF #iUDT_CaljanReceive.BeltDirection_Loading OR #iUDT_CaljanReceive.BeltDirection_Unloading
+	        THEN
+	            #sFB_Displacement(#iqUDT_CaljanInterface);
+	        ELSE
+	            #iqUDT_CaljanInterface.Displacement := 0;
+	        END_IF;
+	        
+	        // Map displacement to upstream conveyor
+	        IF NOT #sx_ReverseActive
+	        THEN
+	            #iqUDT_HandShakeUp.DownstreamDisplacement := #iqUDT_CaljanInterface.Displacement;
+	        ELSE
+	            #iqUDT_HandShake.DownstreamDisplacement := #iqUDT_CaljanInterface.Displacement;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 2.5 - Gaps configuration
+	        
+	        // Forward head to head
+	        #sdi_GapHeadToHeadConfiguration := #iUDT_CaljanConfiguration.Forward_Direction.GapHeadToHead + #iUDT_CaljanConfiguration.Forward_Direction.GapCorrection;
+	        // Forward tail to head
+	        #sdi_GapTailToHeadConfiguration := #iUDT_CaljanConfiguration.Forward_Direction.GapTailToHead + #iUDT_CaljanConfiguration.Forward_Direction.GapCorrection;
+	        
+	    END_REGION
+	    
+	    REGION 2.6 - Timers 
+	        
+	        // Handle PEC when Calian is configured as unloader 
+	        IF #iUDT_CaljanConfiguration.CaljanMode = 2
+	        THEN
+	            // PEC EoS
+	            #sFB_PEC(ix_PEC := #iUDT_CaljanReceive.PECUnloader,
+	                     iUDT_PECConfiguration := #iUDT_CaljanConfiguration.PEC_EOS,
+	                     qx_PECFiltered => #sx_PEC_EoSFiltered,
+	                     qUDT_HMIStatus => #sUDT_HMIStatus.Specific.PEC_EoS,
+	                     iqUDT_ConveyorInterface := #iqUDT_CaljanInterface,
+	                     iqUDT_PECStatistics := #iqUDT_Statistics.PEC_EOS);
+	        END_IF;
+	        
+	        // Hardware will only be available after the delay, so the device has time for the initialisation
+	        #sFB_TimerOnOffDelayCheck24V(iudi_OnDelayTime := #ci_PowerSupplyDelayTime,
+	                                     ix_SignalToDelay := #ix_24vOk,
+	                                     qx_DelayedSignal => #sx_24VOk);
+	        
+	        #sFB_TimerOnOffDelayCheck400V(iudi_OnDelayTime := #ci_PowerSupplyDelayTime,
+	                                      ix_SignalToDelay := #ix_400vOk,
+	                                      qx_DelayedSignal => #sx_400VOk);
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 3 - Reset Profinet errors 
+	    
+	    IF #iqUDT_EquipmentControl.Command.Reset THEN
+	        #sUDT_HMIStatus.Specific.PNSlaveNotOnline := FALSE;
+	        #sUDT_HMIStatus.Specific.PNSlaveError := FALSE;
+	        #sUDT_HMIStatus.Specific.PNSlaveWarning := FALSE;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 4 - Errors
+	    
+	    // Check if PN device is online
+	    IF NOT "DB_ProfinetDiagnostic".ProfinetNetworks[#sUDT_PNDevice.PNNetworknumber].DeviceStatus[#sUDT_PNDevice.PNDeviceNumber].DeviceState.Exist
+	        AND NOT #ix_SimulationModeActive
+	        AND #sx_24VOk
+	    THEN
+	        #sUDT_HMIStatus.Specific.PNSlaveNotOnline := TRUE;
+	        
+	    END_IF;
+	    
+	    // Check if PN ports are healthy 
+	    IF #sa_PNPortsStatus[1] XOR #sa_PNPortsStatus[2] THEN
+	        #sUDT_HMIStatus.Specific.PNSlaveWarning := TRUE;
+	    END_IF;
+	    
+	    // Check if PN device has an error
+	    IF "DB_ProfinetDiagnostic".ProfinetNetworks[#sUDT_PNDevice.PNNetworknumber].DeviceStatus[#sUDT_PNDevice.PNDeviceNumber].DeviceState.Error
+	        AND NOT #ix_SimulationModeActive
+	        AND #sx_24VOk
+	        AND NOT #sUDT_HMIStatus.Specific.PNSlaveWarning
+	    THEN
+	        #sUDT_HMIStatus.Specific.PNSlaveError := TRUE;
+	    END_IF;
+	    
+	    // Not healthy
+	    #sUDT_HMIStatus.Specific.NotHealthy := NOT #iUDT_CaljanReceive.Healthy
+	    AND #sx_400VOk
+	    AND #sx_24VOk
+	    AND #ix_HardwareOK
+	    AND #ix_SafetyOk;
+	    
+	    // Common Error
+	    #sUDT_CommonStatus.Error := NOT #sx_24VOk
+	    OR NOT #sx_400VOk
+	    OR NOT #ix_HardwareOK
+	    OR NOT #ix_SafetyOk
+	    OR #sUDT_HMIStatus.Specific.PEC_EoS.Jam
+	    OR #sUDT_HMIStatus.Specific.NotHealthy;
+	    
+	    //Parcel too long
+	    #sUDT_HMIStatus.Specific.TooLongParcel := #ix_TooLongParcel;
+	    
+	    // Warning
+	    #sUDT_CommonStatus.Warning := #sUDT_HMIStatus.Specific.TooLongParcel;
+	    
+	END_REGION
+	
+	REGION 5 - Check conditions to set caljan ready    
+	    
+	    #sx_Ready := NOT #sUDT_CommonStatus.Error;
+	    
+	END_REGION
+	
+	REGION 6 - Stop caljan
+	    
+	    IF NOT #iqUDT_EquipmentControl.Command.AutomaticOn
+	        OR #sUDT_CommonStatus.Error
+	    THEN
+	        #sx_AutomaticActive := FALSE;
+	        #qUDT_CaljanSend.AllowLoading := FALSE;
+	        #qUDT_CaljanSend.AllowUnloading := FALSE;
+	        #iqUDT_HandShakeUp.RTR := FALSE;
+	        #iqUDT_HandShakeUp.CascadeStartUp := FALSE;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 7 - Start automatic mode  
+	    
+	    // If start (one shot) is received from system, this is memorised until started in cascade. Later the unloader is started
+	    IF #iqUDT_EquipmentControl.Command.Start
+	        AND #sx_Ready
+	    THEN
+	        #sx_AutomaticActive := TRUE;
+	    END_IF;
+	    
+	    //Timer to cascade mode
+	    #sFB_CascadeModeTimer(iudi_OnDelayTime := #iUDT_CaljanConfiguration.CascadeTimeOnDelay,
+	                          ix_SignalToDelay := #sx_AutomaticActive,
+	                          ix_Enable := #sx_Ready,
+	                          qx_DelayedSignal => #sx_CascadeStartUp);
+	    
+	    #iqUDT_HandShakeUp.CascadeStartUp := #sx_CascadeStartUp;                                     //TO CHECK ON SITE
+	    
+	END_REGION
+	
+	REGION 8 - Automatic mode active
+	    
+	    REGION 8.1 - Operation
+	        
+	        (* *******LOADER ******** *)
+	        IF #iUDT_CaljanConfiguration.CaljanMode = 1 THEN
+	            
+	            // Release loading
+	            #qUDT_CaljanSend.AllowLoading := #sx_AutomaticActive
+	            AND #sx_Ready
+	            AND #iUDT_CaljanReceive.ReadyToReceive
+	            AND NOT #sx_Disabled
+	            AND NOT #ix_ExternalRequestHold
+	            AND NOT #sx_EnergySaveActive;
+	            
+	            #iqUDT_HandShakeUp.RTR := #qUDT_CaljanSend.AllowLoading;
+	            
+	        END_IF;
+	        
+	        (* *******UNLOADER ******** *)
+	        IF #iUDT_CaljanConfiguration.CaljanMode = 2
+	        THEN
+	            
+	            // Release unloading
+	            #qUDT_CaljanSend.AllowUnloading := #sx_AutomaticActive
+	            AND #sx_Ready
+	            AND NOT #sx_Disabled
+	            AND NOT #ix_ExternalRequestHold
+	            AND NOT #sx_EnergySaveActive
+	            AND NOT #sx_HoldUnloading;
+	            
+	            #qUDT_CaljanSend.PEC_Override := #iqUDT_HandShake.RTR
+	            AND NOT #ix_ExternalRequestDieBack;
+	            
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 8.2 - Energy save
+	        
+	        IF #iUDT_CaljanConfiguration.Energy THEN
+	            
+	            // Set Energy save active
+	            IF #si_AuxEnergySave >= #iUDT_CaljanConfiguration.EnergySaveLength
+	            THEN
+	                #sx_EnergySaveActive := TRUE;
+	            END_IF;
+	            
+	            (* *******LOADER ******** *)
+	            // Reset or increment displacement calculation to use for energy save
+	            IF #iUDT_CaljanConfiguration.CaljanMode = 1
+	                AND NOT #iUDT_CaljanReceive.PECUnloader
+	                OR #ix_ResetEnergySave
+	                OR #iqUDT_HandShakeUp.RTS
+	                OR #iqUDT_HandShakeUp.ResetEnergySave
+	                OR NOT #iqUDT_EquipmentControl.Command.AutomaticOn
+	            THEN
+	                #si_AuxEnergySave := 0;
+	                #sx_EnergySaveActive := FALSE;
+	                
+	                (* *******UNLOADER ******** *)
+	            ELSIF #iUDT_CaljanConfiguration.CaljanMode = 2
+	                AND NOT #sx_PEC_EoSFiltered
+	                OR #ix_ResetEnergySave
+	                OR #iUDT_CaljanReceive.HoldReverseSignal
+	            THEN
+	                #si_AuxEnergySave := 0;
+	                #sx_EnergySaveActive := FALSE;
+	                
+	            ELSE
+	                #si_AuxEnergySave += #iqUDT_CaljanInterface.Displacement;
+	            END_IF;
+	        ELSE
+	            #si_AuxEnergySave := 0;
+	            #sx_EnergySaveActive := FALSE;
+	            
+	        END_IF;
+	        
+	        IF #sx_AutomaticActive AND NOT #sx_ReverseActive
+	        THEN
+	            #iqUDT_HandShake.ResetEnergySave := NOT #iUDT_CaljanReceive.PECUnloader AND NOT #sx_EnergySaveActive;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 9 - Gapping configuration
+	    
+	    REGION 9.1 - Head to End
+	        
+	        (*  Function to calculate when the head of the parcel reaches the end of the conveyor
+	            When PEC detects parcels head, the functionality increments the displacement of the conveyor until reach the value of the distance
+	            between PEC and the end of the conveyor. After that, the counter is reset and the bit #sx_AuxHeadToEnd is triggered to inform the system. *)
+	        IF NOT #sx_ReverseActive
+	        THEN
+	            REGION 9.1.1 - Forward
+	                
+	                #F_TRIG_PEC_UnloaderFiltered(CLK := #sx_PEC_EoSFiltered);
+	                
+	                IF #F_TRIG_PEC_UnloaderFiltered.Q                                   // Detects the product's head
+	                THEN
+	                    #sdi_HeadToEnd := #iUDT_CaljanConfiguration.PEC_EOS.Distance;  // move the distance between PEC and the end of the conveyor to auxiliary variable 
+	                    #sx_AuxHeadToEnd := TRUE;                                       // Active head to end function
+	                    
+	                    #sdi_GapHeadToHead := #sdi_AuxGapHeadToHeadCounter;             // Move gap calculated to variable
+	                    #sdi_AuxGapHeadToHeadCounter := 0;                              // Reset gap counter
+	                    
+	                    #sdi_Gap := #sdi_AuxGapTailtoHeadCounter;                       // Move gap calculated to variable
+	                    
+	                    #sdi_AuxGapTailtoHeadCounter := 0;                              // Reset gap counter
+	                    
+	                    #iqUDT_HandShake.RTS := TRUE;                                  // Set ready to send true when a parcel is detected in the PEC
+	                END_IF;
+	                
+	                IF #sx_AuxHeadToEnd                                                 // Parcel's head detected in photo cell
+	                    AND (#sdi_HeadToEnd > 0)                                        // Psrcel's head do not arrive in the end of the conveyor yet
+	                THEN
+	                    #sdi_HeadToEnd -= #iqUDT_CaljanInterface.Displacement;         // Count displacement until arrive to the end of the conveyor
+	                ELSE
+	                    #sx_AuxHeadToEnd := FALSE;                                      // Stop function head to end
+	                END_IF;
+	                
+	                // Falling edge trigger Aux Head to End bit
+	                #F_TRIG_AuxHeadToEnd(CLK := #sx_AuxHeadToEnd);
+	                
+	                IF #F_TRIG_AuxHeadToEnd.Q
+	                    
+	                THEN
+	                    #sx_AuxHeadAtEnd := TRUE;                                       // The head of the parcel is at the front positon of the conveyor
+	                END_IF;
+	                
+	            END_REGION
+	            
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 9.2 - Tail to Begin
+	        
+	        (*   This function tracks when parcels tail reaches the begin of downstream conveyor
+	             When the PEC is clear, the function start to increase the displacement until reaches the distance
+	             between PEC and the end of conveyor. *)
+	        IF NOT #sx_ReverseActive
+	        THEN
+	            REGION 9.2.1 - Forward
+	                
+	                #R_TRIG_PEC_UnloaderFiltered(CLK := #sx_PEC_EoSFiltered);
+	                
+	                IF #R_TRIG_PEC_UnloaderFiltered.Q                                             // Detects product's tail
+	                THEN
+	                    
+	                    #sdi_TailToBegin := (#iUDT_CaljanConfiguration.PEC_EOS.Distance / 10);   // move distance between PE and the end of the conveyor to auxiliar variable
+	                    
+	                END_IF;
+	                
+	                IF (#sdi_TailToBegin > 0)                                                     // While tails parcel do not reach the beginning of next conveyor
+	                THEN
+	                    
+	                    #sdi_TailToBegin -= #iqUDT_CaljanInterface.Displacement;                 // count displacement until the product's tail arrive to the next conveyor
+	                    #sx_TailToBegin := FALSE;                                                 // Reset tail to begin bit
+	                    
+	                ELSE
+	                    
+	                    #sx_TailToBegin := TRUE;                                                  // Product's tail arrived at the begin OF next conveyor
+	                    
+	                END_IF;
+	                
+	                // Rising edge trigger Aux tail to Begin bit
+	                #R_TRIG_TailToBegin(CLK := #sx_TailToBegin);
+	                
+	            END_REGION
+	            
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 9.3 - Gap
+	        
+	        (*    Gap tail TO head function calculates the distance (Gap) between two parcels.                                       
+	              The function increases the Counter WHILE the photo eye is clear.                                                    
+	              Every time a parcel trigger the photo eye, gap value is save AND the counter is reset.  *)
+	        IF NOT #sx_ReverseActive
+	        THEN
+	            REGION 9.3.1 - Forward
+	                
+	                IF #iUDT_CaljanReceive.PECUnloader                             // Count displacement when the PE do not detects the product
+	                THEN
+	                    
+	                    IF #sdi_AuxGapTailtoHeadCounter < #ci_OverflowLimit        // Prevent integer variable overflow
+	                    THEN
+	                        IF #iqUDT_HandShake.RTR THEN
+	                            #sdi_AuxGapTailtoHeadCounter += #iqUDT_CaljanInterface.Displacement;    // Calculate the gap
+	                        END_IF;
+	                        
+	                    END_IF;
+	                    
+	                END_IF;
+	                
+	            END_REGION
+	            
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 9.4 - Head to head
+	        
+	        // The functionality head to head is used to calculate the distance between one head's parcel and the head's parcel behind.
+	        // To do it, everytime the PEC is triggered, the function save the distance calculated and reset the counter to start
+	        // counting again, over and over again.
+	        IF NOT #sx_ReverseActive
+	        THEN
+	            REGION 9.4.1 - Forward
+	                
+	                IF #sdi_AuxGapHeadToHeadCounter < #ci_OverflowLimit                         // Prevent integer variable overflow
+	                THEN
+	                    
+	                    #sdi_AuxGapHeadToHeadCounter += #iqUDT_CaljanInterface.Displacement;   // measure the distance between two products
+	                    
+	                END_IF;
+	                
+	            END_REGION
+	            
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 9.5 - Check gaps between products
+	        
+	        // Check gaps is a routine that checks all the time if the gap and head to head distance is acording to the configuration.
+	        // If not, the bit "sx_Gapping" is set true and the conveyor stops to gap.
+	        // Compare gaps calculated with the configured gaps 
+	        IF NOT #sx_ReverseActive
+	        THEN
+	            REGION 9.5.1 - Forward
+	                
+	                IF ((#sdi_GapHeadToHeadConfiguration > #sdi_GapHeadToHead        // Compare head to head configured with real distance
+	                    OR #sdi_GapTailToHeadConfiguration > #sdi_Gap)
+	                    AND #F_TRIG_AuxHeadToEnd.Q)                                  // Trigger when parcel arrive in the end of the conveyor
+	                THEN
+	                    
+	                    #sx_Gapping := TRUE;        // Bit to inform the system that conveyor needs to stop to apply gap
+	                    
+	                END_IF;
+	                
+	            END_REGION
+	            
+	        END_IF;
+	        //    When conveyor stops to gapping, displacement values from downstream are used to 
+	        //    apply new gap.
+	        //    When the new gap applied fits with the configured one, the conveyor starts running again.
+	        //    If the conveyor stops for die back reason and the gap its been applied, and extra gap value it will be applied.
+	        //    This recovery gap it helps to recovery the system after die back.
+	        IF NOT #sx_ReverseActive
+	        THEN
+	            REGION 9.5.2 - Forward recovery
+	                
+	                IF (#sx_Gapping                                                   // Gapping needs to be applied bit
+	                    AND ((#sdi_GapHeadToHeadConfiguration > #sdi_GapHeadToHead    // Configured head to head bigger than the actual one
+	                    OR #sdi_GapTailToHeadConfiguration > #sdi_Gap)                // Configured gap bigger than the actual one
+	                    AND NOT #sx_RecoveryGap)                                      // Die back recovery gap bit not active
+	                    OR ((#sdi_GapHeadToHeadConfiguration > #sdi_GapHeadToHead     // Actual head to head distance
+	                    OR #sdi_GapTailToHeadConfiguration > #sdi_Gap)                // Actual gap between parcels
+	                    AND #sx_RecoveryGap))                                         // Recovery gap bit activate
+	                THEN
+	                    
+	                    #sdi_GapHeadToHead += #iqUDT_HandShake.DownstreamDisplacement;     // Increase head to head counter with conveyor downstream displacement
+	                    #sdi_Gap += #iqUDT_HandShake.DownstreamDisplacement;               // Increase gap counter with conveyor downstream displacement
+	                    
+	                ELSE
+	                    
+	                    #sx_Gapping := FALSE;          // Set gapping bit to false
+	                    
+	                END_IF;
+	                
+	                IF #sx_Gapping                     // Gapping bit active
+	                    AND NOT #iqUDT_HandShake.RTR  // Ready to receive not active
+	                THEN
+	                    
+	                    #sx_RecoveryGap := TRUE;       // Recovery gap activation after die back
+	                    
+	                END_IF;
+	                
+	                IF #sx_RecoveryGap                 // Recovery gap active
+	                    AND NOT #sx_Gapping            // Gapping bit not active
+	                THEN
+	                    
+	                    #sx_RecoveryGap := FALSE;      // Recovery gap disable
+	                    
+	                END_IF;
+	                
+	            END_REGION
+	            
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 9.6 - Ready to send and Transfer in progress
+	        
+	        IF NOT #sx_ReverseActive
+	        THEN
+	            REGION 9.6.1 - Forward
+	                
+	                IF #iqUDT_HandShake.RTR                 // Ready to receive bit
+	                    AND #iqUDT_HandShakeUp.RTR
+	                    AND NOT #sx_Gapping
+	                    AND #sx_AuxHeadAtEnd                 // Parcel is at end of conveyor
+	                    AND NOT #ix_ExternalRequestDieBack
+	                THEN
+	                    
+	                    #iqUDT_HandShake.TIP := TRUE;      // Transfer in progress bit
+	                    #iqUDT_HandShake.RTS := FALSE;     // Ready to send bit
+	                    #sx_AuxHeadAtEnd := FALSE;
+	                    
+	                END_IF;
+	                
+	                IF #R_TRIG_TailToBegin.Q               // Reset TIP when the parcel leaves interlock
+	                THEN
+	                    
+	                    #iqUDT_HandShake.TIP := FALSE;     // Transfer in progress bit
+	                    
+	                END_IF;
+	                
+	            END_REGION
+	            
+	        END_IF;
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 10 - Reverse run
+	    
+	    IF #iUDT_CaljanConfiguration.CaljanMode = 2 THEN
+	        
+	        //Starting reverse run
+	        IF #iUDT_CaljanReceive.HoldReverseSignal
+	            AND #sx_AutomaticActive
+	        THEN
+	            #sx_ReverseActive := TRUE;
+	        END_IF;
+	        
+	        IF #sx_ReverseActive AND NOT #iUDT_CaljanReceive.HoldReverseSignal
+	        THEN
+	            #sx_ReverseActive := FALSE;
+	            #sx_HoldUnloading := TRUE;
+	        END_IF;
+	        
+	        IF NOT #iUDT_CaljanReceive.HoldReverseSignal AND #iUDT_CaljanReceive.ResetReverse
+	        THEN
+	            #sx_ReverseActive := FALSE;
+	            #sx_HoldUnloading := FALSE;
+	        END_IF;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 11 - Reset
+	    
+	    // Safety ok extended pulse
+	    #R_TRIG_SafetyOk(CLK := #ix_SafetyReset);
+	    
+	    #sFB_ResetPulseTimer(iudi_OffDelayTime := #iUDT_CaljanConfiguration.ResetDelay,
+	                         ix_SignalToDelay := #R_TRIG_SafetyOk.Q);
+	    
+	    // Send reset signal to Caljan 
+	    #qUDT_CaljanSend.Reset := #ix_SafetyReset OR #iqUDT_EquipmentControl.Command.Reset OR #sFB_ResetPulseTimer.qx_DelayedSignal;
+	    
+	END_REGION
+	
+	REGION 12 - Status
+	    
+	    #sUDT_CommonStatus.Stopped := NOT #sx_AutomaticActive;
+	    #sUDT_CommonStatus.Running := (#iUDT_CaljanReceive.BeltDirection_Unloading OR #iUDT_CaljanReceive.BeltDirection_Loading) AND #iUDT_CaljanReceive.ActualSpeed > 0;
+	    #sUDT_CommonStatus.AutoON := #sx_Ready AND #sx_AutomaticActive;
+	    #sUDT_CommonStatus.Halted := #ix_ExternalRequestHold AND #sUDT_CommonStatus.AutoON AND NOT #sx_EnergySaveActive;
+	    #sUDT_CommonStatus.Dieback := (NOT #iqUDT_HandShake.RTR OR #ix_ExternalRequestDieBack) AND #sUDT_CommonStatus.AutoON AND NOT #sx_EnergySaveActive
+	    AND NOT #sUDT_CommonStatus.EnergySave AND NOT #sUDT_CommonStatus.Running AND NOT #sx_PEC_EoSFiltered;
+	    
+	    #sUDT_CommonStatus.EnergySave := #sx_EnergySaveActive;
+	    #sUDT_CommonStatus.SafetyStop := NOT #ix_SafetyOk;
+	    
+	    // HMI status update on change
+	    IF #sUDT_CommonStatusOld <> #sUDT_CommonStatus
+	    THEN
+	        // HMI status initialization
+	        #sUDT_HMIStatus.Status := 0;
+	        
+	        // Running
+	        IF #sUDT_CommonStatus.Running
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Running;
+	        END_IF;
+	        
+	        // Stopped
+	        IF #sUDT_CommonStatus.Stopped
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Stopped;
+	        END_IF;
+	        
+	        // Energy save
+	        IF #sUDT_CommonStatus.EnergySave
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".EnergySave;
+	        END_IF;
+	        
+	        // Dieback
+	        IF #sUDT_CommonStatus.Dieback
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Dieback;
+	        END_IF;
+	        
+	        // Halted
+	        IF #sUDT_CommonStatus.Halted
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Halted;
+	        END_IF;
+	        
+	        // Dimension error
+	        IF #sUDT_HMIStatus.Specific.TooLongParcel
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".DimensionError;
+	        END_IF;
+	        
+	        //  PEC error
+	        IF #sUDT_HMIStatus.Specific.PEC_EoS.Jam
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".PECJam;
+	        END_IF;
+	        
+	        // Not healthy
+	        IF #sUDT_HMIStatus.Specific.NotHealthy
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".VFDNotHealthy;
+	        END_IF;
+	        
+	        // Safety stop
+	        IF #sUDT_CommonStatus.SafetyStop
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".SafetyStop;
+	        END_IF;
+	        
+	        // Copy statuses
+	        
+	        #sUDT_CommonStatusOld := #sUDT_CommonStatus;
+	        #qUDT_Status := #sUDT_CommonStatus;
+	    END_IF;
+	    
+	    #qUDT_HMIStatus := #sUDT_HMIStatus;
+	    
+	END_REGION
+	
+	REGION 13 - Statistics
+	    
+	    // Up time
+	    IF #sx_AutomaticActive
+	        AND #sx_Ready
+	        OR #iqUDT_EquipmentControl.Command.ResetData
+	    THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #sx_AutomaticActive AND #sx_Ready,
+	                        ix_RTrigActivate := #R_TRIG_ConveyorUp.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.ExtendableUpTime);
+	    END_IF;
+	    
+	    // Down time
+	    IF NOT #sx_AutomaticActive
+	        AND #sx_Ready
+	        OR #iqUDT_EquipmentControl.Command.ResetData
+	    THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := NOT #sx_AutomaticActive AND #sx_Ready,
+	                        ix_RTrigActivate := #R_TRIG_ConveyorDown.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.ExtendableDownTime);
+	    END_IF;
+	    
+	    // Energy save mode active
+	    IF #sx_EnergySaveActive
+	        OR #iqUDT_EquipmentControl.Command.ResetData
+	    THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #sUDT_CommonStatus.EnergySave,
+	                        
+	                        ix_RTrigActivate := #R_TRIG_EnergySave.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.EnergySave);
+	    END_IF;
+	    
+	    // Not healthy
+	    IF #sUDT_HMIStatus.Specific.NotHealthy
+	        OR #iqUDT_EquipmentControl.Command.ResetData
+	    THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #sUDT_HMIStatus.Specific.NotHealthy,
+	                        ix_RTrigActivate := #R_TRIG_NotHealthy.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.NotHealthy);
+	    END_IF;
+	    
+	    // Too long parcel
+	    IF #sUDT_HMIStatus.Specific.TooLongParcel
+	        OR #iqUDT_EquipmentControl.Command.ResetData
+	    THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #sUDT_HMIStatus.Specific.TooLongParcel,
+	                        ix_RTrigActivate := #R_TRIG_TooLongParcel.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.TooLongParcel);
+	    END_IF;
+	    
+	    // PN Slave not online
+	    IF #iqUDT_EquipmentControl.Command.ResetData OR #sUDT_HMIStatus.Specific.PNSlaveNotOnline
+	    THEN
+	        
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #sUDT_HMIStatus.Specific.PNSlaveNotOnline,
+	                        ix_RTrigActivate := #sR_TRIG_PNSlaveNotOnline.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.PNNodeNotOnline);
+	    END_IF;
+	    
+	    // PN Slave error
+	    IF #iqUDT_EquipmentControl.Command.ResetData OR #sUDT_HMIStatus.Specific.PNSlaveError
+	    THEN
+	        
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #sUDT_HMIStatus.Specific.PNSlaveError,
+	                        ix_RTrigActivate := #sR_TRIG_PNSlaveError.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.PNNodeError);
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 14 - Report to control block
+	    
+	    "FC_EquipmentReport"(iUDT_Status := #sUDT_CommonStatus,
+	                         iqUDT_Control := #iqUDT_EquipmentControl);
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

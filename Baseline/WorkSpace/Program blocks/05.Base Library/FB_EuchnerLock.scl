@@ -1,0 +1,145 @@
+﻿FUNCTION_BLOCK "FB_EuchnerLock"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 210
+// END_ATTRIBUTES
+   VAR_INPUT 
+      ix_ButtonReset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reset button
+      ix_ButtonRequest { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Request open button
+      ix_DoorClosed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Feedback from lock - door is closed
+      ix_BoltTongueClosed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Feedback from lock - bolt tongue closed
+      ix_SafelyLoced { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Feedback from lock - Safely locked
+      ix_LockFault { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Lock has an internal fault
+      ix_SystemStopped { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Feedback from system - System is stopped
+      ix_SafetyLockOK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Safety lock status OK
+      ix_SafetyLockAckReq { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Safety lock need acknowledgement
+   END_VAR
+
+   VAR_OUTPUT 
+      qx_StopSystem { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Signal to stop the system
+      qx_ResetButtonLed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reset button lamp
+      qx_RequestButtonLed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Request button lamp
+      qx_FaultReset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reset internal lock fault
+      qx_ReleaseLock { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Signal to safety logic to release lock
+      qUDT_Status : "UDT_EuchnerLockStatus";   // Status structure
+   END_VAR
+
+   VAR 
+      sFB_OpenRequestDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // Function block to generate on signal delay - emergency request button
+      sFB_ResetDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";
+      sR_TRIG_RequestButton {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge trigger from reqest button
+      sx_Request { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Request to open the door
+      sx_EmergencyReqest { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Emergency request to open the door
+   END_VAR
+
+   VAR CONSTANT 
+      c_Time : UDInt := 10000;
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	11/03/2022  | 0.1       | S.Nikodem     | first release MHS TIA 15.1
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 - Request open
+	    
+	    //Button
+	    //Rising edge trigger 
+	    #sR_TRIG_RequestButton(CLK := #ix_ButtonRequest);
+	    
+	    // Flip-flop
+	    IF #sR_TRIG_RequestButton.Q THEN
+	        
+	        IF #sx_Request THEN
+	            
+	            #sx_Request := FALSE;
+	            #sx_EmergencyReqest := FALSE;
+	            
+	        ELSE
+	            
+	            #sx_Request := TRUE;
+	            
+	        END_IF;
+	        
+	    END_IF;
+	    
+	    // Reset Flip-Flop
+	    IF NOT #ix_BoltTongueClosed THEN
+	        
+	        #sx_Request := FALSE;
+	        #sx_EmergencyReqest := FALSE;
+	        
+	    END_IF;
+	    
+	    //Emergency open reqest
+	    #sFB_OpenRequestDelay(iudi_OnDelayTime := #c_Time,
+	                          iudi_OffDelayTime := 0,
+	                          ix_SignalToDelay := #ix_ButtonRequest,
+	                          ix_Enable := True);
+	    
+	    
+	    IF #sFB_OpenRequestDelay.qx_DelayedSignal THEN
+	        
+	        #sx_EmergencyReqest := True;
+	        
+	    END_IF;
+	    
+	    //Stop system
+	    #qx_StopSystem := #sx_Request OR #sx_EmergencyReqest;
+	    
+	    //If system is stopped and is safe then open lock
+	    #qx_ReleaseLock := (#sx_Request AND #ix_SystemStopped) OR #sx_EmergencyReqest;
+	    
+	END_REGION
+	
+	REGION 2 - Lamp controlling 
+	    
+	    // Reset button LED - Blue
+	    // Lamp active - Safety is open
+	    // Lamp flashing - Euchner lock has a fault or safety lock must be acknowledged and bolt is inside.
+	    
+	    #qx_ResetButtonLed := (NOT #ix_SafetyLockOK AND NOT #ix_SafetyLockAckReq) OR ("mx_Clock_1Hz" AND (#ix_SafetyLockAckReq OR #ix_LockFault));
+	    
+	    // Request button LED - White
+	    // Lamp active - Request to open the lock is active Aand lock is opened and bolt is inside.
+	    // Lamp flashing - Request to open is active, the area is not safe and the lock is closed.
+	    
+	    #qx_RequestButtonLed := #sx_Request AND ((NOT #ix_SafelyLoced AND #ix_BoltTongueClosed) OR "mx_Clock_1Hz");
+	    
+	END_REGION
+	
+	REGION 3 - Falut reset
+	    
+	    #sFB_ResetDelay(iudi_OnDelayTime := 0,
+	                    iudi_OffDelayTime := 3500,
+	                    ix_SignalToDelay := (#ix_LockFault) AND (#ix_ButtonReset));
+	    
+	    
+	    // Set reset signal
+	    #qx_FaultReset := #sFB_ResetDelay.qx_DelayedSignal;
+	    
+	END_REGION
+	
+	REGION 4 - Status
+	    
+	    // Copy status
+	    #qUDT_Status.LockFault := #ix_LockFault;
+	    #qUDT_Status.DoorClosed := #ix_DoorClosed;
+	    #qUDT_Status.DoorOpened := NOT #ix_DoorClosed;
+	    #qUDT_Status.BoltTongueClosed := #ix_BoltTongueClosed;
+	    #qUDT_Status.Safelylocked := #ix_SafelyLoced;
+	    #qUDT_Status.SafetyLockAckReq := #ix_SafetyLockAckReq;
+	    
+	END_REGION
+	
+END_FUNCTION_BLOCK
+

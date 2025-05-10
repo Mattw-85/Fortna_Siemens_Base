@@ -1,0 +1,137 @@
+﻿TYPE "UDT_DeviceState"
+TITLE = UDT_DeviceState
+VERSION : 0.1
+//User-defined structure of device states.
+   STRUCT
+      Configure { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Device configured in TIA Portal hardware
+      Exist { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Device physically connected
+      Error { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Device has an error
+      ProfinetNumber { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UInt;   // Profinet slave number
+      HW_ID { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UInt;   // Device's HW_ID
+      PNDeviceName { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;   // Device's project name
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_ModuleState"
+TITLE = UDT_ModuleState
+VERSION : 0.1
+//User-defined structure of module states.
+   STRUCT
+      Configured { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Module configured
+      Exist { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Module exist
+      Error { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Module has error
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_ProfinetDevice"
+TITLE = UDT_ProfinetDevice
+VERSION : 0.1
+//User-defined structure of profinet device state.
+   STRUCT
+      DeviceState { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_DeviceState";   // Device state
+      Module { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : Array[0..31] of "UDT_ModuleState";   // Modules
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_EventStatistic"
+TITLE = UDT_EventStatistic
+VERSION : 0.1
+//User-defined structure of event statistic data.
+   STRUCT
+      NumberOfTimes : DInt;   // Number of times the event occurred since last reset
+      LastEventSeconds : DInt;   // Number of seconds of the current or last event
+      TotalEventSeconds : DInt;   // Total number of seconds the event occurred since last reset
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_ProfinetNetwork"
+TITLE = UDT_ProfinetNetwork
+VERSION : 0.1
+//User-defined structure of profinet network state.
+   STRUCT
+      DeviceStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[0..512] of "UDT_ProfinetDevice";   // Profinet device status
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_ProfiDiagStatistics"
+TITLE = UDT_ProfiDiagStatistics
+VERSION : 0.1
+//User-defined structure of FB_ProfiDiag function block statistics.
+   STRUCT
+      DeviceError { S7_SetPoint := 'False'} : Array[0..512] of "UDT_EventStatistic";   // Device error statistics
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_PNSlaveStatus"
+VERSION : 0.1
+   STRUCT
+      Status : Int;   // Status number
+      Specific : Struct   // Specific structure
+         PNSlaveNotOnline : Bool;   // Profinet slave is not online
+         PNSlaveError : Bool;   // Profinet slave is in error
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_PNSlaveStatistics"
+VERSION : 0.1
+   STRUCT
+      PNSlaveError : "UDT_EventStatistic";   // Statistics of a Profinet slave error
+      PNSlaveNotOnline : "UDT_EventStatistic";   // Statistics of  Profinet slave not online
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_PNNodeStatus"
+VERSION : 0.1
+   STRUCT
+      Status : Int;   // Status number
+      Specific : Struct   // Specific structure
+         PNSlaveNotOnline { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet slave is not online
+         PNSlaveError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet slave is in error
+         PNSlaveWarning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet slave has  a warning
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_PNNodeStatistics"
+VERSION : 0.1
+   STRUCT
+      PNSlaveError : "UDT_EventStatistic";   // Statistics of a Profinet slave error
+      PNSlaveNotOnline : "UDT_EventStatistic";   // Statistics of  Profinet slave not online
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_PNDevice"
+VERSION : 0.1
+   STRUCT
+      PNNetworknumber { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int := 1;   // Number of the profinet network where device exist
+      PNDeviceNumber { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int := 0;   // Profinet number of the device
+      PNDeviceFound { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Device found in Profinet structure
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_PNCoupler_Interface"
+TITLE = Interface signals between PN Coupler
+VERSION : 0.1
+   STRUCT
+      DownstreamDisplacement { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Displacement from downstream [cm]
+      RTS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Conveyor ready to send
+      RTR { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Conveyor ready to receive
+      TIP { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Transfer in progress
+      ResetEnergySave { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reset energy save mode
+      CascadeStartUp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Cascade startup
+   END_STRUCT;
+
+END_TYPE
+

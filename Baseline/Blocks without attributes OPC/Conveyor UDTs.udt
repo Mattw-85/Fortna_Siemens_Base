@@ -1,0 +1,163 @@
+﻿TYPE "UDT_EventStatistic"
+TITLE = UDT_EventStatistic
+VERSION : 0.1
+//User-defined structure of event statistic data.
+   STRUCT
+      NumberOfTimes : DInt;   // Number of times the event occurred since last reset
+      LastEventSeconds : DInt;   // Number of seconds of the current or last event
+      TotalEventSeconds : DInt;   // Total number of seconds the event occurred since last reset
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_ConveyorCommonConfiguration"
+VERSION : 0.1
+   STRUCT
+      Length { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Conveyor length [mm]
+      LengthCorrection { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Length correction [mm]
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_ConveyorStatus"
+TITLE = UDT_ConveyorStatus
+VERSION : 0.1
+//User-defined structure of FB_Conveyor function block status.
+   STRUCT
+      Status : Int;   // Status number
+      Specific : Struct
+         Reverse { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Conveyor is running in reverse direction
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_ConveyorStatistics"
+TITLE = UDT_ConveyorStatistics
+VERSION : 0.1
+//User-defined structure of FB_Conveyor function block statistics.
+   STRUCT
+      EnergySave : "UDT_EventStatistic";   // Number of times that save energy mode occurs
+      ConveyorUp : "UDT_EventStatistic";   // Conveyor up statistics
+      ConveyorDown : "UDT_EventStatistic";   // Conveyor down statistics
+      ConveyorStop : "UDT_EventStatistic";   // Conveyor down statistics
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_ConveyorPanelStatus"
+TITLE = Cabinet MCP Status
+VERSION : 0.1
+   STRUCT
+      CBFeedbackError : Bool;   // Circuit feedback error
+      MainSwitchOff : Bool;   // Main switch tripped
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_ConveyorPanelStatistics"
+TITLE = Cabinet MCP Statistics
+VERSION : 0.1
+   STRUCT
+      CBFeedbackError : "UDT_EventStatistic";   // Circuit breaker feedback error
+      MainSwitchOff : "UDT_EventStatistic";   // Main switch fault statistics
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_ConveyorInterface"
+TITLE = UDT_ConveyorInterface
+VERSION : 0.1
+//User-defined structure of conveyor interface variables.
+   STRUCT
+      Displacement { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Displacement per PLC scan [cm] either from position (if available) or speed and time
+      SpeedSetpoint { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Conveyor speed setpoint [mm/s]
+      ActualSpeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Conveyors actual speed [mm/s]
+      DeltaPosition { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Read from Conveyor Servo Position [mm] after 1 PLC cycle
+      RunFwd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Run forward request
+      RunRvs { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Run reverse request
+      InternalErrorEncoder { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Encoder has an error
+      InternalErrorVFD { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // VFD has an error
+      InternalErrorTracking { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Tracking has an error
+      InternalErrorPEC { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // PEC has an error
+      InternalWarningVFD { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // VFD has a warning
+      InternalWarningTracking { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Tracking has a warning
+      InternalErrorReset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reset internal errors
+      ConfigurationError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Configuration error is active
+      VFDRunning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Motor is running
+      VFDatSpeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Motor at speed setpoint
+      Disconnected { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // VFD disconnected
+      ManualModeActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Covneyor is in manual mode
+      ResetStatistics { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reset statistics
+      HardwareOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Hardware for the Equipment is available and healthy
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_ConveyorHandshake"
+TITLE = UDT_ConveyorHandshake
+VERSION : 0.1
+//User-defined structure of conveyor handshake variables.
+   STRUCT
+      GIN { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // General identification number
+      NrOfPosToShift { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Number of positions to shift
+      DownstreamDisplacement { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Displacement from downstream [cm]
+      RTS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Conveyor ready to send
+      RTR { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Conveyor ready to receive
+      TIP { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Transfer in progress
+      ResetEnergySave { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reset energy save mode
+      CascadeStartUp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Cascade startup
+      ReqStop { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Request stop
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_ConveyorConfiguration"
+TITLE = UDT_ConveyorConfiguration
+VERSION : 0.1
+//User-defined structure of conveyor parameters.
+   STRUCT
+      Common { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorCommonConfiguration";   // Common configuration
+      Forward_Direction { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Forward Direction configuration
+         EnergySaveLenght { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Distance conveyor travelled before energy save activate [cm]
+         GapHeadToHead { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Gapping head to head value [cm]
+         GapTailToHead { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Gapping tail to head value [cm]
+         GapCorrection { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Gap offset to cover VFD's ramps [cm]
+         PEC_EoSDistanceOffset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Distance offset between photo eye and the end of conveyor [mm]
+         Mode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Automatic operation; 1- Slave; 2- Queue;
+         FirstConveyorToStart { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // First conveyor to start cascade mode forward direction
+      END_STRUCT;
+      Reverse_Direction { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Reverse Direction configuration
+         EnergySaveLenght { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Distance conveyor travelled before energy save activate [cm]
+         GapHeadToHead { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Gapping head to head value [cm]
+         GapTailToHead { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Gapping tail to head value [cm]
+         GapCorrection { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Gap offset to cover VFD's ramps [cm]
+         PEC_BoSDistanceOffset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Distance offset between photo eye and the end of conveyor [mm]
+         Mode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Automatic operation; 1- Slave; 2- Queue;
+         FirstConveyorToStart { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // First conveyor to start cascade mode reverse direction
+      END_STRUCT;
+      CascadeTimeOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Cascade time on delay [ms]
+      ExtraGapRecovery { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Extra gap to recovery die back [cm]
+      SpeedSetpointLow { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Low speed setpoint [mm/s]
+      SpeedSetpointNominal { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Nominal speed setpoint [mm/s]
+      Energy { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Energy save mode enable
+      Bi_Directional_Enable { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // The conveyor can run in both directions
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_ConveyorCommand"
+TITLE = UDT_ConveyorCommand
+VERSION : 0.1
+//User-defined structure of conveyor commands.
+   STRUCT
+      ManualMode : Bool;   // Manual mode command from HMI
+      ManualStartStop : Bool;   // Run conveyor in manual mode
+      ManualFullSpeed : Bool;   // Full speed conveyor in manual mode
+      ManualJog : Bool;   // Command to jog conveyor in slow speed from HMI
+      Reverse : Bool;   // Command to run conveyor in reverse direction from HMI
+      ManualSpeed : Int := 50;   // Manual mode speed as percentage of nominal speed [0-100%]
+   END_STRUCT;
+
+END_TYPE
+

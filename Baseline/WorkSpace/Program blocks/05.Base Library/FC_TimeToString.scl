@@ -1,0 +1,105 @@
+﻿FUNCTION "FC_TimeToString" : Void
+TITLE = FC_TimeToString
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 29
+// END_ATTRIBUTES
+//Function to convert date in DTL to the string format.
+   VAR_INPUT 
+      ia_Date {InstructionName := 'DTL'; LibVersion := '1.0'} : DTL;   // DTL format date
+   END_VAR
+
+   VAR_OUTPUT 
+      qs_Date : String;   // String format date
+   END_VAR
+
+   VAR_TEMP 
+      ta_StringDate : Struct   // String format date
+         Year : String;   //   Year
+         Month : String[2];   //   Month
+         Day : String[2];   //   Day
+         Hour : String[2];   //   Hour
+         Minute : String[2];   //   Minunte
+         Second : String[2];   //   Second
+         Millisecond : String[4];   //   Millisecond
+      END_STRUCT;
+      ta_HTAReturn : Struct   // HTA operation status
+         Year : Word;   //   Year
+         Month : Word;   //   Month
+         Day : Word;   //   Day
+         Hour : Word;   //   Hour
+         Minute : Word;   //   Minunte
+         Second : Word;   //   Second
+         Millisecond : Word;   //   Millisecond
+      END_STRUCT;
+   END_VAR
+
+   VAR CONSTANT 
+      ci_Positions4 : USInt := 4;   // Number of character positions
+      ci_DecimalPlaces0 : USInt := 0;   // Number of decimal places
+      ci_Format0 : USInt := 0;   // Output format of the characters
+      ci_Position1 : USInt := 1;   // Character starting at which the result is written
+      cc_Colon : Char := ':';   // Colon sign
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	24/05/2019  | 0.1       | K.Pokorski    | first release MHS TIA 15.1
+	24/07/2019  | 2.0       | L.Klar        | 2.0 MHS library release TIA 15.1
+	27/08/2019  | 2.1       | M.Kurpiers    | Comments adjusted
+	05/09/2019  | 2.2       | K.Pokorski    | FC changed from unoptimized to optimized
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	16/02/2023  | 3.1       | F.Baten       | Added constants
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 - Date and time separation
+	    
+	    // Convert the year into a character string
+	    VAL_STRG(IN := #ia_Date.YEAR,
+	             SIZE := #ci_Positions4,
+	             PREC := #ci_DecimalPlaces0,
+	             FORMAT := USINT_TO_WORD(#ci_Format0),
+	             P := #ci_Position1,
+	             OUT => #ta_StringDate.Year);
+	    
+	    // Using the HTA function, convert date into a string format
+	    #ta_HTAReturn.Month := HTA(IN := WORD_TO_BYTE(INT_TO_BCD16((USINT_TO_INT(#ia_Date.MONTH)))), N := 1, OUT => #ta_StringDate.Month);                          // Convert the month  
+	    #ta_HTAReturn.Day := HTA(IN := WORD_TO_BYTE(INT_TO_BCD16((USINT_TO_INT(#ia_Date.DAY)))), N := 1, OUT => #ta_StringDate.Day);                                // Convert the day  
+	    #ta_HTAReturn.Hour := HTA(IN := WORD_TO_BYTE(INT_TO_BCD16((USINT_TO_INT(#ia_Date.HOUR)))), N := 1, OUT => #ta_StringDate.Hour);                             // Convert the hour  
+	    #ta_HTAReturn.Minute := HTA(IN := WORD_TO_BYTE(INT_TO_BCD16((USINT_TO_INT(#ia_Date.MINUTE)))), N := 1, OUT => #ta_StringDate.Minute);                       // Convert the minute  
+	    #ta_HTAReturn.Second := HTA(IN := WORD_TO_BYTE(INT_TO_BCD16((USINT_TO_INT(#ia_Date.SECOND)))), N := 1, OUT => #ta_StringDate.Second);                       // Convert the second  
+	    #ta_HTAReturn.Millisecond := HTA(IN := INT_TO_BCD16((UDINT_TO_INT(#ia_Date.NANOSECOND / 1000000))), N := 2, OUT => #ta_StringDate.Millisecond);              // Convert the millisecond  
+	    
+	END_REGION
+	
+	REGION 2 - Timestamp preparation
+	    
+	    // Combine several input strings into one long output string
+	    #qs_Date := (CONCAT(IN1 := #ta_StringDate.Year,
+	                        IN2 := #cc_Colon,
+	                        IN3 := #ta_StringDate.Month,
+	                        IN4 := #cc_Colon,
+	                        IN5 := #ta_StringDate.Day,
+	                        IN6 := #cc_Colon,
+	                        IN7 := #ta_StringDate.Hour,
+	                        IN8 := #cc_Colon,
+	                        IN9 := #ta_StringDate.Minute,
+	                        IN10 := #cc_Colon,
+	                        IN11 := #ta_StringDate.Second,
+	                        IN12 := #cc_Colon,
+	                        IN13 := RIGHT(IN := #ta_StringDate.Millisecond, L := 3)));
+	    
+	END_REGION
+END_FUNCTION
+

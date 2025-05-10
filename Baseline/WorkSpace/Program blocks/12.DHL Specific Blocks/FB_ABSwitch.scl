@@ -1,0 +1,845 @@
+﻿FUNCTION_BLOCK "FB_ABSwitch"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 87
+// END_ATTRIBUTES
+   VAR_INPUT 
+      iUDT_ABSwitchConfig { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ABSwitchConfiguration";   // AB Switch Configuration structure
+      ix_SafetyOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when Safety Circuit of the Conveyor is healthy
+      ix_PRXUp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when upper position sensor is not covered
+      ix_PRXDown { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when lower position sensor is not covered
+      ix_PRXBrkUp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when sensor to slow down the speed is not covered
+      ix_PRXBrkDwn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when sensor to slow down the speed is not covered
+      ix_LSUp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when upper limit sensor is not covered
+      ix_LSDwn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when lower limit sensor is not covered
+      ix_PECFreUp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when nothing is within the range of the motion sensor
+      ix_PECFreDwn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when nothing is within the range of the motion sensor
+      ix_SSMan { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when on Local Controll Panel switch [1] Manual; [0] Automatic
+      ix_PBDwn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when Local Control Panel switch Down is on
+      ix_PBUp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when Local Control Panel switch Up is on
+      ix_PBRst { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when Local Control Panel reset is on
+      ix_HardwareOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when hardware is Ok
+      ii_Mode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Mode - [1] Upper position [2] Lower position
+      ix_ChangeModeSignal { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when change mode command active
+   END_VAR
+
+   VAR_OUTPUT 
+      qUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ABSwitchStatus";   // HMI status structure
+      qUDT_Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_CommonStatus";   // Common status structure
+      qx_ExternalHold { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // External hold for AB Switch belt
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_EquipmentControl : "UDT_EquipmentControl";   // Equipment control structure
+      iqUDT_ABSwitchInterface : "UDT_ConveyorInterface";   // Interface AB Switch motor
+      iqUDT_Statistics : "UDT_ABSwitchStatistics";   // Statistics structure
+   END_VAR
+
+   VAR 
+      sUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ABSwitchStatus";   // HMI status structure
+      sUDT_StatusOld { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   // Common status structure
+      sUDT_Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   // Common status structure
+      Jog_Enable { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // Filtering lower jam photo eye signal
+      SwitchingTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // Switching time
+      R_TRIG_ManualMode {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge trigger manual mode
+      R_TRIG_ManualJogUp {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge trigger manual jog mode command
+      R_TRIG_ManualJogDown {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge trigger manual jog mode command
+      R_TRIG_DownTime {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge trigger VSU is stopped
+      R_TRIG_Error {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge trigger for Error
+      R_TRIG_UPSwA_Error {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge trigger for Upper switch area error
+      R_TRIG_LowSwA_Error {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge trigger for Lower switch area error
+      R_TRIG_UpTime {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge trigger AB switch is running automatic
+      R_TRIG_RestartFromError {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge trigger Restart from error
+      F_TRIG_PECBrakeUp {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   // Falling edge trigger for PEC brake up
+      F_TRIG_PECBrakeDown {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   // Falling edge trigger for PEC brake down
+      F_TRIG_PECUp {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   // Falling edge trigger for PEC up position
+      F_TRIG_PECDown {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   // Falling edge trigger for PEC down position
+      R_TRIG_PreStartSemiAutomaticUp {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   // Falling edge trigger for Pre start semi automatic up signal
+      R_TRIG_PreStartSemiAutomaticDown {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   // Falling edge trigger for Pre start semi automatic down signal
+      ss_ABSwitch_Interface { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // VSU interface static structure
+         Positioning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+         SemiAutomatic { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+         Manual { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+         RunEnabled { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      END_STRUCT;
+      sx_StartReceived { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Start command received from system
+      sx_Ready { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Conveyor Ready to operate in Automatic mode
+      sx_SemiAutomatic { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Running in semi automatic
+      sx_PreStartManual { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Pre conditions to run conveyor in manual mode
+      sx_Stopping { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Stopping is active, first reach position
+      sx_SwitchEnable { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Switching conditions
+      sx_UpRequest { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Request upper outfeed position for actual parcel
+      sx_DownRequest { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Request lower outfeed position for actual parcel
+      sx_ActualPositionUP { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Actual position is up
+      sx_ActualPositionDown { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Actual position is down
+      sx_CombinedJogUp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Combined signal of jogging buttons
+      sx_CombinedJogDown { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Combined signal of jogging buttons
+      sx_RestartFromError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // After an error has occurred the action to be done before resuming normal operation
+      sx_Jog { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Off delayed signal Jogging was activated
+      sx_ConfigurationError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Commissioning: configuration of parameters is wrong
+      sx_JogUp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // AB Switch in manual mode - jog up
+      sx_JogDown { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // AB Switch in manual mode - jog down
+      sx_ABSwitchSlowSpeedUp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Slow down the speed when AB Switch is going up
+      sx_ABSwitchSlowSpeedDown { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Slow down the speed when AB Switch is going down
+      sx_UpperPositionReached { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // AB Switch is in upper position
+      sx_LowerPositionReached { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // AB Switch is in lower position
+      sx_PreStartSemiAutomaticUp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Pre conditions to run conveyor in semi automatic up mode
+      sx_PreStartSemiAutomaticDown { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Pre conditions to run conveyor in semi automatic down  mode
+   END_VAR
+
+   VAR_TEMP 
+      ti_ActiveSensor : Int;   // Active sensor counter
+   END_VAR
+
+   VAR CONSTANT 
+      ci_UpperPosition : Int := 1;   // Upper position number
+      ci_LowerPosition : Int := 2;   // Lower position number
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	|                                                                                      |
+	|  Copyright  2023             FORTNA Europe BV                                        |
+	|  All Rights Reserved         Netherlands                                             |
+	|                                                                                      |  
+	----------------------------------------------------------------------------------------                                           
+	Version history:
+	Date        | Version   | Author       | Remark
+	----------------------------------------------------------------------------------------
+	19/05/2023  | 1.0       | S. Nikodem   | Release TIA 17 | DHL Munich 2023
+	19/12/2023  | 1.1       | S. Nikodem   | On site update
+	09/02/2024  | 1.2       | P.Gryszczyk  | Gap Down sensor invert
+	02/03/2024  | 1.3       | P.Gryszczyk  | HMI Lower Upper Position invert
+	12/03/2024  | 1.4       | S. Nieswiec  | Addjusting to naming standard
+	*)
+	
+	REGION 1 - Initial
+	    
+	    REGION 1.1 - Triggers
+	        
+	        // Detecting rising edge on manual mode Or from Equipment Control
+	        #R_TRIG_ManualMode(CLK := #sUDT_Status.Manual);
+	        
+	        // Rising edge trigger running        
+	        #R_TRIG_UpTime(CLK := #sx_SemiAutomatic AND #sx_Ready);
+	        
+	        // Detecting rising edge AB switch stopped        
+	        #R_TRIG_DownTime(CLK := #sx_SemiAutomatic AND NOT #sx_Ready);
+	        
+	        // Detecting rising edge on AB switch error
+	        #R_TRIG_Error(CLK := #sUDT_Status.Error);
+	        
+	        // Detecting rising edge on start of the restart from error sequence
+	        #R_TRIG_RestartFromError(CLK := #sx_RestartFromError);
+	        
+	    END_REGION
+	    
+	    REGION 1.2 - Filters
+	        
+	        // Time to start without start warning while jogging
+	        #Jog_Enable(iudi_OffDelayTime := #iUDT_ABSwitchConfig.JogNoHornTime,
+	                    ix_SignalToDelay := #sx_Jog);
+	        
+	    END_REGION
+	    
+	    REGION 1.3 - Switching conditions
+	        
+	        #sx_SwitchEnable := NOT #iqUDT_ABSwitchInterface.VFDRunning;
+	        
+	    END_REGION
+	    
+	    REGION 1.4 - Positioning
+	        
+	        // To add manual mode
+	        
+	        #ss_ABSwitch_Interface.Positioning := #iqUDT_ABSwitchInterface.ActualSpeed <> 0
+	        AND #sx_SemiAutomatic
+	        AND NOT #iqUDT_ABSwitchInterface.InternalErrorVFD;
+	        
+	    END_REGION
+	    
+	    REGION 1.5 - Position
+	        
+	        #sx_ActualPositionUP := NOT #ss_ABSwitch_Interface.Positioning                              // The positioning is not active 
+	        AND NOT #ix_PRXUp;                                                          // And the position sensor signals
+	        
+	        #sx_ActualPositionDown := NOT #ss_ABSwitch_Interface.Positioning                            // The positioning is not active                                                      
+	        AND NOT #ix_PRXDown;                                                        // And the position sensor signals
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 2 - Errors
+	    
+	    REGION 2.1 - Reset errors
+	        
+	        //Global reset
+	        IF #iqUDT_EquipmentControl.Command.Reset                                       // Reset
+	        THEN
+	            // Switch area
+	            IF #sUDT_HMIStatus.Specific.UpperSwitchAreaError                            // Upper jam error is active 
+	                AND #ix_PECFreUp                                                       // Upper jam sensor is free
+	            THEN
+	                
+	                #sUDT_HMIStatus.Specific.UpperSwitchAreaError := FALSE;                 // reset error
+	                
+	            END_IF;
+	            
+	            IF #sUDT_HMIStatus.Specific.LowerSwitchAreaError                            // lower jam error is active 
+	                AND #ix_PECFreDwn                                                     // Lower jam sensor is free
+	            THEN
+	                
+	                #sUDT_HMIStatus.Specific.LowerSwitchAreaError := FALSE;                 // reset error
+	                
+	            END_IF;
+	            
+	        END_IF;
+	        
+	        //Local reset
+	        IF #ix_PBRst THEN
+	            
+	            // Switch area
+	            IF #sUDT_HMIStatus.Specific.UpperSwitchAreaError                            // Upper jam error is active 
+	                AND #ix_PECFreUp                                                       // Upper jam sensor is free
+	            THEN
+	                
+	                #sUDT_HMIStatus.Specific.UpperSwitchAreaError := FALSE;                 // reset error
+	                
+	            END_IF;
+	            
+	            IF #sUDT_HMIStatus.Specific.LowerSwitchAreaError                            // lower jam error is active 
+	                AND #ix_PECFreDwn                                                     // Lower jam sensor is free
+	            THEN
+	                
+	                #sUDT_HMIStatus.Specific.LowerSwitchAreaError := FALSE;                 // reset error
+	                
+	            END_IF;
+	            
+	            #sUDT_HMIStatus.Specific.SwitchingTimerError := False;
+	            #sUDT_HMIStatus.Specific.LimitSensorLowerPosition := False;
+	            #sUDT_HMIStatus.Specific.LimitSensorUpperPosition := False;
+	            
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 2.2 - Set errors
+	        
+	        // Upper Jam sensor blocked in movement
+	        IF NOT #ix_PECFreUp AND #ss_ABSwitch_Interface.Positioning
+	            
+	        THEN
+	            #sUDT_HMIStatus.Specific.UpperSwitchAreaError := TRUE;                      // Set error upper jam sensor
+	        END_IF;
+	        
+	        // Lower Jam sensor blocked in movement
+	        IF NOT #ix_PECFreDwn AND #ss_ABSwitch_Interface.Positioning
+	        THEN
+	            #sUDT_HMIStatus.Specific.LowerSwitchAreaError := TRUE;                      // Set error lower jam sensor
+	        END_IF;
+	        
+	        //Configuration error
+	        #sx_ConfigurationError := (#iUDT_ABSwitchConfig.BrakingSpeedSetpoint > #iUDT_ABSwitchConfig.NominalSpeedSetPoint)
+	        OR #iUDT_ABSwitchConfig.NominalSpeedSetPoint = 0
+	        OR #iUDT_ABSwitchConfig.BrakingSpeedSetpoint = 0
+	        OR #iUDT_ABSwitchConfig.ManualModeSpeed = 0
+	        OR #iUDT_ABSwitchConfig.SwitchingTime = 0
+	        OR #iUDT_ABSwitchConfig.JogNoHornTime = 0
+	        OR (#iUDT_ABSwitchConfig.BrakingSpeedSetpoint > 500);
+	        
+	        //Switching Time
+	        #SwitchingTime(iudi_OnDelayTime := #iUDT_ABSwitchConfig.SwitchingTime,
+	                       iudi_OffDelayTime := 0,
+	                       ix_SignalToDelay := #sx_SemiAutomatic AND NOT #iqUDT_EquipmentControl.Request.SignalingRequest AND (#sx_UpRequest AND #ix_PRXUp) OR (#sx_DownRequest AND #ix_PRXDown));
+	        
+	        IF #SwitchingTime.qx_DelayedSignal THEN
+	            #sUDT_HMIStatus.Specific.SwitchingTimerError := True;
+	        END_IF;
+	        
+	        // Reference error - set error when more like one position sensor is active
+	        #ti_ActiveSensor := 0;
+	        
+	        //Position sensor up
+	        IF NOT #ix_PRXUp THEN
+	            #ti_ActiveSensor += 1;
+	        END_IF;
+	        
+	        //Position sensor down
+	        IF NOT #ix_PRXDown THEN
+	            #ti_ActiveSensor += 1;
+	        END_IF;
+	        
+	        //Brake sensor up
+	        IF NOT #ix_PRXBrkUp THEN
+	            #ti_ActiveSensor += 1;
+	        END_IF;
+	        
+	        //Brak sensor down
+	        IF NOT #ix_PRXBrkDwn THEN
+	            #ti_ActiveSensor += 1;
+	        END_IF;
+	        
+	        //Limit switch up
+	        IF NOT #ix_LSUp THEN
+	            #ti_ActiveSensor += 1;
+	        END_IF;
+	        
+	        //Limit switch down
+	        IF NOT #ix_LSDwn THEN
+	            #ti_ActiveSensor += 1;
+	        END_IF;
+	        
+	        IF #ti_ActiveSensor >= 2 THEN
+	            #sUDT_HMIStatus.Specific.ReferenceError := True;
+	        ELSE
+	            #sUDT_HMIStatus.Specific.ReferenceError := False;
+	        END_IF;
+	        
+	        //Limit switch active
+	        IF NOT #ix_LSUp THEN
+	            
+	            #sUDT_HMIStatus.Specific.LimitSensorUpperPosition := True;
+	            
+	        END_IF;
+	        
+	        IF NOT #ix_LSDwn THEN
+	            
+	            #sUDT_HMIStatus.Specific.LimitSensorLowerPosition := True;
+	            
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 2.3 - Common Error
+	        
+	        #sUDT_Status.Error :=
+	        #iqUDT_ABSwitchInterface.InternalErrorTracking                                 // or the AB switch conveyor detected an error in tracking 
+	        OR #iqUDT_ABSwitchInterface.InternalErrorVFD                                   // or there are errors in the VFD
+	        OR NOT #ix_HardwareOk                                                               // or an internal error in the RIO panel occured
+	        OR #sUDT_HMIStatus.Specific.UpperSwitchAreaError                                // or Upper jam PEC detected WHILE going Up
+	        OR #sUDT_HMIStatus.Specific.LowerSwitchAreaError;                                // or Lower jam PEC detected while going Down
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 3 - Check conditions to set Equipment ready
+	    
+	    //Conditions to set bit sx_Ready to operate 
+	    #sx_Ready := NOT #sUDT_Status.Error                                                // Error not present
+	    AND #ix_SafetyOk                                                                  // Safety signalling OK
+	    AND NOT #sUDT_HMIStatus.Specific.LimitSensorUpperPosition
+	    AND NOT #sUDT_HMIStatus.Specific.LimitSensorLowerPosition;
+	    
+	    
+	END_REGION
+	
+	REGION 4 - Stop Equipment
+	    
+	    IF (#ix_SSMan                                                        // Manual mode is active
+	        AND #sx_SemiAutomatic                                                       // AB switch is in semi-automatic mode
+	        OR (NOT #iqUDT_EquipmentControl.Command.AutomaticOn                        // AB switch stops if the bit AutomaticOn from control block is false
+	        AND NOT #ix_SSMan)                                               // Manual mode active bit
+	        OR (NOT #sx_Ready                                                           // Bit AB switch ready to run in automatic mode
+	        AND NOT #ix_SSMan)                                               // Manual mode active
+	        OR #ix_SSMan                                                      // LCP is not set to automatic
+	        OR NOT #ix_SafetyOk)                                                        // Safety is not ok
+	    THEN                                                                            // Order to stop 
+	        #sx_Stopping := TRUE;                                                       // stopping is activated
+	        #sx_SemiAutomatic := FALSE;                                                 // switch of automatic activ
+	        #sx_StartReceived := FALSE;                                                 // Start command received from system 
+	        
+	    END_IF;
+	    
+	    IF (#sx_Stopping                                                                 // stopping is activated
+	        AND NOT #ss_ABSwitch_Interface.Positioning)                                       // The positioning device is not active positioning 
+	        OR NOT #sx_Ready                                                             // AB switch is not ready to run
+	    THEN
+	        #sx_Stopping := FALSE;                                                       // stopping is activated
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 5 - Start Semi-automatic mode 
+	    
+	    REGION 5.1 - Start 
+	        
+	        // if start (OS) is received from system, this is memorised until started in cascade 
+	        IF #iqUDT_EquipmentControl.Command.Start                                       // Start from system
+	            AND #sx_Ready                                                               // Equipment has no errors
+	        THEN
+	            #sx_StartReceived := TRUE;                                                  // Start command received from system 
+	        END_IF;
+	        
+	        IF #sx_StartReceived                                                            // Start command received from system
+	            AND NOT #ix_SSMan                                                         // and the LCP is set to auto
+	        THEN
+	            #sx_SemiAutomatic := TRUE;                                                  // Automatic activated
+	            #sx_StartReceived := FALSE;                                                 // Start command received from system
+	        END_IF;
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 6 - Manual mode 
+	    
+	    REGION 6.1 - Jog signals
+	        
+	        #sx_CombinedJogUp := #ix_SSMan                                                          // box in manual
+	        AND #ix_PBUp;                                                                // If selected jog in positive direction 
+	        
+	        #sx_CombinedJogDown := #ix_SSMan                                                           // box in manual
+	        AND #ix_PBDwn;                                                               // If selected jog in negative direction 
+	        
+	        // Detecting rising edge on manual jog Up           
+	        #R_TRIG_ManualJogUp(CLK := #sx_CombinedJogUp);
+	        
+	        // Detecting rising edge on manual jog Down          
+	        #R_TRIG_ManualJogDown(CLK := #sx_CombinedJogDown);
+	        
+	    END_REGION
+	    
+	    REGION 6.2 - Manual PreStart up or down
+	        
+	        // Pre start conditions to run in manual mode
+	        #sx_PreStartManual := #ix_SSMan                                      // Manual mode active bit
+	        AND #ix_SafetyOk                                                                // Safety healthy bit
+	        AND NOT #iqUDT_ABSwitchInterface.InternalErrorVFD;                             // Profinet comunication or PN_DEvice not ok 
+	        
+	        
+	        IF #sx_PreStartManual                                                           // Pre start conditions to run in manual mode
+	            AND (#R_TRIG_ManualJogUp.Q                                                  // Trigger to start AB switch run in manual jog mode UP
+	            OR #R_TRIG_ManualJogDown.Q)                                                 // Trigger to start AB switch run in manual jog mode Down
+	            AND NOT #Jog_Enable.qx_DelayedSignal
+	        THEN
+	            
+	            #iqUDT_EquipmentControl.Request.SignalingRequest := TRUE;                  // Request signaling TO control block before AB switch runs in manual mode
+	            
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 6.3 - Jog mode Up / Down
+	        
+	        IF #sx_PreStartManual                                                           // IF in manual jog mode 
+	            AND (NOT #iqUDT_EquipmentControl.Request.SignalingRequest                  // Signaling request done
+	            OR #Jog_Enable.qx_DelayedSignal)
+	            AND #sx_CombinedJogUp                                                       // If selected jog in positive direction 
+	            AND NOT #sx_CombinedJogDown                                                 // And not selected jog in negative direction
+	        THEN
+	            
+	            #sx_JogUp := TRUE;                                                          // set jog positive 
+	            #sx_JogDown := FALSE;                                                       // reset jog negative 
+	            #sx_Jog := true;
+	            
+	        ELSIF
+	            #sx_PreStartManual                                                          // IF in manual jog mode 
+	            AND (NOT #iqUDT_EquipmentControl.Request.SignalingRequest                  // Signaling request done
+	            OR #Jog_Enable.qx_DelayedSignal)
+	            AND NOT #sx_CombinedJogUp                                                   // If selected jog in positive direction 
+	            AND #sx_CombinedJogDown                                                     // and there is command to jog in negative direction 
+	        THEN
+	            
+	            #sx_JogUp := FALSE;                                                         // reset jog positive 
+	            #sx_JogDown := TRUE;                                                        // set jog negative 
+	            #sx_Jog := true;
+	            
+	        ELSIF
+	            NOT #sx_PreStartManual                                                      // If not in manual mode 
+	            OR (#sx_PreStartManual                                                      // or in manual mode
+	            AND (#sx_CombinedJogUp                                                      // and jog positive is off 
+	            AND #sx_CombinedJogDown)                                                    // AND jog negative is off 
+	            OR (NOT #sx_CombinedJogUp                                                   // or jog positive is on 
+	            AND NOT #sx_CombinedJogDown))                                               // and jog negative is on 
+	        THEN
+	            
+	            #sx_JogUp := FALSE;                                                         // reset jog positive 
+	            #sx_JogDown := FALSE;                                                       // reset jog negative 
+	            #sx_Jog := False;
+	        END_IF;
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 7 - Automatic mode
+	    
+	    REGION 7.1 - Semi automatic
+	        
+	        IF #sx_SemiAutomatic                                                            // Not running Semi-Automatic
+	            AND (#ii_Mode = #ci_UpperPosition
+	            AND #ix_ChangeModeSignal)
+	        THEN
+	            
+	            #sx_PreStartSemiAutomaticUp := TRUE;
+	            
+	            #sx_DownRequest := FALSE;                                                   // Reset down command
+	            #sx_UpRequest := TRUE;                                                      // Set up command
+	        END_IF;
+	        
+	        IF #sx_SemiAutomatic                                                            // Not running Semi-Automatic
+	            AND (#ii_Mode = #ci_LowerPosition
+	            AND #ix_ChangeModeSignal)
+	            
+	        THEN
+	            
+	            #sx_PreStartSemiAutomaticDown := TRUE;
+	            
+	            #sx_DownRequest := TRUE;                                                    // Reset down command
+	            #sx_UpRequest := FALSE;                                                     // Set up command
+	        END_IF;
+	        
+	        #R_TRIG_PreStartSemiAutomaticUp(CLK := #sx_PreStartSemiAutomaticUp);
+	        #R_TRIG_PreStartSemiAutomaticDown(CLK := #sx_PreStartSemiAutomaticDown);
+	        
+	        //Set Signaling Request 
+	        IF #R_TRIG_PreStartSemiAutomaticUp.Q OR #R_TRIG_PreStartSemiAutomaticDown.Q THEN
+	            #iqUDT_EquipmentControl.Request.SignalingRequest := TRUE;
+	        END_IF;
+	        
+	        IF #sx_SemiAutomatic
+	            AND (NOT #ix_PRXUp
+	            AND #sx_UpRequest)
+	            OR #sUDT_HMIStatus.Specific.SwitchingTimerError
+	        THEN
+	            #sx_UpRequest := false;
+	            #sx_PreStartSemiAutomaticUp := false;
+	        END_IF;
+	        
+	        IF #sx_SemiAutomatic
+	            AND (NOT #ix_PRXDown
+	            AND #sx_DownRequest)
+	            OR #sUDT_HMIStatus.Specific.SwitchingTimerError
+	        THEN
+	            #sx_DownRequest := false;
+	            #sx_PreStartSemiAutomaticDown := false;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 7.2 - Start/Stop AB switch conveyor directly
+	        
+	        // Start
+	        IF #iqUDT_EquipmentControl.Command.Start                                       // Start from system
+	            AND #sx_Ready                                                               // Equipment has no errors
+	        THEN
+	            #qx_ExternalHold := FALSE;                                           // External stop signal
+	        END_IF;
+	        
+	        // Stop 
+	        IF #sUDT_HMIStatus.Specific.UpperSwitchAreaError                                // Blockage of switching area
+	            OR #sUDT_HMIStatus.Specific.LowerSwitchAreaError
+	            OR NOT #sx_SemiAutomatic                                                    // The AB switch is not (semi-)automatic active
+	        THEN
+	            #qx_ExternalHold := TRUE;                                            // External stop signal
+	        END_IF;
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 8 - Write interface DB signals
+	    
+	    REGION 8.1 - Signal interface
+	        
+	        #iqUDT_ABSwitchInterface.InternalErrorReset := #iqUDT_EquipmentControl.Command.Reset;      // Write Reset signal to the VFD interface
+	        #iqUDT_ABSwitchInterface.ResetStatistics := #iqUDT_EquipmentControl.Command.ResetData;     // Write Reset data signal to the VFD interface
+	        
+	    END_REGION
+	    
+	    REGION 8.1 - Mode selection 
+	        
+	        #ss_ABSwitch_Interface.SemiAutomatic :=
+	        (#sx_SemiAutomatic                                                               // Automatic started
+	        OR #sx_Stopping);                                                                // stopping is activated Go to default position
+	        
+	        #ss_ABSwitch_Interface.Manual :=
+	        #ix_SSMan                                                             // Manual mode is started
+	        AND (#sx_CombinedJogUp                                                           // IF selected jog in positive direction 
+	        OR #sx_CombinedJogDown);
+	        
+	    END_REGION
+	    
+	    REGION 8.2 - Run enable
+	        
+	        #ss_ABSwitch_Interface.RunEnabled :=                                                  // Enable the positioning device to run
+	        NOT #iqUDT_ABSwitchInterface.InternalErrorVFD                               // or there are errors in the VFD
+	        AND NOT #sx_ConfigurationError                                                   // configuration is wrong
+	        AND #ix_HardwareOk                                                        // or an internal error in the RIO panel occured                             
+	        AND (#ss_ABSwitch_Interface.SemiAutomatic                                             // AB switch is in semi-automatic mode
+	        OR (#ss_ABSwitch_Interface.Manual                                                     // manual mode is active
+	        AND (#sx_CombinedJogUp                                                           // If selected jog in positive direction 
+	        OR #sx_CombinedJogDown)));                                                       // If selected jog in negative direction 
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 9 - Positions reached
+	    
+	    // triggers of PEC's down/up
+	    #F_TRIG_PECUp(CLK := #ix_PRXUp);
+	    #F_TRIG_PECDown(CLK := #ix_PRXDown);
+	    
+	    // when the upper photo eye to stop the AB switch is covered it means the position is reached
+	    IF #F_TRIG_PECUp.Q THEN
+	        #sx_UpperPositionReached := true;
+	    ELSIF #sx_DownRequest OR #ix_SSMan THEN
+	        #sx_UpperPositionReached := false;
+	    END_IF;
+	    
+	    // when the lower photo eye to stop the AB switch is covered it means the position is reached
+	    IF #F_TRIG_PECDown.Q THEN
+	        #sx_LowerPositionReached := true;
+	    ELSIF #sx_UpRequest OR #ix_SSMan THEN
+	        #sx_LowerPositionReached := false;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 10 - Run up/down
+	    
+	    // Conditions to run AB switch down 
+	    #iqUDT_ABSwitchInterface.RunRvs := ((#sx_DownRequest AND #sx_SemiAutomatic)
+	    OR #sx_JogDown)
+	    AND NOT #sx_LowerPositionReached
+	    AND #ss_ABSwitch_Interface.RunEnabled
+	    AND #ix_PRXDown
+	    AND NOT #sUDT_HMIStatus.Specific.LimitSensorLowerPosition;
+	    
+	    // Conditions to run AB switch upwards
+	    #iqUDT_ABSwitchInterface.RunFwd := ((#sx_UpRequest AND #sx_SemiAutomatic)
+	    OR #sx_JogUp)
+	    AND NOT #sx_UpperPositionReached
+	    AND #ss_ABSwitch_Interface.RunEnabled
+	    AND #ix_PRXUp
+	    AND NOT #sUDT_HMIStatus.Specific.LimitSensorUpperPosition;
+	    
+	END_REGION
+	
+	REGION 11 - AB switch speed reduction
+	    
+	    #F_TRIG_PECBrakeUp(CLK := #ix_PRXBrkUp);
+	    
+	    #F_TRIG_PECBrakeDown(CLK := #ix_PRXBrkDwn);
+	    
+	    IF #F_TRIG_PECBrakeUp.Q
+	        AND #iqUDT_ABSwitchInterface.RunFwd
+	    THEN
+	        #sx_ABSwitchSlowSpeedUp := TRUE;
+	    END_IF;
+	    
+	    IF #F_TRIG_PECBrakeDown.Q
+	        AND #iqUDT_ABSwitchInterface.RunRvs
+	    THEN
+	        #sx_ABSwitchSlowSpeedDown := TRUE;
+	    END_IF;
+	    
+	    IF ((#ss_ABSwitch_Interface.Positioning
+	        AND #iqUDT_ABSwitchInterface.RunFwd
+	        AND #sx_ABSwitchSlowSpeedUp
+	        AND #ix_PRXUp)
+	        OR
+	        (#ss_ABSwitch_Interface.Positioning
+	        AND #iqUDT_ABSwitchInterface.RunRvs
+	        AND #sx_ABSwitchSlowSpeedDown
+	        AND #ix_PRXDown))
+	    THEN
+	        #iqUDT_ABSwitchInterface.SpeedSetpoint := #iUDT_ABSwitchConfig.BrakingSpeedSetpoint;
+	    ELSE
+	        #iqUDT_ABSwitchInterface.SpeedSetpoint := #iUDT_ABSwitchConfig.NominalSpeedSetPoint;
+	        #sx_ABSwitchSlowSpeedUp := FALSE;
+	        #sx_ABSwitchSlowSpeedDown := FALSE;
+	    END_IF;
+	    
+	    IF #ss_ABSwitch_Interface.Manual THEN
+	        #iqUDT_ABSwitchInterface.SpeedSetpoint := #iUDT_ABSwitchConfig.ManualModeSpeed;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 12 - Statistics
+	    
+	    // Down Time
+	    IF #sx_SemiAutomatic                                                                 // Automatic active
+	        AND NOT #sx_Ready                                                                // Conveyor not ready
+	        OR #iqUDT_EquipmentControl.Command.ResetData                                    // Reset statistics
+	    THEN
+	        
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,              // Or reset statistics from control
+	                        ix_Activate := #sx_SemiAutomatic AND NOT #sx_Ready,                     // AB switch is stopped 
+	                        ix_RTrigActivate := #R_TRIG_DownTime.Q,                                      // AB switch is stopped triger 
+	                        iqUDT_Statistics := #iqUDT_Statistics.DownTime);                            // AB switch is stopped statistics 
+	    END_IF;
+	    
+	    // Up time
+	    IF #sx_SemiAutomatic                                // Automatic active
+	        AND #sx_Ready                                   // Ready active
+	        OR #iqUDT_EquipmentControl.Command.ResetData   // Reset statistics
+	    THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,        // OR reset statistics from control
+	                        ix_Activate := #sx_SemiAutomatic AND #sx_Ready,                   // AB switch is running 
+	                        ix_RTrigActivate := #R_TRIG_UpTime.Q,                                  // AB switch running trigger 
+	                        iqUDT_Statistics := #iqUDT_Statistics.UpTime);                        // AB switch running statistics
+	        
+	    END_IF;
+	    
+	    // Upper switch area error
+	    #R_TRIG_UPSwA_Error(CLK := #sUDT_HMIStatus.Specific.UpperSwitchAreaError);               // Oneshot trigger error occurred
+	    
+	    IF #iqUDT_ABSwitchInterface.ResetStatistics OR                                         // IF there is signal TO reset statistics from AB switch interface 
+	        #iqUDT_EquipmentControl.Command.ResetData OR                                        // Or there is signal to reset statistics from equipment control structure 
+	        #sUDT_HMIStatus.Specific.UpperSwitchAreaError                                        // Or an upper switch area error occurred 
+	    THEN
+	        
+	        "FC_Statistics"(ix_Reset := #iqUDT_ABSwitchInterface.ResetStatistics OR                 // Reset statistics from HMI
+	                        #iqUDT_EquipmentControl.Command.ResetData,                                       // Or reset statistics from control
+	                        ix_Activate := #sUDT_HMIStatus.Specific.UpperSwitchAreaError,               // Upper switch area error occurred
+	                        ix_RTrigActivate := #R_TRIG_UPSwA_Error.Q,                                       // Error trigger 
+	                        iqUDT_Statistics := #iqUDT_Statistics.UpperSwitchArea_Error);                   // Statistics of AB switch errors 
+	        
+	    END_IF;
+	    
+	    // Lower switch area error
+	    #R_TRIG_LowSwA_Error(CLK := #sUDT_HMIStatus.Specific.LowerSwitchAreaError);              // Oneshot trigger error occurred
+	    
+	    IF #iqUDT_ABSwitchInterface.ResetStatistics OR                                          // IF there is signal TO reset statistics from AB switch interface 
+	        #iqUDT_EquipmentControl.Command.ResetData OR                                        // Or there is signal to reset statistics from equipment control structure 
+	        #sUDT_HMIStatus.Specific.LowerSwitchAreaError                                        // Or an upper switch area error occurred 
+	    THEN
+	        
+	        "FC_Statistics"(ix_Reset := #iqUDT_ABSwitchInterface.ResetStatistics OR                 // Reset statistics from HMI
+	                        #iqUDT_EquipmentControl.Command.ResetData,                                       // Or reset statistics from control
+	                        ix_Activate := #sUDT_HMIStatus.Specific.LowerSwitchAreaError,               // Upper switch area error occurred
+	                        ix_RTrigActivate := #R_TRIG_LowSwA_Error.Q,                                      // Error trigger 
+	                        iqUDT_Statistics := #iqUDT_Statistics.LowerSwitchArea_Error);                   // Statistics of AB switch errors 
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 13 - Status 
+	    
+	    #sUDT_Status.Stopped := #sx_Ready AND NOT #sx_SemiAutomatic AND NOT #sx_Stopping;      // stopped
+	    #sUDT_Status.AutoON := #sx_SemiAutomatic OR #sx_Stopping;                              // Auto On
+	    #sUDT_Status.Halted := FALSE;                                                          // Halted
+	    #sUDT_Status.Dieback := FALSE;                                                         // Die back
+	    #sUDT_Status.Running := (#sx_UpRequest OR #sx_DownRequest) AND #sx_SemiAutomatic;      // Running
+	    #sUDT_Status.ManualRun := #ix_SSMan AND #sUDT_Status.Running;              // Manual run
+	    #sUDT_Status.Manual := #ix_SSMan;                                           // Manual
+	    #sUDT_Status.EnergySave := FALSE;                                                      // Energy save active
+	    #sUDT_Status.SafetyStop := NOT #ix_SafetyOk;                                           // Safety not ok
+	    
+	    IF #sUDT_StatusOld <> #sUDT_Status                                            // update on change
+	    THEN
+	        
+	        // Set status to status number
+	        #sUDT_HMIStatus.Status := 0;                                               // Initialise status number              
+	        
+	        IF #sUDT_Status.Running                                                    // Running
+	        THEN
+	            
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Running;
+	            
+	        END_IF;
+	        
+	        IF #sUDT_Status.Stopped                                                    // Stopped
+	        THEN
+	            
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Stopped;
+	            
+	        END_IF;
+	        
+	        IF #sUDT_Status.Dieback                                                    // Dieback
+	        THEN
+	            
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Dieback;
+	            
+	        END_IF;
+	        
+	        IF #sUDT_Status.ManualRun                                                  // Manual run
+	        THEN
+	            
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".ManualRun;
+	            
+	        END_IF;
+	        
+	        IF #sUDT_Status.Manual                                                     // Manual
+	        THEN
+	            
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Manual;
+	            
+	        END_IF;
+	        
+	        IF #iqUDT_ABSwitchInterface.InternalWarningVFD                                  // The VFD has an internal warning
+	            OR NOT #ix_HardwareOk                                                         // The RIO panel has an internal warning    
+	            
+	        THEN
+	            
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Warning;
+	            
+	        END_IF;
+	        
+	        IF #sUDT_HMIStatus.Specific.UpperSwitchAreaError                           // Upper limit switch error
+	            OR #sUDT_HMIStatus.Specific.LowerSwitchAreaError                       // Lower limit switch error
+	        THEN
+	            
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".VFDError;
+	            
+	        END_IF;
+	        
+	        IF #iqUDT_ABSwitchInterface.InternalErrorVFD                                // The VFD has an internal error
+	            OR NOT #ix_HardwareOk                                                    // The RIO panel has an internal error
+	        THEN
+	            
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Error;
+	            
+	        END_IF;
+	        
+	        
+	        IF #sUDT_Status.SafetyStop                                                 // Safety stop
+	        THEN
+	            
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".SafetyStop;
+	            
+	        END_IF;
+	        
+	        // Copy status to output
+	        #sUDT_StatusOld := #sUDT_Status;                                          // Copy status TO memory
+	        #qUDT_Status := #sUDT_Status;                                             // Copy status to output
+	        
+	    END_IF;
+	    
+	    //   Specific status
+	    #sUDT_HMIStatus.Specific.UpperPosition := #sx_ActualPositionUP;
+	    #sUDT_HMIStatus.Specific.LowerPosition := #sx_ActualPositionDown;
+	    
+	    #qUDT_HMIStatus := #sUDT_HMIStatus;
+	    
+	END_REGION
+	
+	REGION 14 - Report to control block
+	    
+	    "FC_EquipmentReport"(iUDT_Status := #sUDT_Status,
+	                         iqUDT_Control := #iqUDT_EquipmentControl);
+	    
+	END_REGION
+	
+	REGION 15 - Internal errors and warnings reset
+	    
+	    #iqUDT_ABSwitchInterface.InternalErrorPEC := FALSE;
+	    #iqUDT_ABSwitchInterface.InternalWarningTracking := FALSE;
+	    #iqUDT_ABSwitchInterface.InternalErrorTracking := FALSE;
+	    #iqUDT_ABSwitchInterface.InternalWarningVFD := FALSE;
+	    #iqUDT_ABSwitchInterface.InternalErrorVFD := FALSE;
+	    #iqUDT_ABSwitchInterface.Disconnected := FALSE;
+	    
+	END_REGION
+	
+END_FUNCTION_BLOCK
+

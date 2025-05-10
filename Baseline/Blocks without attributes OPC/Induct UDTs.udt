@@ -1,0 +1,62 @@
+﻿TYPE "UDT_InductGapsize"
+VERSION : 0.1
+   STRUCT
+      "Maximal length" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Maximal length of parcel [cm]
+      Gap { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Gapsize of this size parcel [cm]
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_InductParcelData"
+VERSION : 0.1
+   STRUCT
+      GINNumber { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // GIN number
+      GapRequired { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Size of gap requested by induct
+      WindowPosition { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Position of the window in the merge tracking
+      WindowReserved { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // The window is reserved for the induct
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_InductConfiguration"
+VERSION : 0.1
+   STRUCT
+      Induct_Number { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int := 1;   // Induct number where the most upstream induct is 1
+      Induct_Position { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int := 100;   // Virtual position of the induct [mm] on the merge tracking DB
+      GapMode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int := 2;   // 1=HeadToHead, 2=Length+fixedgap size 3=Length+flex gapsize
+      GapHeadToHead { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int := 150;   // Gapping head to head value [cm]
+      GapTailToHead { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int := 10;   // Gapping tail to head value [cm]
+      MaxParcelSize { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int := 30;   // Maximum size parcel [mm] to set when no size is found
+      MinParcelSize { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int := 5;   // Minimum size parcel [mm] to set when no size is found
+      ReactivationRequestDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt := 10000;   // Delay distance before request to MergeGenerator to activate [mm]
+      RunEmptyDistance { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt := 10000;   // Distance the merge conveyor has to run before the induct starts after an EMstop [mm]
+      SearchOnly { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 1 = The induct is not requesting a gap, only searching
+      DistanceRunBeforeAutoRecovery { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int := 1;   // Distance the merge conevyor should run before Induct does an auto recovery request
+      ParcelStopPositionAutoRecovery { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Position where parcel stops when Induct needs to auto recover
+      RecoveryAdditionalGap { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Additional Gap during recovery  or first startup of Induct
+      InductPositionWindow { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int := 10;   // Induct position window (tollerance) [cm]
+      FlexGap { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : Array[1..5] of "UDT_InductGapsize";
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_Induct"
+VERSION : 0.1
+   STRUCT
+      DistanceLastReserved { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // The distance after which the next window will be reserved
+      DisableWindowReservation { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Signal to disable window reservation
+      AutoRecovery { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Signal for induct to auto recover
+      Position { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : Array[1..20] of "UDT_InductParcelData";   // Position
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_InductInterface"
+VERSION : 0.1
+   STRUCT
+      SpeedSetpoint { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UInt;   // Speedsetpoint for the conveyor
+      ExternalRequestDieBack { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // External Request Die Back
+   END_STRUCT;
+
+END_TYPE
+

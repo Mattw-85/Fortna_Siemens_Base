@@ -1,0 +1,420 @@
+﻿FUNCTION_BLOCK "FB_TCPIPReceive"
+TITLE = FB_TCPIPReceive
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : Communication
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 30
+// END_ATTRIBUTES
+//Function block to receive data from TCPIP.
+// END_ATTRIBUTES
+//Function block to receive data from TCPIP.
+   VAR_INPUT 
+      iUDT_Connection { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_Connection";   // Connection parameters
+      ix_EnableReceive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Enable receive
+      ic_FirstSoMSign { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Char := '$02';   // First Start of Message sign
+      ic_SecondSoMSign { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Char;   // Second Start of Message sign
+      ic_FirstEoMSign { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Char := '$R';   // First End of Message sign
+      ic_SecondEoMSign { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Char := '$L';   // Last Endof Message sign
+   END_VAR
+
+   VAR_OUTPUT 
+      qx_Error { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Collective error output
+      qx_Warning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Collective warning output
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_FifoHeader : "UDT_FifoHeader";   // Fifo header
+      iqUDT_Statistics : "UDT_TCPIPReceiveStatistics";   // Statistic structure
+      iqa_FifoData : Array[*] of "UDT_Message";   // Fifo data
+   END_VAR
+
+   VAR 
+      sFB_TRCV {InstructionName := 'TRCV'; LibVersion := '4.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : TRCV;   // Siemens "TRCV" block - to receive the data from TCPIP socket
+      sa_TRCV { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // TRCV block interface structure
+         Enable { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    TRCV - Enable
+         NDR { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    TRCV - New data available
+         Busy { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    TRCV - Busy
+         Error { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    TRCV - Error
+         Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Word;   //    TRCV - Status
+         RcvLen { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   //    TRCV - Received length
+         Data { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[0..999] of Char;   //    TRCV - Data
+      END_STRUCT;
+      sa_MsgRCVArray { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[0..1999] of Char;   // Message character array with merged last received part and new received messages
+      sUDT_MsgArray { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_Message";   // Message character array
+      sUDT_MsgPartArray { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_Message";   // Part of the message character array
+      sa_Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Status structure
+         ErrorCode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Error code structure
+            TRCV { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Word;   // Siemens TRCV error code - Check documentation
+         END_STRUCT;
+         FIFORcvStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_FifoStatus";   // Receive FIFO status structure
+         FIFORcvError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Bool;   // Receive FIFO error
+         FIFORcvWarning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Bool;   // Receive  FIFO warning
+         ReceiveError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRCV block operation error - Check TRCVStatus
+      END_STRUCT;
+      sdi_RcvMsgCounter { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Total received messages counter
+      si_RcvMsgOffset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Received message offset
+      si_RcvMsgStart { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Received message start offset
+      si_RcvMsgLen { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Received message length
+      si_RcvMsgLenSum { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Sum of received part message and new message
+      si_NrOfRcvMsg { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Number of received messages in one frame
+      si_RcvMsgPartLen { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Length of the part of received message
+      si_LoopCounter1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Loop counter
+      si_LoopCounter2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Loop counter
+      si_MaxMsgLen { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Maximum message length
+      si_MaxMsgRCV { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Maximum message length
+      sx_InvalidTermination { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Termination sign missing
+      sx_RcvMsgPart { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Received part of the message
+      sx_FirstSoMOK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // First SoM sign is OK
+      sx_SecondSoMOK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Second SoM sign is OK
+      sx_FirstEoMOK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // First EoM sign is OK
+   END_VAR
+
+   VAR CONSTANT 
+      cc_NULL : Char := '$00';   // NULL sign
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	24/05/2019  | 0.1       | L.Klar        | first release MHS TIA 15.1
+	17/06/2019  | 0.3       | A.Nowak       | Replace 2nd level subregions with comments (5.3)
+	24/07/2019  | 2.0       | L.Klar        | 2.0 MHS library release TIA 15.1
+	22/08/2019  | 2.1       | K.Pokorski    | Comments adjusted
+	12/09/2019  | 2.2       | A.Nowak       | Delete buffer size variable 
+	20/09/2019  | 2.3       | J.Krawczuk    | Replacing UDT_HeartbeatStatus structure to internal structure  
+	01/10/2019  | 2.4       | A.Nowak       | Implementation of the new FIFO block
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	23/03/2021  | 3.1       | L.Klar        | Static variables data types changed form uint to int
+	14/08/2021  | 3.2       | S. Deulkar    | In region 5.3, conveted variable to ULINT because it was giving warning
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	18/12/2024  | 4.2       | F.Solloch     | SoM and EoM signs changed from constant to input variables
+	*)
+	
+	REGION 1 – Update FIFO header status bits
+	    
+	    // Mode 'S' - FIFO register status update
+	    "FC_Fifo"(ic_Mode := 'S',
+	              qUDT_Status => #sa_Status.FIFORcvStatus,
+	              qx_Error => #sa_Status.FIFORcvError,
+	              qx_Warning => #sa_Status.FIFORcvWarning,
+	              iqv_Data := #sUDT_MsgArray,
+	              iqUDT_FifoHeader := #iqUDT_FifoHeader,
+	              iqv_DataBuffer := #iqa_FifoData);
+	    
+	    
+	END_REGION
+	
+	REGION 2 – Maximum number of message arrays elements
+	    
+	    #si_MaxMsgLen := "FC_GetNrOfArrayEl"(iv_Array := #sUDT_MsgArray.Character);
+	    #si_MaxMsgRCV := "FC_GetNrOfArrayEl"(iv_Array := #sa_MsgRCVArray);
+	    
+	END_REGION
+	
+	REGION 3 – Receive enable
+	    
+	    // Allow receiving if the connection is established and there are no fifo errors
+	    #sa_TRCV.Enable :=
+	    #ix_EnableReceive
+	    AND NOT #sa_Status.FIFORcvError;
+	    
+	END_REGION
+	
+	REGION 4 – Receive data
+	    
+	    // Data received in an ADHOC mode - data available immediately
+	    #sFB_TRCV(EN_R := #sa_TRCV.Enable,
+	              ID := #iUDT_Connection.ID,
+	              LEN := 0,
+	              ADHOC := TRUE,
+	              NDR => #sa_TRCV.NDR,
+	              BUSY => #sa_TRCV.Busy,
+	              ERROR => #sa_TRCV.Error,
+	              STATUS => #sa_TRCV.Status,
+	              RCVD_LEN => #sa_TRCV.RcvLen,
+	              DATA := #sa_TRCV.Data);
+	    
+	    IF #sa_TRCV.RcvLen > 1000 THEN
+	        #sa_TRCV.RcvLen := 1000;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 5 – Received data handling
+	    
+	    // Receiving data was successful
+	    IF (#sa_TRCV.NDR                    // New data received without error
+	        AND NOT #sa_TRCV.Busy           // Job not yet started or already completed
+	        AND NOT #sa_TRCV.Error          // No errors during receiving messages
+	        AND #sa_TRCV.RcvLen > 0)        // Length greater than zero
+	    THEN
+	        
+	        REGION 5.1 – Initialization
+	            
+	            #si_RcvMsgLen := 0;
+	            #si_RcvMsgOffset := 0;
+	            #si_NrOfRcvMsg := 0;
+	            #si_RcvMsgStart := 0;
+	            #si_RcvMsgLenSum := 0;
+	            
+	        END_REGION
+	        
+	        REGION 5.2 – Received message preparation
+	            
+	            // Fill not used message char array elements with NULL sign
+	            FILL_BLK(IN := #cc_NULL,
+	                     COUNT := INT_TO_ULINT(#si_MaxMsgRCV),
+	                     OUT => #sa_MsgRCVArray[0]);
+	            
+	            
+	            // Move part of the messages to a buffer if available
+	            IF (#sx_RcvMsgPart)                             // Message part available
+	            THEN
+	                
+	                // Move last received message to the message array
+	                MOVE_BLK(IN := #sUDT_MsgPartArray.Character[0],
+	                         COUNT := INT_TO_ULINT(#si_RcvMsgPartLen),
+	                         OUT => #sa_MsgRCVArray[0]);
+	                
+	                // Move received message to the message array
+	                MOVE_BLK(IN := #sa_TRCV.Data[0],
+	                         COUNT := UDINT_TO_ULINT(#sa_TRCV.RcvLen),
+	                         OUT => #sa_MsgRCVArray[#si_RcvMsgPartLen]);
+	                
+	                #sx_RcvMsgPart := FALSE;
+	                #si_RcvMsgLenSum := UDINT_TO_INT(#sa_TRCV.RcvLen) + #si_RcvMsgPartLen;
+	                #si_RcvMsgPartLen := 0;
+	                
+	            ELSE
+	                
+	                // Move received message to the message array
+	                MOVE_BLK(IN := #sa_TRCV.Data[0],
+	                         COUNT := UDINT_TO_ULINT(#sa_TRCV.RcvLen),
+	                         OUT => #sa_MsgRCVArray[0]);
+	                
+	                #si_RcvMsgLenSum := UDINT_TO_INT(#sa_TRCV.RcvLen);
+	                
+	            END_IF;
+	            
+	        END_REGION
+	        
+	        REGION 5.3 – Message handling
+	            
+	            FOR #si_LoopCounter1 := 0 TO #si_RcvMsgLenSum - 1 DO
+	                
+	                // Message length validation
+	                IF (#si_RcvMsgLen < #si_MaxMsgLen)
+	                THEN
+	                    
+	                    // Termination sign found
+	                    IF (#sa_MsgRCVArray[#si_LoopCounter1] = #ic_SecondEoMSign)
+	                    THEN
+	                        
+	                        // Move received message to the message array
+	                        MOVE_BLK(IN := #sa_MsgRCVArray[#si_RcvMsgOffset],
+	                                 COUNT := INT_TO_ULINT(#si_RcvMsgLen),
+	                                 OUT => #sUDT_MsgArray.Character[0]);
+	                        
+	                        
+	                        REGION 5.3.1 - SoM AND EoM sign check
+	                            
+	                            // Check and clear termination sign                                                       
+	                            IF (#si_RcvMsgLen - 1) >= 0 AND (#si_RcvMsgLen - 1) < #si_MaxMsgLen
+	                            THEN
+	                                
+	                                REGION 5.3.1.1 - Start Of Message sign check 
+	                                    
+	                                    FOR #si_LoopCounter2 := 0 TO #si_MaxMsgLen - 1 DO
+	                                        
+	                                        IF #ic_FirstSoMSign <> ' '                                                  // if first SoM is configured
+	                                        THEN
+	                                            IF (#sUDT_MsgArray.Character[#si_LoopCounter2] = #ic_FirstSoMSign)        // if the character matches the configured first SoM
+	                                            THEN
+	                                                
+	                                                #si_RcvMsgStart := #si_LoopCounter2 + 1;                             // set the message start offset
+	                                                #sx_FirstSoMOK := TRUE;                                              // set the first SoM OK
+	                                                
+	                                                IF #ic_SecondSoMSign <> ' '                                                  // if second SoM is configured
+	                                                THEN
+	                                                    
+	                                                    IF (#sUDT_MsgArray.Character[#si_LoopCounter2 + 1] = #ic_SecondSoMSign)    // if the next character after the first SoM character matches the configured second SoM character
+	                                                    THEN
+	                                                        
+	                                                        #si_RcvMsgStart += 1;                                            // increment the message start offset
+	                                                        #sx_SecondSoMOK := TRUE;                                        // set the second SoM OK
+	                                                        
+	                                                    END_IF;
+	                                                    
+	                                                END_IF;
+	                                                
+	                                            END_IF;
+	                                            
+	                                        END_IF;
+	                                        
+	                                    END_FOR;
+	                                    
+	                                END_REGION
+	                                
+	                                REGION 5.3.1.2 - End Of Message sign check 
+	                                    
+	                                    IF #ic_FirstEoMSign <> ' '        // if the first EoM is configured
+	                                    THEN
+	                                        IF (#sUDT_MsgArray.Character[#si_RcvMsgLen - 1] = #ic_FirstEoMSign)        // if the character matches the configured first EoM
+	                                        THEN
+	                                            
+	                                            #sUDT_MsgArray.Character[#si_RcvMsgLen - 1] := #cc_NULL;               // replace the EoM charater with the NULL sign
+	                                            #sx_FirstEoMOK := TRUE;                                                                                      // set the firts EoM OK
+	                                            
+	                                        END_IF;
+	                                    END_IF;
+	                                    
+	                                END_REGION
+	                                
+	                                // if one of the SoM or EoM characters is configured and invalid - set invalid termination bit and increase statistics
+	                                IF (#ic_FirstSoMSign <> ' ' AND NOT #sx_FirstSoMOK)
+	                                    OR (#ic_SecondSoMSign <> ' ' AND NOT #sx_SecondSoMOK)
+	                                    OR (#ic_FirstEoMSign <> ' ' AND NOT #sx_FirstEoMOK)
+	                                THEN
+	                                    #sx_InvalidTermination := TRUE;
+	                                    #iqUDT_Statistics.InvalidMsg += 1;
+	                                    
+	                                ELSE
+	                                    // If the SoM sign are OK, delet the sign 
+	                                    MOVE_BLK(IN := #sUDT_MsgArray.Character[#si_RcvMsgStart],
+	                                             COUNT := INT_TO_ULINT(#si_RcvMsgLen),
+	                                             OUT => #sUDT_MsgArray.Character[0]);
+	                                    
+	                                    // Clear NOT used message array characters
+	                                    FILL_BLK(IN := #cc_NULL,
+	                                             COUNT := INT_TO_ULINT(#si_MaxMsgLen - #si_RcvMsgLen + #si_RcvMsgStart),
+	                                             OUT => #sUDT_MsgArray.Character[#si_RcvMsgLen - #si_RcvMsgStart]);
+	                                END_IF;
+	                                
+	                            ELSE
+	                                #iqUDT_Statistics.InvalidMsg += 1;
+	                            END_IF;
+	                            
+	                        END_REGION
+	                        
+	                        REGION 5.3.2 - Write messege into the FIFO data block
+	                            
+	                            // Move message into the FIFO data block
+	                            IF (NOT #sx_InvalidTermination)                                         // No termination sign error 
+	                            THEN
+	                                
+	                                // Mode 'W' - Write FIFO record
+	                                "FC_Fifo"(ic_Mode := 'W',
+	                                          qUDT_Status => #sa_Status.FIFORcvStatus,
+	                                          qx_Error => #sa_Status.FIFORcvError,
+	                                          qx_Warning => #sa_Status.FIFORcvWarning,
+	                                          iqv_Data := #sUDT_MsgArray,
+	                                          iqUDT_FifoHeader := #iqUDT_FifoHeader,
+	                                          iqv_DataBuffer := #iqa_FifoData);
+	                                
+	                                
+	                            END_IF;
+	                            
+	                        END_REGION
+	                        
+	                        
+	                        #sx_InvalidTermination := FALSE;                                    // Reset the invalid termination bit
+	                        #sx_FirstSoMOK := FALSE;                                            // reset all SoM and EoM signs OK bits
+	                        #sx_SecondSoMOK := FALSE;
+	                        #sx_FirstEoMOK := FALSE;
+	                        
+	                        // Update lengths and counters
+	                        #si_RcvMsgOffset += #si_RcvMsgLen + 1;
+	                        #si_RcvMsgLen := 0;
+	                        #si_NrOfRcvMsg += 1;
+	                        #sdi_RcvMsgCounter += 1;
+	                        #si_RcvMsgStart := 0;
+	                        
+	                        // Termination sign not found        
+	                    ELSE
+	                        
+	                        #si_RcvMsgLen := #si_RcvMsgLen + 1;                               // Increment received message length
+	                        
+	                    END_IF;
+	                    
+	                    // Message length invalid - reset message length and increase statistics
+	                ELSE
+	                    
+	                    #si_RcvMsgLen := 0;
+	                    #iqUDT_Statistics.InvalidMsg += 1;
+	                    
+	                END_IF;
+	                
+	            END_FOR;
+	            
+	        END_REGION
+	        
+	        REGION 5.4 – Part of the message preparation
+	            
+	            
+	            // Move part of the message to buffer when last received sign is not a termination signs
+	            IF (#sa_MsgRCVArray[#si_RcvMsgLenSum - 1] <> #ic_SecondEoMSign            // Last received sign is not a termination sing
+	                AND #si_RcvMsgLen < #si_MaxMsgLen)                         // Message length valid
+	            THEN
+	                
+	                // Move part of the message to a buffer
+	                MOVE_BLK(IN := #sa_MsgRCVArray[#si_RcvMsgOffset],
+	                         COUNT := INT_TO_ULINT(#si_RcvMsgLen),
+	                         OUT => #sUDT_MsgPartArray.Character[0]);
+	                
+	                // Fill not used message char array elements with NULL sign
+	                FILL_BLK(IN := #cc_NULL,
+	                         COUNT := INT_TO_ULINT(#si_MaxMsgLen - #si_RcvMsgLen),
+	                         OUT => #sUDT_MsgPartArray.Character[#si_RcvMsgLen]);
+	                
+	                // Set the part of the message received bit and move length of the received message into the length of the part of the message variable
+	                #sx_RcvMsgPart := TRUE;
+	                #si_RcvMsgPartLen := #si_RcvMsgLen;
+	                
+	            END_IF;
+	            
+	        END_REGION
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 6 – Status
+	    
+	    REGION 6.1 - Block status
+	        
+	        // Receive error
+	        #sa_Status.ReceiveError := #sa_TRCV.Error;
+	        
+	        // Parametrization collective error output
+	        #qx_Error :=
+	        #sa_Status.FIFORcvError                          // FIFO error
+	        OR #sa_Status.ReceiveError;                      // Receive error
+	        
+	        // Parametrization collective warning output
+	        #qx_Warning := #sa_Status.FIFORcvWarning;        // FIFO warning
+	        
+	    END_REGION
+	    
+	    REGION 6.2 - Error code preparation
+	        
+	        IF (#sa_TRCV.#Status > 16#8000
+	            OR #sa_TRCV.#Status = 16#0)
+	        THEN
+	            
+	            #sa_Status.ErrorCode.TRCV := #sa_TRCV.#Status;
+	            
+	        END_IF;
+	        
+	    END_REGION
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

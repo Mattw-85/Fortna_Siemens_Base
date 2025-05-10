@@ -1,0 +1,133 @@
+﻿TYPE "UDT_CognexDM260_IN"
+VERSION : 0.1
+   STRUCT
+      TriggerReady { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Indicates when the device is ready to accept a new trigger. Bit is True when “Trigger Enable”is set and the device is ready to accept a new trigger.
+      TriggerAck { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Indicates that the DataMan has received a new Trigger. This bit remains True as long as the“Trigger” bit remains True (that is, it is interlocked with the Trigger bit).
+      "Acquiring/Reserved??" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reserved for future use.
+      MissedAcq { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Indicates that the DataMan was unable to successfully trigger an acquisition. Bit is cleared
+      "Not used" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reserved for future use.8-23
+      "Not used_1" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reserved for future use.8-23
+      "Not used_2" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reserved for future use.8-23
+      "Not used_3" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reserved for future use.8-23
+      TriggerID { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;   // HIGHER BYTE ID value of the next trigger to be issued (16-bit integer). Used to match issued triggers withcorresponding result data received later. This same value is returned in ResultID of theresult data.
+      "TriggerID 1" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;   // LOWER BYTE ID value of the next trigger to be issued (16-bit integer). Used to match issued triggers withcorresponding result data received later. This same value is returned in ResultID of theresult data.
+      BYTE_Decoding { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;   // Bit:0-Decode Complete, 1-Decode Complete, 2- Results Buffer Overrun, 3- Results Available, 4-6 Unused, 7 - General Fault
+      "Train Code Ack" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Indicates that the “Train Code” operation is complete
+      "Train Match String Ack" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Indicates that the “Train Match String” operation is complete
+      "Train Focus Ack" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Indicates that the “Train Focus” operation is complete
+      "Train Brightness Ack" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Indicates that the “Train Brightness” operation is complete
+      "Untrain Ack" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Indicates that the “Untrain” operation is complete
+      Reserved { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reserved for future use
+      "Execute DMCC Ack" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Indicates that the “Execute DMCC” operation is complete
+      "Set Match String Ack" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Indicates that the “Set Match String” operation is complete - User Data Option - Currently only used by “Set Match String” soft event.
+      ResultID { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;   // HIGHER BYTE The value of the “Trigger ID” when the trigger that generated these results was issued. Used to match up triggers with corresponding result data (16-bit Integer).
+      "ResultID 1" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;   // LOWER BYTE The value of the “Trigger ID” when the trigger that generated these results was issued. Used to match up triggers with corresponding result data (16-bit Integer).
+      "Result Code" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;   // HIGHER BYTE not used
+      "Result Code_1" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;   // Indicates the success or failure of the read that produced these results (16-bit Integer).Bit 0,1=read, 0=no read, Bit 1,1=validated, 0=not validated (or validation not in use),  Bit 2,1=verified, 0=not verified (or verification not in use)  Bit 3,1=acquisition trigger overrun  Bit 4,1=acquisition buffer overflow
+      "Result Extended" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;   // Currently unused (16-bit Integer).
+      "Result Extended_1" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;   // Currently unused (16-bit Integer).
+      "Result Length" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;   // HIGHER BYTE Actual number of bytes of read data contained in the “Result Data” field (16-bitInteger).
+      "Result Length_1" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;   // LOWER BYE Actual number of bytes of read data contained in the “Result Data” field (16-bitInteger).
+      "BarCodeValue[0]-NO_READ_sign" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Char;   // First barecode char
+      BarCodeValue { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[1..63] of Char;   // Remaining characters of the barcode, after the barcode remaining chars are  '$00' = BYTE#16#00
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_CognexDM260_OUT"
+VERSION : 0.1
+   STRUCT
+      TriggerEnable { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Setting this bit enables triggering via PROFINET. Clearing this bit disables triggering.
+      Trigger { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Setting this bit triggers an acquisition when the following conditions are met:l Trigger Enable is set.l No acquisition is currently in progress.l The device is ready to trigger.
+      Reserved_0 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reserved for future use
+      Reserved_1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reserved for future use
+      Reserved_2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reserved for future use
+      Reserved_3 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reserved for future use
+      Reserved_4 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reserved for future use
+      Reserved_5 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reserved for future use
+      BufferResultsEnable { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Enables queuing of “Result Data”. If enabled, the current result data will remain until acknowledged (even if new results arrive). New results are queued. The reader can buffer up to 50 and the base station can buffer up to 500 sets of read results.
+      ResultsAck { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit is used to acknowledge that the PLC has successfully read the latest result data. When set True the “Result Available” bit will be cleared. If result buffering is enabled, the next set of result data will be pulled from the queue and “Result Available” will again be set True.
+      Reserved { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reserved for future use.
+      Reserved_1_1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reserved for future use.
+      Reserved_2_1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reserved for future use.
+      Reserved_3_1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reserved for future use.
+      Reserved_4_1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reserved for future use.
+      Reserved_5_1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reserved for future use.
+      "Train Code" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit transition from 0 -> 1 causes the train code operation to be invoked.
+      "Train Match String" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit transition from 0 -> 1 causes the train match string operation to be invoked.
+      "Train Focus" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit transition from 0 -> 1 causes the train focus operation to be invoked.
+      "Train Brightness" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit transition from 0 -> 1 causes the train brightness operation to be invoked
+      Untrain { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit transition from 0 -> 1 causes the untrain operation to be invoked.
+      Reserved_6 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reserved for future use
+      "Execute DMCC" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit transition from 0 -> 1 causes the DMCC operation to be invoked. Note that a valid DMCC command string must first be placed in “User Data” before invoking this event.
+      "Set Match String" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit transition from 0 -> 1 causes the set match string operation to be invoked. Note that match string data must first be placed in “User Data” before invoking this event.
+      "UserData Option" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Specifies which code target to assign the string (16-bit Integer). 1, assign string to 2D codes, 2, assign string to QR codes
+      "UserData Length" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Number of bytes of valid data actually contained in the “User Data” field (16-bit
+      "UserData[0]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;   // Data sent from the PLC to the DataMan to support acquisition, decoding, andother special operations (array of bytes). User Data Option - Currently only used by “Set Match String” soft event.
+      "UserData[1]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[2]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[3]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[4]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[5]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[6]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[7]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[8]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[9]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[10]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[11]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[12]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[13]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[14]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[15]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[16]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[17]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[18]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[19]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[20]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[21]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[22]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[23]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[24]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[25]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[26]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[27]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[28]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[29]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[30]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[31]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[32]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[33]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[34]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[35]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[36]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[37]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[38]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[39]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[40]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[41]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[42]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[43]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[44]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[45]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[46]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[47]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[48]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[49]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[50]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[51]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[52]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[53]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[54]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[55]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[56]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[57]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[58]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[59]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[60]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[61]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[62]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+      "UserData[63]" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;
+   END_STRUCT;
+
+END_TYPE
+

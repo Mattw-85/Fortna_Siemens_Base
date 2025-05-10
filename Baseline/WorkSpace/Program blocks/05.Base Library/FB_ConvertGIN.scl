@@ -1,0 +1,99 @@
+﻿FUNCTION_BLOCK "FB_ConvertGIN"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 5
+// END_ATTRIBUTES
+   VAR_INPUT 
+      ii_GINRangeStart { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // GIN range start
+      ii_GINRangeEnd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // GIN range end
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_Handshake : "UDT_ConveyorHandshake";   // Conveyor handshake structure
+      iqUDT_UnknownGIN : "UDT_UnknownGIN";   // Unknown GIN structure
+   END_VAR
+
+   VAR 
+      sR_TRIG_NewGINDetected {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // New GIN detected rising edge
+      si_LastGenGIN { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Last generated GIN
+      si_GenGIN { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Generated GIN
+      si_DetectedGIN { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Last detected GIN
+      sx_GINOutOfRange { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // GIN out of range
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	15/01/2020  | 3.0       | L.Klar        | first release MHS TIA 15.1
+	03/03/2020  | 3.1       | P. Pielucha   | Adapting reviews
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 – GIN generator initialization
+	    
+	    // Initialize GIN if last generated GIN is out of configured range.
+	    IF (#si_LastGenGIN < #ii_GINRangeStart
+	        OR #si_LastGenGIN > #ii_GINRangeEnd)
+	    THEN
+	        
+	        #si_LastGenGIN := #ii_GINRangeStart - 1;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 2 – GIN conversion
+	    
+	    // Riding edge on new GIN detected
+	    #sR_TRIG_NewGINDetected(CLK := #iqUDT_Handshake.GIN > 0 AND #iqUDT_Handshake.GIN <> #si_DetectedGIN);
+	    
+	    // Check if detected GIN is out of normal and unknown GIN ranges 
+	    #sx_GINOutOfRange := (#iqUDT_Handshake.GIN < #ii_GINRangeStart
+	    OR #iqUDT_Handshake.GIN > #ii_GINRangeEnd)
+	    AND (#iqUDT_Handshake.GIN < #iqUDT_UnknownGIN.Start OR
+	    #iqUDT_Handshake.GIN > #iqUDT_UnknownGIN.End);
+	    
+	    // Generate new GIN if new GIN was detected
+	    IF (#sR_TRIG_NewGINDetected.Q
+	        AND #sx_GINOutOfRange)
+	    THEN
+	        
+	        #si_DetectedGIN := #iqUDT_Handshake.GIN;
+	        
+	        IF (#si_LastGenGIN < #ii_GINRangeEnd)
+	        THEN
+	            
+	            #si_GenGIN := #si_LastGenGIN + 1;
+	            #si_LastGenGIN += 1;
+	            
+	        ELSE
+	            
+	            #si_GenGIN := #ii_GINRangeStart;
+	            #si_LastGenGIN := #ii_GINRangeStart;
+	            
+	        END_IF;
+	        
+	        // Copy detected GIN record to new generated GIN
+	        "DB_GIN".GIN[#si_GenGIN] := "DB_GIN".GIN[#si_DetectedGIN];
+	        
+	    END_IF;
+	    
+	    // GIN update
+	    IF (#iqUDT_Handshake.GIN > 0
+	        AND #sx_GINOutOfRange)
+	    THEN
+	        
+	        #iqUDT_Handshake.GIN := #si_GenGIN;
+	        
+	    END_IF;
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

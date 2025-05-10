@@ -1,0 +1,53 @@
+﻿FUNCTION "FC_ControlPowerGroup" : Void
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 2
+// END_ATTRIBUTES
+   VAR_TEMP 
+      "ix_0030-PSC01_24V_OK" : Bool;   // Example, remove when block is used
+      "ix_0030-PSC04_24V_OK" : Bool;   // Example, remove when block is used
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                      
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	2020-06-12  | 1.0       | S.Theocharis  | Initial version
+	*)
+	
+	REGION Control Power Group 1 
+	    "DI_CPG01"(ix_PowerSupplyOk_1 := #"ix_0030-PSC01_24V_OK",
+	               ix_PowerSupply_Infeed_1 := "DB_PowerDistributionPanel".PDP04.CircuitBreakerStateF100,
+	               ix_PowerSupplyOk_2 := #"ix_0030-PSC04_24V_OK",
+	               ix_PowerSupply_Infeed_2 := "DB_PowerDistributionPanel".PDP04.CircuitBreakerStateF100,
+	               ix_PowerSupplyOk_3 := TRUE,
+	               ix_PowerSupply_Infeed_3 := TRUE,
+	               ix_PowerSupplyOk_4 := TRUE,
+	               ix_PowerSupply_Infeed_4 := TRUE,
+	               ix_PowerSupplyOk_5 := TRUE,
+	               ix_PowerSupply_Infeed_5 := TRUE,
+	               ix_PowerSupplyOk_6 := TRUE,
+	               ix_PowerSupply_Infeed_6 := TRUE,
+	               ix_PowerSupplyOk_7 := TRUE,
+	               ix_PowerSupply_Infeed_7 := TRUE,
+	               ix_PowerSupplyOk_8 := TRUE,
+	               ix_PowerSupply_Infeed_8 := TRUE,
+	               ix_PowerSupplyOk_9 := TRUE,
+	               ix_PowerSupply_Infeed_9 := TRUE,
+	               ix_PowerSupplyOk_10 := TRUE,
+	               ix_PowerSupply_Infeed_10 := TRUE,
+	               qUDT_HMIStatus => "DB_Status".System.CPG01,
+	               qUDT_Status => "DB_CommonStatus".System.CPG01,
+	               iqUDT_EquipmentControl := "DB_Control".System1,
+	               iqUDT_Statistics := "DB_Statistics".System.CPG01);
+	    
+	END_REGION
+	
+END_FUNCTION
+

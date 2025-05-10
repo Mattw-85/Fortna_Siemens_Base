@@ -1,0 +1,62 @@
+﻿TYPE "UDT_EventStatistic"
+TITLE = UDT_EventStatistic
+VERSION : 0.1
+//User-defined structure of event statistic data.
+   STRUCT
+      NumberOfTimes : DInt;   // Number of times the event occurred since last reset
+      LastEventSeconds : DInt;   // Number of seconds of the current or last event
+      TotalEventSeconds : DInt;   // Total number of seconds the event occurred since last reset
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_ControlPowerGroupWORStatus"
+VERSION : 0.1
+   STRUCT
+      Status : Int;   // Status number
+      Specific : Struct
+         PowerSuppliesError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Power supplly error
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_ControlPowerGroupWORStatistics"
+VERSION : 0.1
+   STRUCT
+      PowerSupplyError : "UDT_EventStatistic";   // Error Power Supply Group Statistics
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_ControlPowerGroupStatus"
+VERSION : 0.1
+   STRUCT
+      Status : Int;   // Status number
+      Specific : Struct
+         Fail_PowerSupply_1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Power supply 1 fail
+         Fail_PowerSupply_2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Power supply 2 fail
+         Fail_PowerSupply_3 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Power supply 3 fail
+         Fail_PowerSupply_4 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Power supply 4 fail
+         Fail_PowerSupply_5 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Power supply 5 fail
+         Fail_PowerSupply_6 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Power supply 6 fail
+         Fail_PowerSupply_7 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Power supply 7 fail
+         Fail_PowerSupply_8 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Power supply 8 fail
+         Fail_PowerSupply_9 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Power supply 9 fail
+         Fail_PowerSupply_10 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Power supply 10 fail
+         PowerSuppliesWarning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Power supplies warning
+         PowerSuppliesError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Power supplies error
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_ControlPowerGroupStatistics"
+VERSION : 0.1
+   STRUCT
+      PowerSupplyGroupWarnning : "UDT_EventStatistic";   // Warning Power Supply Group Statistics
+      PowerSupplyGroupError : "UDT_EventStatistic";   // Error Power Supply Group Statistics
+   END_STRUCT;
+
+END_TYPE
+

@@ -1,0 +1,368 @@
+﻿FUNCTION_BLOCK "FB_RIOVSU"
+TITLE = FB_RIOVSU
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 226
+// END_ATTRIBUTES
+   VAR_INPUT 
+      is_ET200spPNDeviceName { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;   //   Name of the ET200sp device
+      ix_400VintOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   TRUE if internal circuit breaker 400V is ok
+      ix_400VextOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   TRUE if external 400V Main cabinet is ok
+      ix_BrakeSupplyOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   TRUE if circuit breaker of brake power supply is ok
+      ix_ThermalBrake { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   TRUE when No thermal error
+      ix_24VOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   TRUE when 24V power supply to RIO is ok
+      ix_SimulationModeActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   True when Simulation mode active
+      ix_HardwareOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE when  hardware is Ok
+   END_VAR
+
+   VAR_OUTPUT 
+      qUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_RIOVSUStatus";   //   HMI status structure
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_Statistics : "UDT_RIOVSUStatistics";   //   Statistics structure
+      iqUDT_VSUInterface : "UDT_VSUInterface";   //   Interface RIO and VSU
+   END_VAR
+
+   VAR 
+      sUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_RIOVSUStatus";   //   HMI status structure
+      sUDT_PNDevice { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_PNDevice";   //   PN device structure
+      sa_PNPortsStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[1..8] of Bool;   // TRUE when specific port has an error
+      sFB_TimerOnOffDelayCheckSupply { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   //   MHS "TimerOnOffDelay" - to delay time for VFD supply contactor
+      sR_TRIG_Int400VCBError {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Rising edge for trigger 400v internal error
+      sR_TRIG_Int24VError {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Rising edge for trigger 24v internal error
+      sR_TRIG_BrakeCBerror {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Rising edge for trigger brake circuit breaker tripped
+      sR_TRIG_BrakeThermError {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Rising edge for trigger brake thermal error
+      sR_TRIG_DeviceFound {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Rising edge for trigger scan modules
+      sR_TRIG_PNSlaveNotOnline {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Rising edge for trigger Profinet slave not online statistics
+      sR_TRIG_PNSlaveError {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Rising edge for trigger Profinet slave error statistics
+      si_ModuleStateReturn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Status structure
+      si_NrOfModulesWithError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Number of the faulty modules
+      sx_PNSlaveOnline { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Profinet device is online and error free
+      sx_PowerOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   True = External Power OK
+      sx_ConfigurationError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Commissioning: configuration error
+   END_VAR
+
+   VAR_TEMP 
+      ta_Configured : Array[0..127] of Bool;   //   Configured modules array
+      ta_Exist : Array[0..127] of Bool;   //   Existing modules array
+      ta_Error : Array[0..127] of Bool;   //   Faulty modules array
+      ti_NrOfModule : Int;   //   Number of current module
+      ti_DiagArraySize : Int;   //   Diagnostic array size
+   END_VAR
+
+   VAR CONSTANT 
+      cui_ConfiguredModulesMode : UInt := 1;   //   Mode selector: 1 = Configured modules scan mode
+      cui_ModuleErrorMode : UInt := 2;   //   Mode selector: 2 = Existing modules scan mode
+      cui_ExistingModulesMode : UInt := 4;   //   Mode selector: 3 = Module Error scan mode
+      ci_PowerSupplyDelayTime : UInt := 4000;   //   Power supply delay time
+      ci_NumberOfProfinetPorts : Int := 2;   // Number of Profinet ports in device
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	03/09-2019  | 2.1       | F.Baten       | first release MHS TIA 15.1
+	23/09/2019  | 2.2       | F.Baten       | Changed region 1 contents to FC
+	12/10/2019  | 2.3       | L. Klar       | Updated status structure
+	14/10/2019  | 2.4       | S. Deulkar    | Added equipment control structure and created 
+	                                        | region for status
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1   
+	29/11/2019  | 3.1       | F.Baten       | Updated interface to VSU
+	04/12/2019  | 3.2       | F.Baten       | Region 3: ix_SimulationModeActive rearranged to correct position
+	09/12/2019  | 3.3       | F.Baten       | Region 5: added #ix_SimulationModeActive to PNDeviceOk
+	04/03/2020  | 3.4       | F.Baten       | Updated errors and warnings and interface to VSU
+	06/08/2020  | 3.5       | L.Klar        | Initialize the #si_NrOfModulesWithError on the reset
+	03/11/2020  | 3.9       | K.Pokorski    | Profinet ports diagnostics added 
+	02/08/2021  | 3.5       | S. Deulkar    | Added logic to reset error when 24V is not okay. 
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 - Get Device Profinet information
+	    
+	    "FC_GetDevicePN"(is_PNDeviceName := #is_ET200spPNDeviceName,
+	                     ix_SimulationModeActive := #ix_SimulationModeActive,
+	                     iqUDT_PND := #sUDT_PNDevice);
+	    
+	    
+	    "FC_GetPNPortStatus"(ii_NumberOfPorts := #ci_NumberOfProfinetPorts,
+	                         iUDT_DevicePNInfo := #sUDT_PNDevice,
+	                         qa_PortFault => #sa_PNPortsStatus);
+	    
+	END_REGION
+	
+	REGION 2 - Reset errors
+	    // reset Profinet Slave error/not online  
+	    IF #iqUDT_VSUInterface.InternalErrorReset
+	        OR NOT #ix_24VOk
+	    THEN
+	        #sUDT_HMIStatus."400VCircuitBreaker" := FALSE;
+	        #sUDT_HMIStatus.BrakeCircuitBreaker := FALSE;
+	        #sUDT_HMIStatus.BrakeThermalError := FALSE;
+	        #sUDT_HMIStatus.PNSlaveNotOnline := FALSE;
+	        #sUDT_HMIStatus.PNSlaveError := FALSE;
+	        #sUDT_HMIStatus."24VPowersupplyError" := FALSE;
+	        #sUDT_HMIStatus.PNSlaveWarning := FALSE;
+	        #si_NrOfModulesWithError := 0;
+	        
+	    END_IF;
+	    
+	    // reset ET200sp module error status
+	    IF #sUDT_HMIStatus.PNSlaveNotOnline OR #iqUDT_VSUInterface.InternalErrorReset OR NOT #ix_24VOk
+	    THEN
+	        FILL_BLK(IN := FALSE,
+	                 COUNT := 32,
+	                 OUT => #sUDT_HMIStatus.ET200sp_ErrorModule[0]);
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 3 - Update PN slave device status
+	    // Hardware will only be available after the delay, so the device has time for the initialisation
+	    #sFB_TimerOnOffDelayCheckSupply(iudi_OnDelayTime := #ci_PowerSupplyDelayTime,
+	                                    ix_SignalToDelay := #ix_24VOk,
+	                                    qx_DelayedSignal => #sx_PowerOk);
+	    
+	    // check if PN device is online
+	    IF ((NOT "DB_ProfinetDiagnostic".ProfinetNetworks[#sUDT_PNDevice.PNNetworknumber].DeviceStatus[#sUDT_PNDevice.PNDeviceNumber].DeviceState.Exist
+	        AND #sx_PowerOk)
+	        OR NOT #sUDT_PNDevice.PNDeviceFound)
+	        AND NOT #ix_SimulationModeActive
+	    THEN
+	        #sUDT_HMIStatus.PNSlaveNotOnline := TRUE;
+	    END_IF;
+	    
+	    // Check if PN ports are healthy 
+	    IF #sa_PNPortsStatus[1] XOR #sa_PNPortsStatus[2] THEN
+	        #sUDT_HMIStatus.PNSlaveWarning := TRUE;
+	    END_IF;
+	    
+	    // check if PN device has an error
+	    IF "DB_ProfinetDiagnostic".ProfinetNetworks[#sUDT_PNDevice.PNNetworknumber].DeviceStatus[#sUDT_PNDevice.PNDeviceNumber].DeviceState.Error
+	        AND #sx_PowerOk
+	        AND NOT #ix_SimulationModeActive
+	        AND NOT #sUDT_HMIStatus.PNSlaveWarning
+	        
+	    THEN
+	        #sUDT_HMIStatus.PNSlaveError := TRUE;
+	    END_IF;
+	    
+	    // set bit when PN device is healthy (online and no error)
+	    #sx_PNSlaveOnline := NOT #sUDT_HMIStatus.PNSlaveNotOnline
+	    AND #sUDT_PNDevice.PNDeviceFound
+	    AND #sx_PowerOk
+	    OR #ix_SimulationModeActive;
+	    
+	    // create rising edge to scan module status when device is found
+	    #sR_TRIG_DeviceFound(CLK := #sUDT_PNDevice.PNDeviceFound);
+	    
+	END_REGION
+	
+	REGION 4 - Status update modules ET200sp
+	    // update ET200sp module status 
+	    IF (#sx_PNSlaveOnline
+	        AND (#sUDT_HMIStatus.PNSlaveError
+	        OR #sUDT_HMIStatus.PNSlaveWarning))
+	        OR #sR_TRIG_DeviceFound.Q
+	    THEN
+	        // get configured modules
+	        #si_ModuleStateReturn := ModuleStates(LADDR := "DB_ProfinetDiagnostic".ProfinetNetworks[#sUDT_PNDevice.PNNetworknumber].DeviceStatus[#sUDT_PNDevice.PNDeviceNumber].DeviceState.HW_ID,
+	                                              MODE := #cui_ConfiguredModulesMode,
+	                                              STATE := #ta_Configured);
+	        
+	        // get module online status
+	        #si_ModuleStateReturn := ModuleStates(LADDR := "DB_ProfinetDiagnostic".ProfinetNetworks[#sUDT_PNDevice.PNNetworknumber].DeviceStatus[#sUDT_PNDevice.PNDeviceNumber].DeviceState.HW_ID,
+	                                              MODE := #cui_ExistingModulesMode,
+	                                              STATE := #ta_Exist);
+	        
+	        // get module error status
+	        #si_ModuleStateReturn := ModuleStates(LADDR := "DB_ProfinetDiagnostic".ProfinetNetworks[#sUDT_PNDevice.PNNetworknumber].DeviceStatus[#sUDT_PNDevice.PNDeviceNumber].DeviceState.HW_ID,
+	                                              MODE := #cui_ModuleErrorMode,
+	                                              STATE := #ta_Error);
+	        
+	        // Handle ET200sp module errors/offline
+	        IF (#si_ModuleStateReturn = 0)
+	        THEN
+	            #si_NrOfModulesWithError := 0;
+	            
+	            #ti_DiagArraySize := "FC_GetNrOfArrayEl"(iv_Array := "DB_ProfinetDiagnostic".ProfinetNetworks[#sUDT_PNDevice.PNNetworknumber].DeviceStatus[#sUDT_PNDevice.PNDeviceNumber].Module);
+	            
+	            FOR #ti_NrOfModule := 0 TO (#ti_DiagArraySize - 1) DO
+	                
+	                // check if the module is configured
+	                IF (#ta_Configured[#ti_NrOfModule])
+	                THEN
+	                    "DB_ProfinetDiagnostic".ProfinetNetworks[#sUDT_PNDevice.PNNetworknumber].DeviceStatus[#sUDT_PNDevice.PNDeviceNumber].Module[#ti_NrOfModule].Configured := TRUE;
+	                    // and check if the module is online
+	                    IF (#ta_Exist[#ti_NrOfModule])
+	                    THEN
+	                        "DB_ProfinetDiagnostic".ProfinetNetworks[#sUDT_PNDevice.PNNetworknumber].DeviceStatus[#sUDT_PNDevice.PNDeviceNumber].Module[#ti_NrOfModule].Exist := TRUE;
+	                        
+	                    ELSE
+	                        "DB_ProfinetDiagnostic".ProfinetNetworks[#sUDT_PNDevice.PNNetworknumber].DeviceStatus[#sUDT_PNDevice.PNDeviceNumber].Module[#ti_NrOfModule].Exist := FALSE;
+	                        #sUDT_HMIStatus.ET200sp_ErrorModule[#ti_NrOfModule] := TRUE;
+	                        // count number of modules with error/offline
+	                        #si_NrOfModulesWithError += 1;
+	                    END_IF;
+	                    
+	                    // and check if the module has an error
+	                    IF (NOT #ta_Error[#ti_NrOfModule])
+	                    THEN
+	                        "DB_ProfinetDiagnostic".ProfinetNetworks[#sUDT_PNDevice.PNNetworknumber].DeviceStatus[#sUDT_PNDevice.PNDeviceNumber].Module[#ti_NrOfModule].Error := FALSE;
+	                        
+	                    ELSE
+	                        "DB_ProfinetDiagnostic".ProfinetNetworks[#sUDT_PNDevice.PNNetworknumber].DeviceStatus[#sUDT_PNDevice.PNDeviceNumber].Module[#ti_NrOfModule].Error := TRUE;
+	                        #sUDT_HMIStatus.ET200sp_ErrorModule[#ti_NrOfModule] := TRUE;
+	                        // count number OF modules with error/offline
+	                        #si_NrOfModulesWithError += 1;
+	                    END_IF;
+	                    
+	                ELSE
+	                    // reset module status when module is not configured
+	                    "DB_ProfinetDiagnostic".ProfinetNetworks[#sUDT_PNDevice.PNNetworknumber].DeviceStatus[#sUDT_PNDevice.PNDeviceNumber].Module[#ti_NrOfModule].Configured := FALSE;
+	                    "DB_ProfinetDiagnostic".ProfinetNetworks[#sUDT_PNDevice.PNNetworknumber].DeviceStatus[#sUDT_PNDevice.PNDeviceNumber].Module[#ti_NrOfModule].Exist := FALSE;
+	                    "DB_ProfinetDiagnostic".ProfinetNetworks[#sUDT_PNDevice.PNNetworknumber].DeviceStatus[#sUDT_PNDevice.PNDeviceNumber].Module[#ti_NrOfModule].Error := FALSE;
+	                    
+	                END_IF;
+	            END_FOR;
+	        END_IF;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 5 - Check RIO Panel Status
+	    
+	    // create 400v internal error
+	    IF NOT #ix_400VintOk
+	    THEN
+	        #sUDT_HMIStatus."400VCircuitBreaker" := TRUE;
+	    END_IF;
+	    
+	    // create error circuit breaker brake tripped
+	    IF NOT #ix_BrakeSupplyOk
+	    THEN
+	        #sUDT_HMIStatus.BrakeCircuitBreaker := TRUE;
+	    END_IF;
+	    
+	    // Create error thermal overload brake
+	    IF NOT #ix_ThermalBrake
+	    THEN
+	        #sUDT_HMIStatus.BrakeThermalError := TRUE;
+	    END_IF;
+	    
+	    // Create error thermal overload brake
+	    IF NOT #ix_24VOk
+	    THEN
+	        #sUDT_HMIStatus."24VPowersupplyError" := TRUE;
+	    END_IF;
+	    
+	    // check if 400 v to VFD positioning is ok
+	    #iqUDT_VSUInterface.VSUMainPowerOk := #ix_400VextOk;
+	    
+	    // set config not ok bit if no device found
+	    #sx_ConfigurationError := NOT #sUDT_PNDevice.PNDeviceFound;
+	    
+	END_REGION
+	
+	REGION 6 - Statistics
+	    // create trigger on error and create statistics 
+	    #sR_TRIG_Int400VCBError(CLK := #sUDT_HMIStatus."400VCircuitBreaker");
+	    
+	    IF #iqUDT_VSUInterface.ResetStatistics OR #sUDT_HMIStatus."400VCircuitBreaker"
+	    THEN
+	        
+	        "FC_Statistics"(ix_Reset := #iqUDT_VSUInterface.ResetStatistics,
+	                        ix_Activate := #sUDT_HMIStatus."400VCircuitBreaker",
+	                        ix_RTrigActivate := #sR_TRIG_Int400VCBError.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.Int400VCBError);
+	    END_IF;
+	    
+	    // create trigger on error and create statistics 
+	    #sR_TRIG_Int24VError(CLK := #sUDT_HMIStatus."24VPowersupplyError");
+	    
+	    IF #iqUDT_VSUInterface.ResetStatistics OR #sUDT_HMIStatus."24VPowersupplyError"
+	    THEN
+	        
+	        "FC_Statistics"(ix_Reset := #iqUDT_VSUInterface.ResetStatistics,
+	                        ix_Activate := #sUDT_HMIStatus."24VPowersupplyError",
+	                        ix_RTrigActivate := #sR_TRIG_Int24VError.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics."24VError");
+	    END_IF;
+	    
+	    // create trigger on error and create statistics 
+	    #sR_TRIG_BrakeCBerror(CLK := #sUDT_HMIStatus.BrakeCircuitBreaker);
+	    
+	    IF #iqUDT_VSUInterface.ResetStatistics OR #sUDT_HMIStatus.BrakeCircuitBreaker
+	    THEN
+	        
+	        "FC_Statistics"(ix_Reset := #iqUDT_VSUInterface.ResetStatistics,
+	                        ix_Activate := #sUDT_HMIStatus.BrakeCircuitBreaker,
+	                        ix_RTrigActivate := #sR_TRIG_BrakeCBerror.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.BrakeCBerror);
+	    END_IF;
+	    
+	    // create trigger on error and create statistics 
+	    #sR_TRIG_BrakeThermError(CLK := #sUDT_HMIStatus.BrakeThermalError);
+	    
+	    IF #iqUDT_VSUInterface.ResetStatistics OR #sUDT_HMIStatus.BrakeThermalError
+	    THEN
+	        
+	        "FC_Statistics"(ix_Reset := #iqUDT_VSUInterface.ResetStatistics,
+	                        ix_Activate := #sUDT_HMIStatus.BrakeThermalError,
+	                        ix_RTrigActivate := #sR_TRIG_BrakeThermError.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.BrakeThermError);
+	    END_IF;
+	    
+	    // create trigger on error and create statistics for profinet slave not online
+	    #sR_TRIG_PNSlaveNotOnline(CLK := #sUDT_HMIStatus.PNSlaveNotOnline);
+	    
+	    IF #iqUDT_VSUInterface.ResetStatistics OR #sUDT_HMIStatus.PNSlaveNotOnline
+	    THEN
+	        
+	        "FC_Statistics"(ix_Reset := #iqUDT_VSUInterface.ResetStatistics,
+	                        ix_Activate := #sUDT_HMIStatus.PNSlaveNotOnline,
+	                        ix_RTrigActivate := #sR_TRIG_PNSlaveNotOnline.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.PNSlaveNotOnline);
+	    END_IF;
+	    
+	    // create trigger on error and create statistics for profinet slave error
+	    #sR_TRIG_PNSlaveError(CLK := #sUDT_HMIStatus.PNSlaveError);
+	    
+	    IF #iqUDT_VSUInterface.ResetStatistics OR #sUDT_HMIStatus.PNSlaveError
+	    THEN
+	        
+	        "FC_Statistics"(ix_Reset := #iqUDT_VSUInterface.ResetStatistics,
+	                        ix_Activate := #sUDT_HMIStatus.PNSlaveError,
+	                        ix_RTrigActivate := #sR_TRIG_PNSlaveError.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.PNSlaveError);
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 7 - Status
+	    // Statement section REGION
+	    #iqUDT_VSUInterface.InternalErrorRIOPanel := #sUDT_HMIStatus.PNSlaveError
+	    OR #sUDT_HMIStatus.PNSlaveNotOnline
+	    OR #si_NrOfModulesWithError <> 0
+	    OR #sUDT_HMIStatus."400VCircuitBreaker"
+	    OR #sUDT_HMIStatus."24VPowersupplyError"
+	    OR #sUDT_HMIStatus.BrakeCircuitBreaker
+	    OR #sUDT_HMIStatus.BrakeThermalError;
+	    
+	    // HMI status update
+	    
+	    #qUDT_HMIStatus := #sUDT_HMIStatus;                       // Copy HMI status to output
+	    
+	END_REGION
+	
+END_FUNCTION_BLOCK
+

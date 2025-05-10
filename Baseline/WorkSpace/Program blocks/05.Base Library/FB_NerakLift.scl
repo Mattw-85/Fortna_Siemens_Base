@@ -1,0 +1,297 @@
+﻿FUNCTION_BLOCK "FB_NerakLift"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 250
+// END_ATTRIBUTES
+   VAR_INPUT 
+      iUDT_Configuration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_NerakLiftConfiguration";   // Configuration structure
+      idi_PECEoSDistance { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // PEC distance from the end of lift
+      ix_SafetyOK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when safety is ok
+      ix_24VOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when 24V supply is ok
+      ix_400VOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when 400V supply is ok
+      ix_HardwareOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when hardware is ok
+      iUDT_LiftPI { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_NerakLiftPI";   // Structure of inputs from IO Panel
+      iUDT_MotorInput { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_VfdSEWSpeedPI";
+   END_VAR
+
+   VAR_OUTPUT 
+      qUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_NerakLiftStatus";   // HMI status structure
+      qUDT_LiftPO { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_NerakLiftPO";   // Structure of outputs from IO Panel
+      qUDT_MotorOutput { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_VfdSEWSpeedPO";
+      qx_Fault { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Fault active
+      qx_Ready { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Machine ready
+      qx_ExternalDieback { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Send external dieback to downstream conveyor
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_CommonStatus : "UDT_CommonStatus";   // Common status structure
+      iqUDT_EquipmentControl : "UDT_EquipmentControl";   // Equipment control structure
+      iqUDT_HandshakeUp : "UDT_ConveyorHandshake";   // Upstream handshake structure
+      iqUDT_Handshake : "UDT_ConveyorHandshake";   // Downstream handshake structure
+      iqUDT_ConveyorCommand : "UDT_ConveyorCommand";   // HMI commands structure
+      iqUDT_Statistics : "UDT_NerakLiftStatistics";   // Statistics structure
+   END_VAR
+
+   VAR 
+      sUDT_Interface { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorInterface";   // Interface structure
+      sUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_NerakLiftStatus";   // HMI status structure
+      sUDT_ConveyorConfiguration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorConfiguration" := (((), 0), (), (), (), 0, 200, (), (), FALSE);   // Conveyor configuration structure
+      sFB_DisplacementLift { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_Displacement";
+      sFB_ConveyorControl { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_Conveyor";   // Conveyor instance
+      sFB_VfdSEWMOVICSpeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_VfdSEWMOVI-CSpeed";   // Function to interface with SEW-MoviCPositioning for  020
+      sFB_TimerOnOffDelay_B2Treshold { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // B2 on off delay
+      sFB_TimerOnOffDelay_B3Treshold { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // B3 on off delay
+      sFB_TimerOnOffDelay_B4Treshold { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // B4 on off delay
+      sFB_TimerOnOffDelay_B5Treshold { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // B5 on off delay
+      sFB_TimerOnOffDelay_B10Treshold { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // B10 on off delay
+      sFB_TimerOnOffDelay_B11Treshold { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // B11 on off delay
+      sR_TRIG_ProductFellDown {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // R_TRIG Product fell down for statistics
+      sR_TRIG_CollisionDetected {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // R_TRIG collision detected for statistics
+      sx_B2Filtered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // B2 sensor filtered
+      sx_B3Filtered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Cumulative B3 sensors filtered
+      sx_B4Filtered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // B4 sensor filtered
+      sx_B5Filtered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // B5 sensor filtered
+      sx_B10Filtered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // B10 sensor filtered
+      sx_B11Filtered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // B11 sensor filtered
+   END_VAR
+
+   VAR_TEMP 
+      tUDT_Statistics : "UDT_ConveyorStatistics";   // Temporary conveyor statistics structure
+      tUDT_ConveyorHMIStatus : "UDT_ConveyorStatus";   // Temporary conveyor status structure
+      tx_ExternalDieback : Bool;   // Upstream dieback control
+      tx_Hold : Bool;   // Hold bit
+      tx_GlobalResetMemory : Bool;   // Memory for global reset
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                      
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	20/02/2024  | 1.0       | K.Pokorski    | First release TIA 17         
+	28/03/2024  | 1.1       | K. Pokorski   | Modifications after lift test
+	16/08/2024  | 2.0       | J.Majer       | Block Interface IO changed to UDT type
+	05/02/2025  | 2.1       | R.Willems     | Add displacement, VFD
+	*)
+	REGION 1 - Displacement
+	    #sFB_DisplacementLift(#sUDT_Interface);
+	END_REGION
+	
+	REGION 2 - Lift
+	    REGION 2.1 - Edge detection 
+	        
+	        #sR_TRIG_ProductFellDown(CLK := #sUDT_HMIStatus."010".Lift.Specific.ProductFellDown);
+	        
+	        #sR_TRIG_CollisionDetected(CLK := #sUDT_HMIStatus."010".Lift.Specific.CollisionDetected);
+	        
+	    END_REGION
+	    
+	    REGION 2.2 - Filtering
+	        
+	        #sFB_TimerOnOffDelay_B2Treshold(iudi_OnDelayTime := #iUDT_Configuration."010".Lift.CollisionSensorDelayOn,
+	                                        iudi_OffDelayTime := #iUDT_Configuration."010".Lift.CollisionSensorDelayOff,
+	                                        ix_SignalToDelay := #iUDT_LiftPI.ix_B2_CollisionControl,
+	                                        qx_DelayedSignal => #sx_B2Filtered);
+	        
+	        #sFB_TimerOnOffDelay_B3Treshold(iudi_OnDelayTime := #iUDT_Configuration."010".Lift.FallingThroughSensorDelayOn,
+	                                        iudi_OffDelayTime := #iUDT_Configuration."010".Lift.FallingThroughSensorDelayOff,
+	                                        ix_SignalToDelay := #iUDT_LiftPI."ix_B3.1FallingThrought" AND #iUDT_LiftPI."ix_B3.2FallingThrought" AND #iUDT_LiftPI."ix_B3.3FallingThrought",
+	                                        qx_DelayedSignal => #sx_B3Filtered);
+	        
+	        #sFB_TimerOnOffDelay_B4Treshold(iudi_OnDelayTime := #iUDT_Configuration."010".Lift.TailbackControlFrontSensorDelayOn,
+	                                        iudi_OffDelayTime := #iUDT_Configuration."010".Lift.TailbackControlFrontSensorDelayOff,
+	                                        ix_SignalToDelay := #iUDT_LiftPI.ix_B4TailbackControlFront,
+	                                        qx_DelayedSignal => #sx_B4Filtered);
+	        
+	        #sFB_TimerOnOffDelay_B5Treshold(iudi_OnDelayTime := #iUDT_Configuration."010".Lift.TailbackControlRearSensorDelayOn,
+	                                        iudi_OffDelayTime := #iUDT_Configuration."010".Lift.TailbackControlRearSensorDelayOff,
+	                                        ix_SignalToDelay := #iUDT_LiftPI.ix_B5TailbackControlBack,
+	                                        qx_DelayedSignal => #sx_B5Filtered);
+	        
+	        #sFB_TimerOnOffDelay_B10Treshold(iudi_OnDelayTime := #iUDT_Configuration."010".Lift.PlatformPositionSensorDelayOn,
+	                                         iudi_OffDelayTime := #iUDT_Configuration."010".Lift.PlatformPositionSensorDelayOff,
+	                                         ix_SignalToDelay := #iUDT_LiftPI.ix_B10_PlatforninPosition,
+	                                         qx_DelayedSignal => #sx_B10Filtered);
+	        
+	        #sFB_TimerOnOffDelay_B11Treshold(iudi_OnDelayTime := #iUDT_Configuration."010".Lift.CollisionSensorDelayOn,
+	                                         iudi_OffDelayTime := #iUDT_Configuration."010".Lift.CollisionSensorDelayOff,
+	                                         ix_SignalToDelay := #iUDT_LiftPI.ix_B11ColisionControl,
+	                                         qx_DelayedSignal => #sx_B11Filtered);
+	        
+	    END_REGION
+	    
+	    REGION 2.3 - Errors
+	        
+	        IF #iqUDT_EquipmentControl.Command.Reset OR #iUDT_LiftPI.ix_FaultReset
+	        THEN
+	            #sUDT_HMIStatus."010".Lift.Specific.CollisionDetected := FALSE;
+	            #sUDT_HMIStatus."010".Lift.Specific.ProductFellDown := FALSE;
+	        END_IF;
+	        
+	        IF NOT #sx_B2Filtered AND #sx_B11Filtered AND #iUDT_Configuration."010".Lift.Mode = 1
+	            OR NOT #sx_B2Filtered AND #iUDT_Configuration."010".Lift.Mode = 2
+	        THEN
+	            #sUDT_HMIStatus."010".Lift.Specific.CollisionDetected := TRUE;
+	        END_IF;
+	        
+	        IF NOT #sx_B3Filtered
+	        THEN
+	            #sUDT_HMIStatus."010".Lift.Specific.ProductFellDown := TRUE;
+	        END_IF;
+	        
+	        IF #sUDT_HMIStatus."010".Lift.Specific.CollisionDetected
+	            OR #sUDT_HMIStatus."010".Lift.Specific.ProductFellDown THEN
+	            #sUDT_Interface.InternalErrorPEC := TRUE;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 2.4 - Conveyor control
+	        
+	        REGION 2.4.1 - Conveyor configuration
+	            
+	            #sUDT_ConveyorConfiguration.Common.Length := #iUDT_Configuration."010".Lift.Length;
+	            #sUDT_ConveyorConfiguration.Forward_Direction.EnergySaveLenght := #iUDT_Configuration."010".Lift.EnergySaveLength;
+	            #sUDT_ConveyorConfiguration.Forward_Direction.PEC_EoSDistanceOffset := #iUDT_Configuration."010".Lift.PEC_EoSDistanceOffset;
+	            #sUDT_ConveyorConfiguration.Forward_Direction.FirstConveyorToStart := #iUDT_Configuration."010".Lift.FirstConveyorToStart;
+	            #sUDT_ConveyorConfiguration.CascadeTimeOnDelay := #iUDT_Configuration."010".Lift.CascadeTimeOnDelay;
+	            #sUDT_ConveyorConfiguration.SpeedSetpointNominal := #iUDT_Configuration."010".Lift.SpeedSetpointNominal;
+	            #sUDT_ConveyorConfiguration.Energy := #iUDT_Configuration."010".Lift.Energy;
+	            
+	        END_REGION
+	        
+	        REGION 2.4.2 - Tailback control
+	            
+	            #tx_Hold := NOT #sx_B4Filtered AND NOT #sx_B5Filtered;
+	            
+	        END_REGION
+	        
+	        REGION 2.4.3 - Conveyor block call
+	            
+	            #tx_GlobalResetMemory := #iqUDT_EquipmentControl.Command.Reset;
+	            #iqUDT_EquipmentControl.Command.Reset := #iqUDT_EquipmentControl.Command.Reset OR #iUDT_LiftPI.ix_FaultReset;
+	            
+	            #iqUDT_ConveyorCommand.ManualMode := #iUDT_LiftPI.ix_ManualMode;
+	            #iqUDT_ConveyorCommand.ManualStartStop := FALSE;
+	            #iqUDT_ConveyorCommand.ManualJog := #iUDT_LiftPI.ix_ManualUp OR #iUDT_LiftPI.ix_ManualDown;
+	            
+	            #iqUDT_ConveyorCommand.Reverse :=
+	            (#iUDT_Configuration."010".Lift.Mode = 1 AND #iUDT_LiftPI.ix_ManualUp)
+	            OR (#iUDT_Configuration."010".Lift.Mode = 2 AND #iUDT_LiftPI.ix_ManualDown);
+	            
+	            #sFB_ConveyorControl(iUDT_ConveyorConfiguration := #sUDT_ConveyorConfiguration,
+	                                 idi_PECEoSDistance := #idi_PECEoSDistance,
+	                                 idi_PECBoSDistance := 0,
+	                                 ii_ExternalSpeed := 0,
+	                                 ix_SafetyOk := #ix_SafetyOK,
+	                                 ix_24vOk := #ix_24VOk,
+	                                 ix_400vOk := #ix_400VOk,
+	                                 ix_HardwareOk := #ix_HardwareOk,
+	                                 ix_PECEoS := #sx_B5Filtered,
+	                                 ix_PECBoS := TRUE,
+	                                 ix_ReverseDirection := FALSE,
+	                                 ix_ExternalRequestDieBack := FALSE,
+	                                 ix_ExternalRequestHold := #tx_Hold,
+	                                 ix_ResetEnergySave := FALSE,
+	                                 qUDT_HMIStatus => #tUDT_ConveyorHMIStatus,
+	                                 qUDT_Status => #iqUDT_CommonStatus,
+	                                 iqUDT_EquipmentControl := #iqUDT_EquipmentControl,
+	                                 iqUDT_ConveyorCommand := #iqUDT_ConveyorCommand,
+	                                 iqUDT_ConveyorInterface := #sUDT_Interface,
+	                                 iqUDT_HandShakeUp := #iqUDT_HandshakeUp,
+	                                 iqUDT_HandShake := #iqUDT_Handshake,
+	                                 iqUDT_Statistics := #tUDT_Statistics);
+	            
+	            IF #iqUDT_CommonStatus.ManualRun
+	                AND #sUDT_Interface.SpeedSetpoint > 200
+	            THEN
+	                #sUDT_Interface.SpeedSetpoint := 200;
+	            END_IF;
+	            
+	            #iqUDT_EquipmentControl.Command.Reset := #tx_GlobalResetMemory;
+	            #tx_ExternalDieback := TRUE;
+	            IF #sx_B10Filtered THEN
+	                #tx_ExternalDieback := false;
+	            END_IF;
+	            
+	        END_REGION
+	        
+	    END_REGION
+	    
+	    REGION 2.5 - Status
+	        
+	        #sUDT_HMIStatus."010".Lift.Status := #tUDT_ConveyorHMIStatus.Status;
+	        #qUDT_HMIStatus."010".Lift := #sUDT_HMIStatus."010".Lift;
+	        
+	    END_REGION
+	    
+	    REGION 2.6 - Statistics
+	        
+	        REGION 2.6.1 - Conveyor statistics mapping
+	            
+	            #iqUDT_Statistics."010".Lift.EnergySave := #tUDT_Statistics.EnergySave;
+	            #iqUDT_Statistics."010".Lift.ConveyorStop := #tUDT_Statistics.ConveyorStop;
+	            #iqUDT_Statistics."010".Lift.ConveyorDown := #tUDT_Statistics.ConveyorDown;
+	            #iqUDT_Statistics."010".Lift.ConveyorUp := #tUDT_Statistics.ConveyorUp;
+	            
+	        END_REGION
+	        
+	        REGION 2.6.2 - Collision detected time
+	            
+	            IF #sUDT_HMIStatus."010".Lift.Specific.CollisionDetected OR #iqUDT_EquipmentControl.Command.ResetData  // Reset statistics
+	            THEN
+	                
+	                "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,          // Reset statistics input
+	                                ix_Activate := #sUDT_HMIStatus."010".Lift.Specific.CollisionDetected,         // Activate statistics functions input
+	                                ix_RTrigActivate := #sR_TRIG_CollisionDetected.Q,                       // Statistics active trigger
+	                                iqUDT_Statistics := #iqUDT_Statistics."010".Lift.CollisionDetected);               // Statistics values output
+	                
+	            END_IF;
+	            
+	        END_REGION
+	        
+	        REGION 2.6.3 - Collision detected time
+	            
+	            IF #sUDT_HMIStatus."010".Lift.Specific.ProductFellDown OR #iqUDT_EquipmentControl.Command.ResetData  // Reset statistics
+	            THEN
+	                
+	                "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,          // Reset statistics input
+	                                ix_Activate := #sUDT_HMIStatus."010".Lift.Specific.ProductFellDown,         // Activate statistics functions input
+	                                ix_RTrigActivate := #sR_TRIG_ProductFellDown.Q,                       // Statistics active trigger
+	                                iqUDT_Statistics := #iqUDT_Statistics."010".Lift.ProductFellDown);               // Statistics values output
+	                
+	            END_IF;
+	            
+	        END_REGION
+	        
+	    END_REGION
+	    
+	    REGION 2.7 - Outputs
+	        
+	        #qx_Fault := #iqUDT_CommonStatus.Error;
+	        #qx_Ready := NOT #iqUDT_CommonStatus.Error;
+	        #qx_ExternalDieback := #tx_ExternalDieback;
+	        
+	    END_REGION
+	END_REGION
+	
+	REGION 3 - VFD
+	    
+	    #"sFB_VfdSEWMOVICSpeed"(iUDT_VfdConfig := #iUDT_Configuration."010".VFD,
+	                            iUDT_VfdInputs := #iUDT_MotorInput,
+	                            ix_PowerOK := TRUE,
+	                            ix_SimulationModeActive := FALSE,
+	                            ix_QuickStopDisable := TRUE,
+	                            qUDT_HMIStatus => #qUDT_HMIStatus."010".VFD,
+	                            qUDT_VfdOutputs => #qUDT_MotorOutput,
+	                            iqUDT_ConveyorInterface := #sUDT_Interface,
+	                            iqUDT_VfdStatistics := #iqUDT_Statistics."010".VFD);
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

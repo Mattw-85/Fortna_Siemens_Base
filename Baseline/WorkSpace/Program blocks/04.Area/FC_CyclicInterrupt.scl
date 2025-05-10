@@ -1,0 +1,29 @@
+﻿FUNCTION "FC_CyclicInterrupt" : Void
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+// FC's used in cyclic interrupt
+// FC Cyclic Interrupt, which is calling the FC's for cyclic interrupt's
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	|                                                                                      |
+	|  Copyright  2022             MHS                                                     |
+	|  All Rights Reserved         Larenweg 90                                             |
+	|                              5234 KC 's-Hertogenbosch,                               |
+	|                              Netherlands                                             |
+	|                                                                                      |     
+	----------------------------------------------------------------------------------------
+	                                                                                      
+	Version history:
+	Date        | Version   | Author          | Remark
+	----------------------------------------------------------------------------------------
+	20/6/2024  | 0.1       | TM Generation   | _Test_IBA_Transport Controller(TC01-92)_V09
+	*)
+	
+	
+	
+	
+	
+END_FUNCTION
+

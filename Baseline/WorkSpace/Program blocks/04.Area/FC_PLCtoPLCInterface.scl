@@ -1,0 +1,27 @@
+﻿FUNCTION "FC_PLCtoPLCInterface" : Void
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 8
+// END_ATTRIBUTES
+   VAR_TEMP 
+      tx_replace : Bool;
+      td_replace : DInt;
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                      
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	
+	*)
+	
+	
+	
+END_FUNCTION
+

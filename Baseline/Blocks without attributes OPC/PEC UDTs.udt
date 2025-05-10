@@ -1,0 +1,130 @@
+﻿TYPE "UDT_EventStatistic"
+TITLE = UDT_EventStatistic
+VERSION : 0.1
+//User-defined structure of event statistic data.
+   STRUCT
+      NumberOfTimes : DInt;   // Number of times the event occurred since last reset
+      LastEventSeconds : DInt;   // Number of seconds of the current or last event
+      TotalEventSeconds : DInt;   // Total number of seconds the event occurred since last reset
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_PECStatistics"
+VERSION : 0.1
+   STRUCT
+      Jam : "UDT_EventStatistic";   // Number of times PEC got jammed
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_PECUpdateStatus"
+TITLE = UDT_PECUpdateStatus
+VERSION : 0.1
+//User-defined structure of FB_PECUpdate function block status.
+   STRUCT
+      TooManyLost : Bool;   // Too many parcels lost in a row
+      LowPerformance : Bool;   // Performance warning
+      PEC : Bool;   // Current state of the end of section photo eye
+      Jam : Bool;   // PEC Jam error
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_PECUpdateStatistics"
+TITLE = UDT_PECupdateStatistics
+VERSION : 0.1
+//User-defined structure of FB_PECUpdate function block statistics.
+   STRUCT
+      PEC { S7_SetPoint := 'False'} : "UDT_PECStatistics";   // PEC Statistics
+      TooManyLost { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Too many lost parcels
+      TotalNrOfParcels : DInt;   // Total number of parcels
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_PECUpdateConfiguration"
+TITLE = UDT_PECConfiguration
+VERSION : 0.1
+//User-defined structure of PEC parameters.
+   STRUCT
+      Distance { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Distance between photo eye and the end of conveyor [mm]
+      JamDisplacementLimit { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Limit displacement with PEC blocked o detect jam [cm]
+      TimeOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Photo eye time on delay [ms]
+      TimeOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Photo eye time off delay [ms]
+      ParcelLengthFilter { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool := TRUE;   // Parcel length filter
+      ResetWithPECBlocked { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // When 'True' Allow reset system after jam with PEC blocked
+      SearchWindowFwd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Search window in forward direction [cm]
+      SearchWindowRvs { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Search window in reverse direction [cm]
+      GINRangeStart { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // GIN range start value
+      GINRangeEnd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // GIN range end value
+      NrOfTeachParcels { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Number of parcels to teach
+      DefaultGIN { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int := 1;   // Default GIN record
+      MaxLost { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Maximum number of lost parcels in a row
+      GenerationPoint { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Generation point
+      NegativeGINDelete { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True when negative GIN has to be deleted
+      ParcelLengthMeasurement { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Parcel length measurement
+      GapLengthMeasurement { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Gap length measurement
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_PECStatus"
+VERSION : 0.1
+   STRUCT
+      PEC : Bool;   // Current state of the photo eye
+      Jam : Bool;   // PEC jam error
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_PECDUpdateConfiguration"
+TITLE = UDT_PECConfiguration
+VERSION : 0.1
+//User-defined structure of PEC parameters.
+   STRUCT
+      OnDelayDistance { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Photo eye distance on delay [cm]
+      OffDelayDistance { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Photo eye distance off delay [cm]
+      Distance { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Distance between photo eye and the end of conveyor [mm]
+      JamDisplacementLimit { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Limit displacement with PEC blocked o detect jam [cm]
+      SearchWindowFwd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Search window in forward direction [cm]
+      SearchWindowRvs { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Search window in reverse direction [cm]
+      GINRangeStart { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // GIN range start value
+      GINRangeEnd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // GIN range end value
+      NrOfTeachParcels { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Number of parcels to teach
+      DefaultGIN { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int := 1;   // Default GIN record
+      MaxLost { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Maximum number of lost parcels in a row
+      ParcelLengthFilter { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool := TRUE;   // Parcel length filter
+      ResetWithPECBlocked { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // When 'True' Allow reset system after jam with PEC blocked
+      GenerationPoint { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Generation point
+      NegativeGINDelete { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True when negative GIN has to be deleted
+      ParcelLengthMeasurement { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Parcel length measurement
+      GapLengthMeasurement { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Gap length measurement
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_PECDConfiguration"
+VERSION : 0.1
+   STRUCT
+      Distance { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Distance between photo eye and the end of conveyor [mm]
+      OnDelayDistance { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Photo eye distance on delay [cm]
+      OffDelayDistance { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Photo eye distance off delay [cm]
+      JamDisplacementLimit { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Limit displacement with PEC blocked o detect jam [cm]
+      ResetWithPECBlocked { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool := TRUE;   // When 'True' Allow reset system after jam with PEC blocked
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_PECConfiguration"
+VERSION : 0.1
+   STRUCT
+      Distance { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Distance between photo eye and the end of conveyor [mm]
+      JamDisplacementLimit { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Limit displacement with PEC blocked o detect jam [cm]
+      TimeOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Photo eye time on delay [ms]
+      TimeOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Photo eye time off delay [ms]
+      ResetWithPECBlocked { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // When 'True' Allow reset system after jam with PEC blocked
+   END_STRUCT;
+
+END_TYPE
+

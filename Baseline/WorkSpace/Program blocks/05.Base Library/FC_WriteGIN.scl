@@ -1,0 +1,53 @@
+﻿FUNCTION "FC_WriteGIN" : Void
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 31
+// END_ATTRIBUTES
+   VAR_INPUT 
+      ii_GIN : Int;   //    GIN number
+      ii_PositionToWrite : Int;   //    Position in tracking array where to start writing GIN
+      ii_NumberOfPositions : Int;   //    Number of positions to be written
+      ix_Direction : Bool;   //    TRUE when positions in positive direction have to be written
+   END_VAR
+
+   VAR_IN_OUT 
+      iqa_TrackingData : Array[*] of Int;   //    Tracking data
+   END_VAR
+
+   VAR_TEMP 
+      ti_LCWritePosition : Int;   //    Loop counter
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	27/02/2020  | 3.1       | L.Klar        | first release MHSE TIA 15.1
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 – GIN write
+	    
+	    // Depending on the direction, a GIN is written into a specific number of tracking array positions.
+	    #ti_LCWritePosition := 0;
+	    
+	    IF #ix_Direction
+	    THEN
+	        FOR #ti_LCWritePosition := #ii_PositionToWrite TO #ii_PositionToWrite + #ii_NumberOfPositions - 1 BY 1 DO
+	            #iqa_TrackingData[#ti_LCWritePosition] := #ii_GIN;
+	        END_FOR;
+	    ELSE
+	        FOR #ti_LCWritePosition := #ii_PositionToWrite TO #ii_PositionToWrite - #ii_NumberOfPositions + 1 BY -1 DO
+	            #iqa_TrackingData[#ti_LCWritePosition] := #ii_GIN;
+	        END_FOR;
+	    END_IF;
+	    
+	END_REGION
+END_FUNCTION
+

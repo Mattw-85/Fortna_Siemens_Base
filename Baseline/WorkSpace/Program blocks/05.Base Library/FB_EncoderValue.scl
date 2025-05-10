@@ -1,0 +1,344 @@
+﻿FUNCTION_BLOCK "FB_EncoderValue"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 95
+// END_ATTRIBUTES
+   VAR_INPUT 
+      i_UDT_EncoderConfiguration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_EncoderConfigurationV2";   // Encoder configuration structure
+      id_EncoderValue { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Encoder value
+      ix_EncoderDirection { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True if encoder rotates forward, False if encoder rotates reverse
+      ix_ConveyorRunningFwd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True when the conveyor is running in the forward direction
+      ix_ConveyorRunningRvs { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True when the conveyor is running in the reverse direction
+   END_VAR
+
+   VAR_OUTPUT 
+      q_UDT_Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_EncoderStatusV2";   // Encoder status structure
+      qi_ActualSpeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Calculated speed [mm/sec]
+      qi_Displacement { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Calculated displacement [cm]
+   END_VAR
+
+   VAR_IN_OUT 
+      iq_UDT_EquipmentControl : "UDT_EquipmentControl";   // Equipment control structure
+      iq_UDT_Statistics : "UDT_EncoderStatisticsV2";   // Statistics structure
+   END_VAR
+
+   VAR 
+      s_FB_SamplingTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // Error detection timer
+      s_FB_RunningFeedbackError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // Error detection timer
+      R_TRIG_RunningFeedbackError {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge trigger of running feedback error
+      R_TRIG_InvalidValue {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge trigger of invalid value
+      R_TRIG_NoDirection {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge trigger of no direction command
+      s_UDT_Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_EncoderStatusV2";   // Encoder status structure
+      sa_EncoderData { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[1..10] of DInt;   // Encoder data in array
+      sa_SpeedData { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[1..20] of Struct   // Encoder sampled distance and time in array
+         Distance { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Distance [mm]
+         "Time" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Time [sec]
+      END_STRUCT;
+      slr_FormDisplacement { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : LReal;   // Conveyor displacement [cm]
+      slr_Correction { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : LReal;   // Correction [cm]
+      sdi_Value { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Value from encoder card
+      sdi_OldValue { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Old value from encoder card
+      sdi_Delta { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Encoder value per cycle
+      si_StatusMoveBLKVariant { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Move BLK status
+      si_SampleDisplacement { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Travel the distance for one sample
+      si_ActualSpeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Actual speed [mm/sec]
+      sx_InvalidValue { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Invalid encoder value
+   END_VAR
+
+   VAR_TEMP 
+      ti_TotalTime : UDInt;   // Total sampled time
+      ti_TotalDistance : DInt;   // Total sampled distance
+      ti_Displacement : Int;   // Conveyor displacement [cm]
+      ti_ArraySize : Int;   // Array size
+      ti_LoopActulaSpeed : Int;   // Loop counter
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	|                                                                                      |
+	|  Copyright  2023             FORTNA Europe BV                                        |
+	|  All Rights Reserved         Netherlands                                             |
+	|                                                                                      |  
+	----------------------------------------------------------------------------------------   
+	
+	Version history:
+	Date        | Version   | Author       | Remark
+	----------------------------------------------------------------------------------------
+	29/03/2023  | 1.0       | S. Nikodem   | Release TIA 17 | DHL Munich 2023
+	12/03/2024  | 1.1       | S. Nieswiec  | Updated for new baseline
+	*)
+	
+	REGION 1 - Triggers
+	    
+	    //Conveyor is not running
+	    #R_TRIG_NoDirection(CLK := NOT #ix_ConveyorRunningFwd AND NOT #ix_ConveyorRunningRvs);
+	    
+	    //Invalid value error
+	    #R_TRIG_InvalidValue(CLK := #s_UDT_Status.InvalidValue);
+	    
+	END_REGION
+	
+	REGION 1 - Displacement 
+	    
+	    //Check if encoder value is in range
+	    IF #id_EncoderValue > #i_UDT_EncoderConfiguration.EncoderMaxValue THEN
+	        
+	        //Set fault 
+	        #sx_InvalidValue := TRUE;
+	        
+	    ELSE
+	        
+	        //Copy encoder value
+	        #sdi_Value := #id_EncoderValue;
+	        
+	        //Reset fault
+	        #sx_InvalidValue := FALSE;
+	        
+	    END_IF;
+	    
+	    REGION 1.1 - Encoder data
+	        
+	        IF (#sdi_OldValue <> #sdi_Value)
+	            AND NOT #s_UDT_Status.InvalidValue
+	        THEN
+	            
+	            //Check array size
+	            #ti_ArraySize := "FC_GetNrOfArrayEl"(iv_Array := #sa_EncoderData);
+	            
+	            // Switch data in the array
+	            #si_StatusMoveBLKVariant := MOVE_BLK_VARIANT(SRC := #sa_EncoderData, COUNT := INT_TO_UINT(#ti_ArraySize - 1), SRC_INDEX := 0, DEST_INDEX := 1, DEST => #sa_EncoderData);
+	            
+	            //Save data in array 
+	            #sa_EncoderData[1] := #sdi_Value;
+	            
+	            //Conveyor is running in the forward direction
+	            IF #ix_EncoderDirection THEN
+	                
+	                IF #sa_EncoderData[1] < #sa_EncoderData[2] THEN
+	                    
+	                    //Rollover
+	                    #sdi_Delta := #i_UDT_EncoderConfiguration.EncoderMaxValue - #sa_EncoderData[2] + #sa_EncoderData[1];
+	                    
+	                ELSE
+	                    
+	                    #sdi_Delta := #sa_EncoderData[1] - #sa_EncoderData[2];
+	                    
+	                END_IF;
+	                
+	            END_IF;
+	            
+	            //Conveyor is running in the reverse direction
+	            IF #ix_EncoderDirection THEN
+	                
+	                IF #sa_EncoderData[1] > #sa_EncoderData[2] THEN
+	                    
+	                    //Rollover
+	                    #sdi_Delta := #i_UDT_EncoderConfiguration.EncoderMaxValue - #sa_EncoderData[1] + #sa_EncoderData[2];
+	                    
+	                ELSE
+	                    
+	                    #sdi_Delta := #sa_EncoderData[2] - #sa_EncoderData[1];
+	                    
+	                END_IF;
+	                
+	            END_IF;
+	            
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 1.2 - mm per encoder incremental
+	        
+	        //Count up value in mm , 
+	        // Displacement is calculated using actual conveyor speed and the previous PLC cycle scan time
+	        #slr_FormDisplacement := DINT_TO_LREAL(#sdi_Delta) * #i_UDT_EncoderConfiguration.mmPerIncrement / 10.0;
+	        
+	        //Accumulate the rest of the calculated value
+	        #slr_Correction := FRAC(#slr_FormDisplacement) + #slr_Correction;
+	        
+	        // The actual displacement is a sum of complete parts of the displacement and correction variables
+	        #ti_Displacement := DINT_TO_INT(TRUNC(#slr_FormDisplacement) + TRUNC(#slr_Correction));
+	        
+	        // Correction incrementation or decremantation if it exceeds 1 or -1 in case of negative speed
+	        IF (#slr_Correction >= 1)
+	        THEN
+	            
+	            #slr_Correction -= 1;
+	            
+	        ELSIF (#slr_Correction <= -1)
+	        THEN
+	            
+	            #slr_Correction += 1;
+	            
+	        END_IF;
+	        
+	        //Reset delta value
+	        #sdi_Delta := 0;
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 2- Actual speed
+	    
+	    //Check array size
+	    #ti_ArraySize := "FC_GetNrOfArrayEl"(iv_Array := #sa_SpeedData);
+	    
+	    //Sampling time
+	    #s_FB_SamplingTime(iudi_OnDelayTime := #i_UDT_EncoderConfiguration.SamplingTime,
+	                       ix_SignalToDelay := (#ix_ConveyorRunningFwd OR #ix_ConveyorRunningRvs) AND NOT #s_FB_SamplingTime.qx_DelayedSignal);
+	    
+	    //Save displacemnt only when conveyor is running 
+	    IF #ix_ConveyorRunningFwd OR #ix_ConveyorRunningRvs THEN
+	        #si_SampleDisplacement += #ti_Displacement;
+	    END_IF;
+	    
+	    //Saving data every sampling time
+	    IF #s_FB_SamplingTime.qx_DelayedSignal THEN
+	        
+	        // Switch data in the array
+	        #si_StatusMoveBLKVariant := MOVE_BLK_VARIANT(SRC := #sa_SpeedData, COUNT := INT_TO_UINT(#ti_ArraySize - 1), SRC_INDEX := 0, DEST_INDEX := 1, DEST => #sa_SpeedData);
+	        
+	        //Copy data to array
+	        //Save distance value in mm
+	        #sa_SpeedData[1].Distance := #si_SampleDisplacement;
+	        //Save time value in ms
+	        #sa_SpeedData[1]."Time" := (LREAL_TO_UDINT(#s_FB_SamplingTime.qlr_ActualTime));
+	        
+	        //Reset varaible
+	        #si_SampleDisplacement := 0;
+	        
+	    END_IF;
+	    
+	    //Calculate the speed according to the data in the array
+	    FOR #ti_LoopActulaSpeed := 1 TO #ti_ArraySize DO
+	        
+	        //[mm]
+	        #ti_TotalDistance += ABS(#sa_SpeedData[#ti_LoopActulaSpeed].Distance);
+	        //[sec]
+	        #ti_TotalTime += #sa_SpeedData[#ti_LoopActulaSpeed]."Time";
+	        
+	        //Reset data in array
+	        IF #R_TRIG_NoDirection.Q THEN
+	            
+	            #sa_SpeedData[#ti_LoopActulaSpeed].Distance := 0;
+	            #sa_SpeedData[#ti_LoopActulaSpeed]."Time" := 0;
+	            
+	        END_IF;
+	        
+	    END_FOR;
+	    
+	    //Actual speed in mm/sec
+	    #si_ActualSpeed := DINT_TO_INT((#ti_TotalDistance / (UDINT_TO_DINT(#ti_TotalTime) / 1000)));
+	    
+	END_REGION
+	
+	REGION 3 - Error
+	    
+	    REGION 3.1 - Running feedback error
+	        
+	        //Timer
+	        #s_FB_RunningFeedbackError(iudi_OnDelayTime := #i_UDT_EncoderConfiguration.ErrorFilter,
+	                                   ix_SignalToDelay := (#ix_ConveyorRunningFwd OR #ix_ConveyorRunningRvs) AND (#sdi_OldValue = #sdi_Value));
+	        
+	        //Save last encoder value
+	        #sdi_OldValue := #sdi_Value;
+	        
+	        //Trigger from error signal
+	        #R_TRIG_RunningFeedbackError(CLK := #s_FB_RunningFeedbackError.qx_DelayedSignal);
+	        
+	        //Set running feedback error
+	        IF #R_TRIG_RunningFeedbackError.Q THEN
+	            #s_UDT_Status.RunningFeedbackError := True;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 3.2 - Invalid Value error
+	        
+	        //Set invalid value error
+	        IF #sx_InvalidValue THEN
+	            #s_UDT_Status.InvalidValue := True;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 3.3 - Reset
+	        
+	        //Reset error
+	        IF #iq_UDT_EquipmentControl.Command.Reset THEN
+	            #s_UDT_Status.RunningFeedbackError := False;
+	            #s_UDT_Status.InvalidValue := False;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 4 - Statistics
+	    
+	    // Running feedback error statistics
+	    IF #s_UDT_Status.RunningFeedbackError
+	        OR #iq_UDT_EquipmentControl.Command.ResetData                                         // Reset statistics
+	    THEN
+	        
+	        "FC_Statistics"(ix_Reset := #iq_UDT_EquipmentControl.Command.ResetData,               // Reset statistics input
+	                        ix_Activate := #s_UDT_Status.RunningFeedbackError,                    // Activate statistics functions input
+	                        ix_RTrigActivate := #R_TRIG_RunningFeedbackError.Q,                   // Statistics active trigger
+	                        iqUDT_Statistics := #iq_UDT_Statistics.RunningFeedbackError);        // Statistics values output
+	        
+	    END_IF;
+	    
+	    // Invalid Value statistics
+	    IF #s_UDT_Status.InvalidValue
+	        OR #iq_UDT_EquipmentControl.Command.ResetData                                         // Reset statistics
+	    THEN
+	        
+	        "FC_Statistics"(ix_Reset := #iq_UDT_EquipmentControl.Command.ResetData,               // Reset statistics input
+	                        ix_Activate := #s_UDT_Status.InvalidValue,                            // Activate statistics functions input
+	                        ix_RTrigActivate := #R_TRIG_InvalidValue.Q,                           // Statistics active trigger
+	                        iqUDT_Statistics := #iq_UDT_Statistics.InvalidValue);                // Statistics values output
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 5 - Outputs
+	    
+	    //Check motor direction
+	    IF #ix_ConveyorRunningFwd THEN
+	        
+	        //Actual speed
+	        #qi_ActualSpeed := #si_ActualSpeed;
+	        //Displacement
+	        #qi_Displacement := #ti_Displacement;
+	        
+	    ELSIF #ix_ConveyorRunningRvs THEN
+	        
+	        //Actual speed
+	        #qi_ActualSpeed := #si_ActualSpeed * -1;
+	        //Displacement
+	        #qi_Displacement := #ti_Displacement * -1;
+	        
+	    ELSE
+	        
+	        //Actual speed
+	        #qi_ActualSpeed := 0;
+	        //Displacement
+	        #qi_Displacement := 0;
+	        
+	    END_IF;
+	    
+	    //Copy value to output
+	    //Status
+	    #q_UDT_Status := #s_UDT_Status;
+	    
+	    
+	END_REGION
+	
+END_FUNCTION_BLOCK
+

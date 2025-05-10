@@ -1,0 +1,79 @@
+﻿FUNCTION "FC_BitAllocation" : Void
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      ix_Bit0 : Bool;
+      ix_Bit1 : Bool;
+      ix_Bit2 : Bool;
+      ix_Bit3 : Bool;
+      ix_Bit4 : Bool;
+      ix_Bit5 : Bool;
+      ix_Bit6 : Bool;
+      ix_Bit7 : Bool;
+      ix_Bit8 : Bool;
+      ix_Bit9 : Bool;
+      ix_Bit10 : Bool;
+      ix_Bit11 : Bool;
+      ix_Bit12 : Bool;
+      ix_Bit13 : Bool;
+      ix_Bit14 : Bool;
+      ix_Bit15 : Bool;
+      ix_Bit16 : Bool;
+      ix_Bit17 : Bool;
+      ix_Bit18 : Bool;
+      ix_Bit19 : Bool;
+      ix_Bit20 : Bool;
+      ix_Bit21 : Bool;
+      ix_Bit22 : Bool;
+      ix_Bit23 : Bool;
+      ix_Bit24 : Bool;
+      ix_Bit25 : Bool;
+      ix_Bit26 : Bool;
+      ix_Bit27 : Bool;
+      ix_Bit28 : Bool;
+      ix_Bit29 : Bool;
+      ix_Bit30 : Bool;
+      ix_Bit31 : Bool;
+   END_VAR
+
+   VAR_OUTPUT 
+      qdw_Dword : DWord;
+   END_VAR
+
+
+BEGIN
+	#qdw_Dword.%X0 := #ix_Bit0;
+	#qdw_Dword.%X1 := #ix_Bit1;
+	#qdw_Dword.%X2 := #ix_Bit2;
+	#qdw_Dword.%X3 := #ix_Bit3;
+	#qdw_Dword.%X4 := #ix_Bit4;
+	#qdw_Dword.%X5 := #ix_Bit5;
+	#qdw_Dword.%X6 := #ix_Bit6;
+	#qdw_Dword.%X7 := #ix_Bit7;
+	#qdw_Dword.%X8 := #ix_Bit8;
+	#qdw_Dword.%X9 := #ix_Bit9;
+	#qdw_Dword.%X10 := #ix_Bit10;
+	#qdw_Dword.%X11 := #ix_Bit11;
+	#qdw_Dword.%X12 := #ix_Bit12;
+	#qdw_Dword.%X13 := #ix_Bit13;
+	#qdw_Dword.%X14 := #ix_Bit14;
+	#qdw_Dword.%X15 := #ix_Bit15;
+	#qdw_Dword.%X16 := #ix_Bit16;
+	#qdw_Dword.%X17 := #ix_Bit17;
+	#qdw_Dword.%X18 := #ix_Bit18;
+	#qdw_Dword.%X19 := #ix_Bit19;
+	#qdw_Dword.%X20 := #ix_Bit20;
+	#qdw_Dword.%X21 := #ix_Bit21;
+	#qdw_Dword.%X22 := #ix_Bit22;
+	#qdw_Dword.%X23 := #ix_Bit23;
+	#qdw_Dword.%X24 := #ix_Bit24;
+	#qdw_Dword.%X25 := #ix_Bit25;
+	#qdw_Dword.%X26 := #ix_Bit26;
+	#qdw_Dword.%X27 := #ix_Bit27;
+	#qdw_Dword.%X28 := #ix_Bit28;
+	#qdw_Dword.%X29 := #ix_Bit29;
+	#qdw_Dword.%X30 := #ix_Bit30;
+	#qdw_Dword.%X31 := #ix_Bit31;
+	
+END_FUNCTION
+

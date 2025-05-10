@@ -1,0 +1,203 @@
+﻿TYPE "UDT_EventStatistic"
+TITLE = UDT_EventStatistic
+VERSION : 0.1
+//User-defined structure of event statistic data.
+   STRUCT
+      NumberOfTimes : DInt;   // Number of times the event occurred since last reset
+      LastEventSeconds : DInt;   // Number of seconds of the current or last event
+      TotalEventSeconds : DInt;   // Total number of seconds the event occurred since last reset
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_DimensionsCheckStatusV2"
+VERSION : 0.1
+   STRUCT
+      Status : Int;   // Status number
+      Specific : Struct   // Specific status
+         ParcelTooLongError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Error - parcel is too long
+         ParcelTooShortError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Error - parcel is too short
+         ParcelTooHighError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Error - parcel is too high
+         ParcelTooLowError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Error - parcel is too low
+         ParcelTooWideError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Error - parcel is too wide
+         ParcelTooNarrowError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Error - parcel is too narrow
+         IncorrectParcelOrientationError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Error - Incorrect parcel orientation
+         GeneralError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // General error
+         DisabledGeneralFunctionality { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Disabled general DMC functionality
+         DisabledTooLongParcel { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Disabled "TooLongParcel" detection
+         DisabledTooShortParcelError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Disabled "TooShortParcel" detection
+         DisabledTooHighParcelError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Disabled "TooHighParcel" detection
+         DisabledTooLowParcelError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Disabled "TooLowParcel" detection
+         DisabledTooWideParcelError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Disabled "TooWideParcel" detection
+         DisabledTooNarrowParcelError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Disabled "TooNarrowParcel" detection
+         DisabledParcelOrientationError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Disabled "ParcelOrientation" detection
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_DimensionsCheckStatus"
+VERSION : 0.1
+   STRUCT
+      Status : Int;   // Status number
+      Specific : Struct   // Specific status
+         ParcelTooLong { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Parcel is too long
+         ParcelTooHigh { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Parcel is too high
+         ParcelTooWide { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Parcel is too wide
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_DimensionsCheckStatisticsV2"
+VERSION : 0.1
+   STRUCT
+      TooLongParcels : "UDT_EventStatistic";
+      TooShortParcels : "UDT_EventStatistic";
+      TooHighParcels : "UDT_EventStatistic";
+      TooLowParcels : "UDT_EventStatistic";
+      TooWideParcels : "UDT_EventStatistic";
+      TooNarrowParcels : "UDT_EventStatistic";
+      IncorrectShape : "UDT_EventStatistic";
+      GeneralError : "UDT_EventStatistic";
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_DimensionsCheckStatistics"
+VERSION : 0.1
+   STRUCT
+      TooLongParcels : "UDT_EventStatistic";
+      TooHighParcels : "UDT_EventStatistic";
+      TooWideParcels : "UDT_EventStatistic";
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_DimensionsCheckHMIDataV2"
+VERSION : 0.1
+   STRUCT
+      ActualSensor1 : UInt;   // Actual sensor value
+      OffsetSensor1 : UInt;   // Sensor offset value
+      PositionSensor1 : UInt;   // The value of the sensor after subtracting the offset
+      ActualSensor2 : UInt;   // Actual sensor value
+      OffsetSensor2 : UInt;   // Sensor offset value
+      PositionSensor2 : UInt;   // The value of the sensor after subtracting the offset
+      BeltWidth : UInt;   // Belt width
+      ProductWidth : UInt;   // Product width
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_DimensionsCheckHMIData"
+VERSION : 0.1
+   STRUCT
+      ActualSensor1 : UInt;   // Actual sensor value
+      OffsetSensor1 : UInt;   // Sensor offset value
+      PositionSensor1 : UInt;   // The value of the sensor after subtracting the offset
+      ActualSensor2 : UInt;   // Actual sensor value
+      OffsetSensor2 : UInt;   // Sensor offset value
+      PositionSensor2 : UInt;   // The value of the sensor after subtracting the offset
+      BeltWidth : UInt;   // Belt width
+      ProductWidth : UInt;   // Product width
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_DimensionsCheckConfigurationV2"
+VERSION : 0.1
+   STRUCT
+      PEC_Time_Delay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Times for sensors ON/OFF delay
+         On_MinHeight { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt := 30;   // Minimum Height photo eye time on delay [ms]
+         Off_MinHeight { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt := 30;   // MinimumHeight photo eye time off delay [ms]
+      END_STRUCT;
+      Position { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // This values is calculeted from the PEC1 to the next one
+         MinHeightPEC_Array { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Distance between Lenght PEC Laser and Min Height PEC Array [mm]
+         Width_Distance_Sensor_1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Distance between Lenght PEC Laser and Distance sensor 1 [mm]
+         Width_Distance_Sensor_2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Distance between Lenght PEC Laser and Distance sensor 2 [mm]
+         BeltWidth { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Distance between side guards [mm]
+      END_STRUCT;
+      Limit { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Limits for parcel size
+         MinWidth { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int := 100;   // Minimum width [mm]
+         MaxWidth { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int := 900;   // Maximum width [mm]
+         MinLength { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int := 100;   // Minimum length [mm]
+         MaxLength { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int := 1200;   // Maximum length [mm]
+         TooHighDistance { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int := 200;   // Distance [mm]
+         TooLongDistance { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int := 1400;   // Distance [mm]
+      END_STRUCT;
+      Tolerance { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Tolerance for parcel size
+         TooWide { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // [%] - Percentage of deviations
+         TooNarrow { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // [%] - Percentage of deviations
+         TooHigh { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // [%] - Percentage of deviations
+         TooLow { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // [%] - Percentage of deviations
+         Orientation { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // [%] - Percentage of deviations
+      END_STRUCT;
+      Functionality { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Set TRUE if functionality should be enabled
+         TooLongParcelError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // If true "TooLongParcel"detection active
+         TooShortParcelError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // If true "TooShortParcel"detection active
+         TooHighParcelError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // If true "TooHighParcel"detection active
+         TooLowParcelError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // If true "TooLowParcel"detection active
+         TooWideParcelError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // If true "TooWideParcel"detection active
+         TooNarrowParcelError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // If true "TooNarrowParcel"detection active
+         ParcelOrientationError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // If true "ParcelOrientation"detection active
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_DimensionsCheckConfiguration"
+VERSION : 0.1
+   STRUCT
+      DistanceBetweenLenghtPECs { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UInt;   // Distance between two Lenght PECs [cm]
+      ParcelLengthAllowedDeviation { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UInt;   // Maximum torelance in measured parcel length [cm]
+      PECLength1OnTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Lenght 1 photo eye time on delay [ms]
+      PECLength1OffTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Lenght 1 photo eye time off delay [ms]
+      PECLength2OnTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Lenght 2 photo eye time on delay [ms]
+      PECLength2OffTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Lenght 2 photo eye time off delay [ms]
+      PECLength2CheckLimit { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // maximum length for length check PEC 2
+      PECWidthOnTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Width 1 photo eye time on delay [ms]
+      PECWidthOffTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Width 1 photo eye time off delay [ms]
+      PECWidthCheckLimit { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // maximum width for width check PEC
+      PECHeightTimeOn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Height photo eye time on delay [ms]
+      PECHeightTimeOff { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Height photo eye time off delay [ms]
+      AllowedPackageWidth { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UInt;   // Maximum package width measured by mode 2
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_DimensionsCheckCommandV2"
+TITLE = Flow Splitter Command
+VERSION : 0.1
+   STRUCT
+      DisableGeneral : Bool;   // Disable genneral functionality DMC
+      DisableTooLongParcelError : Bool;   // Disable "TooLongParcel" error
+      DisableTooShortParcelError : Bool;   // Disable "TooShortParcel" error
+      DisableTooHighParcelError : Bool;   // Disable "TooHighParcel" error
+      DisableTooLowParcelError : Bool;   // Disable "TooLowParcel" error
+      DisableTooWideParcelError : Bool;   // Disable "TooWideParcel" error
+      DisableTooNarrowParcelError : Bool;   // Disable "TooNarrowParcel" error
+      DisableParcelOrientationError : Bool;   // Disable "ParcelOrientation" error
+      ButtonOffsetDistanceSensor1 : Bool;   // Button to set offset value
+      ButtonOffsetDistanceSensor2 : Bool;   // Button to set offset value
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_DimensionsCheckCommand"
+TITLE = Flow Splitter Command
+VERSION : 0.1
+   STRUCT
+      DisableGeneral : Bool;   // Disable genneral functionality DMC
+      DisableTooLongParcelError : Bool;   // Disable "TooLongParcel" error
+      DisableTooShortParcelError : Bool;   // Disable "TooShortParcel" error
+      DisableTooHighParcelError : Bool;   // Disable "TooHighParcel" error
+      DisableTooLowParcelError : Bool;   // Disable "TooLowParcel" error
+      DisableTooWideParcelError : Bool;   // Disable "TooWideParcel" error
+      DisableTooNarrowParcelError : Bool;   // Disable "TooNarrowParcel" error
+      DisableParcelOrientationError : Bool;   // Disable "ParcelOrientation" error
+      ButtonOffsetDistanceSensor1 : Bool;   // Button to set offset value
+      ButtonOffsetDistanceSensor2 : Bool;   // Button to set offset value
+   END_STRUCT;
+
+END_TYPE
+

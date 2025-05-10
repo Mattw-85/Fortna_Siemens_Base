@@ -1,0 +1,1701 @@
+﻿FUNCTION_BLOCK "FB_Conveyor"
+TITLE = FB_Conveyor_BiDirectional
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : Equimpent
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 207
+// END_ATTRIBUTES
+//Function block to control the bi-directional conveyor.
+   VAR_INPUT 
+      iUDT_ConveyorConfiguration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ConveyorConfiguration";   //           Conveyor configuration structure
+      idi_PECEoSDistance { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //           Distance between photo eye and the end of conveyor [mm] in forward direction
+      idi_PECBoSDistance { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //           Distance between photo eye and the end of conveyor [mm] in reverse direction
+      ii_ExternalSpeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //           External speed [mm/s]
+      ix_SafetyOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //           TRUE when safety is ok
+      ix_24vOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //           TRUE when 24VDC is healthy
+      ix_400vOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //           TRUE when 400VAC is healthy
+      ix_HardwareOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //           TRUE when  hardware is Ok
+      ix_PECEoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool := TRUE;   //           TRUE when the end of section photoeye in forward direction is not blocked
+      ix_PECBoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool := TRUE;   //           TRUE when the end of section photoeye in reverse direction is not blocked
+      ix_ReverseDirection { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //           FALSE when to run in forward direction and True to run in Reverse direction
+      ix_ExternalRequestDieBack { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //           External input to request die back
+      ix_ExternalRequestHold { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //           External input to request conveyor hold
+      ix_ResetEnergySave { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //           Reset energy save mode timer
+   END_VAR
+
+   VAR_OUTPUT 
+      qUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ConveyorStatus";   //           HMI status structure
+      qUDT_Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_CommonStatus";   //           Common status structure
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_EquipmentControl : "UDT_EquipmentControl";   //           Equipment control structure
+      iqUDT_ConveyorCommand : "UDT_ConveyorCommand";   //           Conveyor command stucture
+      iqUDT_ConveyorInterface : "UDT_ConveyorInterface";   //           Interface structure
+      iqUDT_HandShakeUp : "UDT_ConveyorHandshake";   //           Upstream handshake structure in forward direction
+      iqUDT_HandShake : "UDT_ConveyorHandshake";   //           Handshake structure in forward direction
+      iqUDT_Statistics : "UDT_ConveyorStatistics";   //           Statistics structure
+   END_VAR
+
+   VAR 
+      sUDT_CommonStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   //           Common status structure
+      sUDT_CommonStatusOld { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   //           Auxiliary status structure
+      sUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorStatus";   //           HMI status structure
+      sFB_CascadeModeTimer { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   //           Timer to cascade start
+   END_VAR
+   VAR RETAIN
+      sdi_GapHeadToHeadConfigurationFwd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //           Preset forward gap head to head with correction [cm]
+      sdi_GapTailToHeadConfigurationFwd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //           Preset forward gap tail to head with correction [cm]
+      sdi_GapHeadToHeadConfigurationRvs { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //           Preset reverse gap head to head with correction [cm]
+      sdi_GapTailToHeadConfigurationRvs { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //           Preset reverse gap tail to head with correction [cm]
+      sdi_AuxGapHeadToHeadCounterFwd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //           Aux variable to count the head to head
+      sdi_AuxGapTailtoHeadCounterFwd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //           Aux variable to count the gap
+      sdi_AuxGapHeadToHeadCounterRvs { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //           Aux variable to count the head to head
+      sdi_AuxGapTailtoHeadCounterRvs { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //           Aux variable to count the gap
+      sdi_GapFwd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //           Gap between two products
+      sdi_GapHeadToHeadFwd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //           Head to head between two products
+      sdi_Gap_Rvs { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //           Gap between two products
+      sdi_GapHeadToHeadRvs { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //           Head to head between two products
+      sdi_TailToBeginFwd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //           Count tail to next conveyor distance
+      sdi_HeadToEndFwd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //           Count head to end distance
+      sdi_TailToBeginRvs { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //           Count tail to next conveyor distance
+      sdi_HeadToEndRvs { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //           Count head to end distance
+      sdi_PECEoSDistanceFwd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //           Real distance between PEC and the end of distance
+      sdi_PECtoEndDistanceFwd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //           Distance between photeye and the end of the conveyor in cm
+      sdi_PEC_EoSDistanceRvs { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //           Real distance between PEC and the end of distance
+      sdi_PECtoEndDistanceRvs { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //           Distance between photeye and the end of the conveyor in cm
+      sdi_AuxEnergySaveFwd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //           Auxiliary variable to calculate energy save displacement
+      sdi_AuxEnergySaveRvs { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //           Auxiliary variable to calculate energy save displacement
+      sdi_DownstreamGapTailtoHeadFwd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //           Gap between the beginning of the conveyor and the closer parcel in that conveyor
+      sdi_DownstreamGapHeadToHeadFwd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //           Head to head between the beginning of the conveyor and the closer parcel in that conveyor
+      sdi_DownstreamGapTailtoHeadRvs { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //           Gap between the beginning of the conveyor and the closer parcel in that conveyor
+      sdi_DownstreamGapHeadToHeadRvs { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //           Head to head between the beginning of the conveyor and the closer parcel in that conveyor
+      sdi_TransitionZone { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Counter of product in transition zone
+   END_VAR
+   VAR 
+      sR_TRIG_ManualMode {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //           Rising edge trigger manual mode
+      sR_TRIG_Jog {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //           Rising edge trigger manual jog
+      sR_TRIG_PE_EoSFiltered_Rvs {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //           Rising edge trigger end of section photo eye filtered
+      sR_TRIG_PE_EoSFiltered_Fwd {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //           Rising edge trigger end of section photo eye filtered
+      sR_TRIG_TailToBegin_Rvs {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //           Rising edge trigger Tail arrive at the beginning of next conveyor
+      sR_TRIG_TailToBegin_Fwd {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //           Rising edge trigger Tail arrive at the beginning of next conveyor
+      sF_TRIG_ManualMode {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   //           Falling edge trigger manual mode
+      sF_TRIG_Jog {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   //           Falling edge trigger manual mode jog
+      sF_TRIG_PEC_EoSFiltered_Rvs {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   //           Falling edge trigger end of section photo eye filtered
+      sF_TRIG_PEC_EoSFiltered_Fwd {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   //           Falling edge trigger end of section photo eye filtered
+      sF_TRIG_AuxHeadToEnd_Rvs {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   //           Falling edge trigger Aux head to end bit
+      sF_TRIG_AuxHeadToEnd_Fwd {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   //           Falling edge trigger Aux head to end bit
+      sR_TRIG_ConveyorUp {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //           Rising edge trigger conveyor up time
+      sR_TRIG_EnergySave {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //           Rising edge trigger energy save
+      sR_TRIG_VFDRunning {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //           Rising edge trigger VFD running
+      sR_TRIG_ConveyorDownTime {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //           Rising edge trigger conveyor down
+      sR_TRIG_RunManual {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //           Rising edge run conveyor in manual mode
+      sR_TRIG_Transfering_Rvs {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //           Rising edge transfering
+      sR_TRIG_Transfering_Fwd {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //           Rising edge transfering
+      sF_TRIG_HeadAtEnd_Rvs {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   //           Falling edge head at the end of the conveyor
+      sF_TRIG_HeadAtEnd_Fwd {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   //           Falling edge head at the end of the conveyor
+      sR_TRIG_Reverse {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //           Rising edge of reverse direction
+      sF_TRIG_Reverse {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   //           Falling edge of reverse direction
+      sR_Trig_DirectionChange {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //           Rising edge of change direction
+      sF_Trig_DirectionChange {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   //           Falling edge of change direction
+      sR_TRIG_PrestartManual {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Rising edge of manual prestart
+      sR_TRIG_ConveyorStopped {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge of stop
+      sx_Ready { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //           Conveyor Ready to operate in Automatic mode
+   END_VAR
+   VAR RETAIN
+      sx_StartReceived { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //           Save start trigger from the system
+      sx_EnergySaveActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //           Active energy save mode
+      sx_AuxHeadToEndFwd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //           Aux bit to control head to end positioning in forward direction
+      sx_AuxHeadToEndRvs { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //           Aux bit to control head to end positioning in reverse direction
+      sx_TailToBeginFwd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //           Tail to begin done in forward direction
+      sx_TailToBeginRvs { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //           Tail to begin done in reverse direction
+      sx_GappingFwd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //           Gapping in process in forward direction
+      sx_GappingRvs { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //           Gapping in process in reverse direction
+   END_VAR
+   VAR 
+      sx_AutomaticActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //           Automatic active
+   END_VAR
+   VAR RETAIN
+      sx_RecoveryGapFwd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //           Recovery gap activated in forward direction
+      sx_RecoveryGapRvs { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //           Recovery gap activated in reverse direction
+   END_VAR
+   VAR 
+      sx_ManualModeActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //           Manual mode active
+      sx_PreStartManual { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //           Pre conditions to run conveyor in manual mode
+   END_VAR
+   VAR RETAIN
+      sx_AuxHeadAtEndFwd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //           Parcel reach the end of the conveyor in forward direction
+      sx_AuxHeadAtEndRvs { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //           Parcel reach the end of the conveyor in reverse direction
+   END_VAR
+   VAR 
+      sx_CascadeStartUp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //           Cascade startup auxiliary bit
+      sx_DirectionChanged { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //           Change direction until stop
+      sx_ReverseDirection { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //           Direction Selection auxiliary bit
+      sx_ManualRunning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //          Conveyor running in manual mode
+      sx_Up { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Conveyor is up
+      sx_Down { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Conveyor is down
+      sx_Stopped { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Conveyor is stopped
+   END_VAR
+
+   VAR_TEMP 
+      tx_CascadeStart : Bool;
+   END_VAR
+
+   VAR CONSTANT 
+      ci_OverflowLimit : Int := 32000;   //           Limit int overflow
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                      
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	            | 3.0       | C.Leite       | First release TIA 15.1
+	01/01/2020  | 3.1       | S. Deulkar    | Modified error loging, added reset to reset internal error
+	                                        | Cosidered commissioning error to put conveyor in ready state
+	07/01/2020  | 3.2       | C. Leite      | Manual mode bug corrected related with conveyor start 
+	10/01/2020  | 3.3       | C. Leite      | Manual mode start\stop change
+	                                        | Lenght conveyor data type was changed to DInt  
+	14/01/2020  | 3.4       | F.Baten       | Renamed Trail to Tail
+	                                        | Renamed ii_PEC_EosDistance_EoS to idi_PEC_EoSDistance same for BoS 
+	21/01/2020  | 3.5       | C.Leite       | Reset gapping bits when the direction changes 
+	06/01/2020  | 3.6       | S. Deulkar    | Added safety Ok in condition to make ready status
+	25/02/2020  | 3.7       | S. Deulkar    | Modified to update ststus output every cycle
+	21/04/2020  | 3.8       | F.Baten       | Modified energysave reset
+	23/04/2020  | 3.9       | S. Deulkar    | Modified logic for reset energy save command if it is slave conveyor
+	22/06/2020  | 3.10      | K. Pokorski   | Modified singaling request activation, modified stop conditions (Handshake ReqStop)
+	02/07/2020  | 3.11      | K. Pokorski   | Modified condition to disable manual mode (safety ok)
+	30/07/2020  | 3.12      | S. Theocharis | Reset HMI commands of manual mode when conveyor no ready
+	                                        | Keep downstream running when the a PEC error occurs 
+	04/08/2020  | 3.13      | S. Deulkar    | Deletded Manual run stop command and Modified code to let 
+	                                        | let slave conveyor go in energy save, Optimized energy save logic
+	17/08/2020  | 3.14      | L.Klar        | Gapping corrected to work with PEC offset. Gap correction configuration added
+	17/08/2020  | 3.15      | S. Theocharis | Encoder fault added. Manual mode active to interface. Stop trigger added for statistics
+	                                        | Fix  statistics 
+	11/01/2021  | 3.16      | L.Klar        | Input safety ok added to stop conveyor condition
+	02/03/2021  | 3.17      | K. Pokorski   | Halted status enable only when automatic on
+	11/03/2021  | 3.18      | S. Theocharis | Added bulk flow mode 3
+	13/03/2021  | 3.19      | S. Theocharis | Warning color commented, line 665 added, sensors initial values changed to true
+	15/03/2021  | 3.20      | S. Theocharis | Energy safe corrected
+	29/03/2021  | 3.21      | M. Kocot      | Added HMI command for manual speed percetage selection and modified logic for cascade 
+	                                        | startup
+	31/03/2021  | 3.22      | H.Rutkowski   | Changed logic for TransitionZone calculation in mode 3( Converted PEC distance to cm)
+	14/05/2021  | 3.23      | S. Nikodem    | Reset value from iq_UDT_HandShakeUp.DownstreamDisplacement and iq_UDT_HandShake.DownstreamDisplacement
+	28/06/2021  | 3.24      | N.Kadam       | Modified logic for conveyor downtime and Esave statistics
+	29/07/2021  | 3.25      | S. Deulkar    | Autotic ON condition is added to excecut region 7: Automatic mode active
+	                                        | Statistics are updated after status
+	11/11/2021  | 3.26      | M.Singh       |Shared Hardware signal over Interface
+	28/03/2022  | 3.27      | M.Singh       |Solved Esave Bug, Swapped regions "Operation modes" and "Energy Save"
+	28/07/2022  | 3.28      | M.Singh       |Removed handsakeUP.RTR from conditions determining downstream TIP and RTS
+	30/07/2022  | 3.28      | M.Singh       |Addded hardware ok as condition to show safety status 
+	                                        |Added Aux Head at end and TIP to Esave Reset conditions
+	                                        
+	                                        
+	*)
+	
+	REGION 1 - Initial
+	    
+	    REGION 1.1 - First PLC cycle
+	        
+	        // Conveyor stops in the first scan of the PLC
+	        IF "DB_Memory".FirstScan
+	        THEN
+	            #iqUDT_EquipmentControl.Command.Start := FALSE;    // Command start
+	            #sx_AutomaticActive := FALSE;                       // switch of automatic active
+	            #iqUDT_HandShakeUp.RTR := False;                   // Reset RTR signal
+	            
+	            #iqUDT_HandShakeUp.CascadeStartUp := FALSE;        // Reset cascade start signal
+	            
+	            #iqUDT_ConveyorInterface.RunFwd := FALSE;          // Order to run forward to VFD
+	            #iqUDT_ConveyorInterface.RunRvs := FALSE;          // Order to run reverse to VFD
+	            
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 1.2 - Conversion distance between PEC and end of conveyor [mm to cm]
+	        
+	        // Move PEC Distance into a static variable. Added on version 2.8
+	        #sdi_PECEoSDistanceFwd := #idi_PECEoSDistance;
+	        #sdi_PEC_EoSDistanceRvs := #iUDT_ConveyorConfiguration.Common.Length - #idi_PECBoSDistance;
+	        
+	        // Limit to prevent malfunctions with zero or negative values. Added on version 2.8
+	        IF #sdi_PECEoSDistanceFwd < 10
+	        THEN
+	            #sdi_PECEoSDistanceFwd := 10;
+	        END_IF;
+	        
+	        IF #sdi_PEC_EoSDistanceRvs < 10
+	        THEN
+	            #sdi_PEC_EoSDistanceRvs := 10;
+	        END_IF;
+	        
+	        //  Convertion of the distance between photo eye and the end of the conveyor from mm to cm.
+	        #sdi_PECtoEndDistanceFwd := (#sdi_PECEoSDistanceFwd
+	        - #iUDT_ConveyorConfiguration.Forward_Direction.PEC_EoSDistanceOffset) / 10;
+	        
+	        #sdi_PECtoEndDistanceRvs := (#sdi_PEC_EoSDistanceRvs
+	        - #iUDT_ConveyorConfiguration.Reverse_Direction.PEC_BoSDistanceOffset) / 10;
+	        
+	        
+	        // Limit the Pec to End distance in positive ranges. Added on version 2.7
+	        IF #sdi_PECtoEndDistanceFwd < 1 THEN
+	            #sdi_PECtoEndDistanceFwd := 1;
+	        END_IF;
+	        
+	        IF #sdi_PECtoEndDistanceRvs < 1 THEN
+	            #sdi_PECtoEndDistanceRvs := 1;
+	        END_IF;
+	        
+	        #sx_ReverseDirection := (#iqUDT_ConveyorCommand.Reverse OR #ix_ReverseDirection) AND #iUDT_ConveyorConfiguration.Bi_Directional_Enable;
+	        
+	        
+	    END_REGION
+	    
+	    REGION 1.3 Conditions Up - Down - Stopped
+	        //Used for statistics
+	        
+	        #sx_Up := (#sx_AutomaticActive                               // Automatic active
+	        AND #sx_Ready                                                // Ready active
+	        AND NOT #sx_EnergySaveActive);                              // Not in energy save
+	        
+	        #sx_Down := (NOT #sx_ManualModeActive                                                   // Not in manual mode
+	        AND #sUDT_CommonStatus.Error                                                           // in error 
+	        AND NOT #sx_Ready                                                                       // Conveyor not ready
+	        AND NOT #sx_EnergySaveActive);                                                          // Not in energy save
+	        
+	        #sx_Stopped := (NOT #sx_AutomaticActive AND #sx_Ready);
+	        
+	    END_REGION
+	    
+	    REGION 1.3 - Triggers
+	        
+	        // Rising edge trigger manual mode
+	        #sR_TRIG_ManualMode(CLK := #iqUDT_ConveyorCommand.ManualMode
+	                            OR #iqUDT_EquipmentControl.Command.ManualMode);
+	        
+	        // Falling edge trigger manual mode
+	        #sF_TRIG_ManualMode(CLK := #iqUDT_ConveyorCommand.ManualMode
+	                            OR #iqUDT_EquipmentControl.Command.ManualMode);
+	        
+	        // Rising edge trigger manual mode jog
+	        #sR_TRIG_Jog(CLK := #iqUDT_ConveyorCommand.ManualJog);
+	        
+	        // Falling edge trigger manual mode jog
+	        #sF_TRIG_Jog(CLK := #iqUDT_ConveyorCommand.ManualJog);
+	        
+	        // Rising edge trigger to start in manual mode
+	        #sR_TRIG_RunManual(CLK := #iqUDT_ConveyorCommand.ManualStartStop);
+	        
+	        // Rising edge trigger end of section photo eye filtered
+	        #sR_TRIG_PE_EoSFiltered_Fwd(CLK := #ix_PECEoS);
+	        #sR_TRIG_PE_EoSFiltered_Rvs(CLK := #ix_PECBoS);
+	        
+	        // Falling edge trigger end of section photo eye filtered
+	        #sF_TRIG_PEC_EoSFiltered_Fwd(CLK := #ix_PECEoS);
+	        #sF_TRIG_PEC_EoSFiltered_Rvs(CLK := #ix_PECBoS);
+	        
+	        // Rising edge conveyor up
+	        #sR_TRIG_ConveyorUp(CLK := #sx_Up);
+	        
+	        // Rising edge energy save mode
+	        #sR_TRIG_EnergySave(CLK := #sx_EnergySaveActive);
+	        
+	        // Rising edge running
+	        #sR_TRIG_VFDRunning(CLK := #iqUDT_ConveyorInterface.VFDRunning);
+	        
+	        // Rising edge conveyor conveyor down
+	        #sR_TRIG_ConveyorDownTime(CLK := #sx_Down);
+	        
+	        //Rising edge conveyor stopped
+	        #sR_TRIG_ConveyorStopped(CLK := #sx_Stopped);
+	        
+	        // Rising edge conveyor command reverse direction
+	        #sR_TRIG_Reverse(CLK := #iqUDT_ConveyorCommand.Reverse);
+	        
+	        // Falling edge conveyor command reverse direction
+	        #sF_TRIG_Reverse(CLK := #iqUDT_ConveyorCommand.Reverse);
+	        
+	        // Rising edge conveyor change direction
+	        #sR_Trig_DirectionChange(CLK := #sx_ReverseDirection);
+	        
+	        // Falling edge conveyor change direction
+	        #sF_Trig_DirectionChange(CLK := #sx_ReverseDirection);
+	        
+	    END_REGION
+	    
+	    REGION 1.4 - Move displacement to upstream
+	        
+	        // Downstream displacement is mode to upstream conveyor to calculate gap
+	        
+	        IF NOT #sx_ReverseDirection
+	        THEN
+	            #iqUDT_HandShakeUp.DownstreamDisplacement := #iqUDT_ConveyorInterface.Displacement;
+	        ELSE
+	            #iqUDT_HandShake.DownstreamDisplacement := #iqUDT_ConveyorInterface.Displacement;
+	            
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 1.5 - Change direction
+	        
+	        // The memory bit to change direction is activated when the input is trigger
+	        
+	        IF #sR_Trig_DirectionChange.Q
+	            OR #sF_Trig_DirectionChange.Q
+	        THEN
+	            #sx_DirectionChanged := TRUE;
+	        END_IF;
+	        
+	        // The direction changed memory bit is just reset when the conveyor stops to prevente mechanical problems
+	        
+	        IF #sx_DirectionChanged
+	            AND #iUDT_ConveyorConfiguration.Bi_Directional_Enable
+	            AND NOT #iqUDT_ConveyorInterface.VFDatSpeed
+	            AND NOT #iqUDT_ConveyorInterface.VFDRunning
+	            AND (#iqUDT_ConveyorInterface.ActualSpeed <= 0)
+	        THEN
+	            #sx_DirectionChanged := FALSE;
+	            
+	            #sx_AuxHeadAtEndFwd := FALSE;
+	            #sx_AuxHeadAtEndRvs := FALSE;
+	            
+	            #sdi_AuxGapHeadToHeadCounterFwd := 0;
+	            #sdi_AuxGapHeadToHeadCounterRvs := 0;
+	            
+	            #sdi_AuxGapTailtoHeadCounterRvs := 0;
+	            #sdi_AuxGapTailtoHeadCounterFwd := 0;
+	            
+	            #sx_GappingRvs := FALSE;
+	            #sx_GappingFwd := FALSE;
+	            
+	            #iqUDT_HandShake.TIP := FALSE;
+	            #iqUDT_HandShakeUp.TIP := FALSE;
+	            
+	            #iqUDT_HandShakeUp.DownstreamDisplacement := 0;     // v3.23
+	            #iqUDT_HandShake.DownstreamDisplacement := 0;       // v3.23
+	            
+	        END_IF;
+	        
+	        IF (#sR_Trig_DirectionChange.Q
+	            AND NOT #ix_PECBoS)
+	            OR (#sF_Trig_DirectionChange.Q
+	            AND NOT #ix_PECEoS)
+	            AND #iUDT_ConveyorConfiguration.Bi_Directional_Enable
+	        THEN
+	            #sdi_AuxGapHeadToHeadCounterFwd := 0;
+	            #sdi_AuxGapHeadToHeadCounterRvs := 0;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 1.5 - Gaps configuration
+	        
+	        // Forward head to head
+	        #sdi_GapHeadToHeadConfigurationFwd := #iUDT_ConveyorConfiguration.Forward_Direction.GapHeadToHead + #iUDT_ConveyorConfiguration.Forward_Direction.GapCorrection;
+	        // Forward tail to head
+	        #sdi_GapTailToHeadConfigurationFwd := #iUDT_ConveyorConfiguration.Forward_Direction.GapTailToHead + #iUDT_ConveyorConfiguration.Forward_Direction.GapCorrection;
+	        // Reverse head to head
+	        #sdi_GapHeadToHeadConfigurationRvs := #iUDT_ConveyorConfiguration.Reverse_Direction.GapHeadToHead + #iUDT_ConveyorConfiguration.Reverse_Direction.GapCorrection;
+	        // Reverse tail to head
+	        #sdi_GapTailToHeadConfigurationRvs := #iUDT_ConveyorConfiguration.Reverse_Direction.GapTailToHead + #iUDT_ConveyorConfiguration.Reverse_Direction.GapCorrection;
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 2 - Reset faults
+	    
+	    REGION 2.1 - Send reset request to interface UDT
+	        
+	        // Reset signal is sent to the interface UDT (VFD block, Tracking block, PEC update block)
+	        #iqUDT_ConveyorInterface.InternalErrorReset := #iqUDT_EquipmentControl.Command.Reset;
+	        
+	        #iqUDT_ConveyorInterface.ResetStatistics := #iqUDT_EquipmentControl.Command.ResetData;
+	        
+	    END_REGION
+	    
+	    
+	    REGION 2.2 - Error / warning
+	        
+	        #sUDT_CommonStatus.Error := #iqUDT_ConveyorInterface.InternalErrorPEC               // Internal PEC error status
+	        OR #iqUDT_ConveyorInterface.InternalErrorVFD               // Internal VFD error status
+	        OR #iqUDT_ConveyorInterface.InternalErrorTracking          // Internal tracking error status
+	        OR #iqUDT_ConveyorInterface.Disconnected                   // Isolator switch error status 
+	        OR #iqUDT_ConveyorInterface.InternalErrorEncoder;          // Encoder error
+	        
+	        
+	        #sUDT_CommonStatus.Warning := #iqUDT_ConveyorInterface.InternalWarningTracking        // v2.3 Internal Warning Tracking  added
+	        OR #iqUDT_ConveyorInterface.InternalWarningVFD;                                        // v2.3 Internal Warning VFD added
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 3 - Check conditions to set conveyor ready
+	    //Share HardwareOK signal over interface
+	    #iqUDT_ConveyorInterface.HardwareOk := #ix_HardwareOk;
+	    
+	    //  Conditions to set bit sx_Ready to operate in automatic mode
+	    #sx_Ready := NOT #sUDT_CommonStatus.Error                              // Ready bit is set true when common error status its false
+	    AND #ix_SafetyOk
+	    AND #ix_24vOk                                                        // 24V error status
+	    AND #ix_400vOk                                                       // 400V error status
+	    AND #ix_HardwareOk                                                   // Profinet error status
+	    AND NOT #iqUDT_ConveyorInterface.ConfigurationError;                // No configuration error      
+	    
+	END_REGION
+	
+	REGION 4 - Stop conveyor
+	    
+	    // Conditions to stop conveyor
+	    IF (#sF_TRIG_Jog.Q                                           // Trigger when conveyor stops jogging by HMI
+	        AND #sx_ManualModeActive)                                   // Manual mode is active
+	        
+	        OR (NOT #iqUDT_EquipmentControl.Command.AutomaticOn        // Conveyor stops if the bit AutomaticOn from control block is false
+	        AND NOT #sx_ManualModeActive)                               // Manual mode active bit
+	        
+	        OR (NOT #sx_Ready                                           // Bit conveyor ready to run in automatic mode
+	        AND NOT #sx_ManualModeActive)                               // Manual mode active
+	        
+	        OR #sR_TRIG_ManualMode.Q                                     // Trigger when manual mode is set on
+	        OR #sF_TRIG_ManualMode.Q                                     // Trigger when manual mode is set off
+	        
+	        OR (#iqUDT_HandShakeUp.ReqStop                             // Stop request from upstream if direction not changed
+	        AND NOT #sx_DirectionChanged)
+	        
+	        OR (#iqUDT_HandShake.ReqStop                               // Stop request from downstream if direction changed
+	        AND #sx_DirectionChanged)
+	        
+	        OR NOT #ix_SafetyOk
+	        
+	    THEN
+	        //  Order to stop VFD
+	        #iqUDT_ConveyorInterface.RunFwd := FALSE;                  // Set false order to VFD run in forward direction
+	        #iqUDT_ConveyorInterface.RunRvs := FALSE;                  // Set false order to VFD run in reverse direction
+	        
+	        IF NOT #sx_ReverseDirection
+	        THEN
+	            
+	            #iqUDT_HandShakeUp.RTR := FALSE;                       // Set false the bit ready to receive
+	            #iqUDT_HandShakeUp.CascadeStartUp := FALSE;            // Set false cascade start up bit
+	            
+	        ELSE
+	            
+	            #iqUDT_HandShake.RTR := FALSE;                       // Set false the bit ready to receive
+	            #iqUDT_HandShake.CascadeStartUp := FALSE;            // Set false cascade start up bit
+	            
+	        END_IF;
+	        
+	        #sx_AutomaticActive := FALSE;                               // Automatic mode is disable
+	        //    #sx_StartReceived := FALSE;                                 // Clear start receive bit 
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 5 - Start
+	    
+	    REGION 5.1 - Save Start bit request
+	        
+	        // The conditions to set the bit "startReceived" are: 
+	        // - Conveyor not in manual mode.
+	        // - Conveyor ready to run.
+	        // - Bit AutomaticOn from control block must be on.
+	        // - Bit start form control block on.
+	        
+	        IF #iqUDT_EquipmentControl.Command.Start
+	            AND #iqUDT_EquipmentControl.Command.AutomaticOn
+	        THEN
+	            #sx_StartReceived := TRUE;          // Start bit from control block received
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 5.2 - Cascade mode
+	        
+	        (* If the bit "StartReceived" is set, automatic mode is activated if the conveyor is set as the first one to run
+	         or the bit cascadestartup from downstream is on. *)
+	        
+	        IF #iqUDT_EquipmentControl.Command.Start
+	            AND #iqUDT_EquipmentControl.Command.AutomaticOn
+	            AND NOT #sx_ManualModeActive
+	            AND #sx_Ready
+	        THEN
+	            #sx_AutomaticActive := TRUE;        // Conveyor active automatic mode
+	        END_IF;
+	        
+	        //Timer to cascade mode
+	        #tx_CascadeStart := #sx_StartReceived
+	        AND ((NOT #sx_ReverseDirection
+	        AND (#iUDT_ConveyorConfiguration.Forward_Direction.FirstConveyorToStart
+	        OR #iqUDT_HandShake.CascadeStartUp))
+	        OR (#sx_ReverseDirection
+	        AND (#iUDT_ConveyorConfiguration.Reverse_Direction.FirstConveyorToStart
+	        OR #iqUDT_HandShakeUp.CascadeStartUp)));
+	        
+	        #sFB_CascadeModeTimer(iudi_OnDelayTime := #iUDT_ConveyorConfiguration.CascadeTimeOnDelay,      // Cascade mode timer
+	                              ix_SignalToDelay := #tx_CascadeStart,
+	                              ix_Enable := TRUE,                                                   // Signal ready to enable cascade mode
+	                              qx_DelayedSignal => #sx_CascadeStartUp);
+	        
+	        IF NOT #iqUDT_EquipmentControl.Command.AutomaticOn
+	        THEN
+	            #sx_StartReceived := False;
+	        END_IF;
+	        
+	        
+	        // Cascade mode signal to upstream
+	        IF NOT #sx_ReverseDirection
+	        THEN
+	            #iqUDT_HandShakeUp.CascadeStartUp := #sx_CascadeStartUp;
+	        ELSE
+	            #iqUDT_HandShake.CascadeStartUp := #sx_CascadeStartUp;
+	        END_IF;
+	        
+	        
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 6 - Manual mode
+	    
+	    REGION 6.1 - Manual mode force disable
+	        
+	        // Manual mode bits inputs can be reset in case of malfunction
+	        IF #iqUDT_EquipmentControl.Command.DisableManualMode
+	        THEN
+	            #iqUDT_ConveyorCommand.ManualMode := False;
+	            #iqUDT_EquipmentControl.Command.ManualMode := False;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 6.2 - Manual mode activation 
+	        
+	        // Manual mode is active if it is active from hmi or by control block  
+	        #sx_ManualModeActive := #iqUDT_ConveyorCommand.ManualMode
+	        OR #iqUDT_EquipmentControl.Command.ManualMode;
+	        
+	        //Send manual mode active to PEC/VFD blocks to supress errors
+	        #iqUDT_ConveyorInterface.ManualModeActive := #sx_ManualModeActive;
+	        
+	    END_REGION
+	    
+	    REGION 6.3 - Reset manual commands 
+	        //When the system is not any more in manual mode or when fatal error occurs the HMI commands should be reset
+	        //Added in V3.12 as bug fix. 
+	        IF NOT #ix_SafetyOk
+	            OR NOT #ix_24vOk                                                        // 24V error status
+	            OR NOT #ix_400vOk                                                       // 400V error status
+	            OR NOT #ix_HardwareOk                                                   // Profinet error status
+	            OR #iqUDT_ConveyorInterface.ConfigurationError                          // No configuration err
+	            OR #iqUDT_ConveyorInterface.InternalErrorVFD
+	            OR #iqUDT_ConveyorInterface.Disconnected
+	            OR NOT #sx_ManualModeActive
+	        THEN
+	            #iqUDT_ConveyorCommand.ManualStartStop := FALSE;
+	            #iqUDT_ConveyorCommand.ManualFullSpeed := FALSE;
+	            #iqUDT_ConveyorCommand.ManualJog := FALSE;
+	            #iqUDT_ConveyorCommand.Reverse := FALSE;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 6.4 - Start/Stop
+	        
+	        // Pre start conditions to run in manual mode
+	        #sx_PreStartManual := #sx_ManualModeActive              // Manual mode active bit
+	        AND #ix_SafetyOk                                        // Safety healthy bit
+	        AND NOT #iqUDT_ConveyorInterface.Disconnected          // Isolator switch connected
+	        AND #ix_HardwareOk                                      // Profinet comunication 
+	        AND NOT #iqUDT_ConveyorInterface.InternalErrorVFD;     // Internal error from VFD
+	        
+	        #sR_TRIG_PrestartManual(CLK := #sx_PreStartManual);
+	        
+	        
+	        IF (#sx_PreStartManual                                  // Pre start conditions to run in manual mode
+	            AND (#sR_TRIG_RunManual.Q                            // Trigger when conveyor start running in manual mode
+	            OR (#iqUDT_ConveyorCommand.ManualStartStop             // Conveyor start running in manual mode active
+	            AND #sR_TRIG_PrestartManual.Q)                       // Trigger when pre start conditions ti run in manual mode
+	            AND NOT #iqUDT_ConveyorCommand.ManualJog)          // Conveyor is not running in jog
+	            OR (#sx_PreStartManual AND #sR_TRIG_Jog.Q                                   // Trigger to start jogging
+	            AND NOT #iqUDT_ConveyorCommand.ManualStartStop))       // Conveyor is not running in manual mode
+	        THEN
+	            
+	            #iqUDT_EquipmentControl.Request.SignalingRequest := TRUE;  // Request signaling to control block before conveyor run in manual mode
+	            
+	        END_IF;
+	        
+	        // Run conveyor forward in manual mode
+	        #iqUDT_ConveyorInterface.RunFwd := #sx_PreStartManual           // Pre start conditions to run in manual mode
+	        AND NOT #iqUDT_ConveyorCommand.Reverse                          // Not in reverse direction
+	        AND (NOT #iqUDT_EquipmentControl.Request.SignalingRequest       // Signaling request done
+	        OR #sx_ManualRunning)
+	        AND (#iqUDT_ConveyorCommand.ManualStartStop                         // Manual mode start to run
+	        OR #iqUDT_ConveyorCommand.ManualJog);                           // Jogging
+	        
+	        // Run conveyor reverse in manual mode
+	        #iqUDT_ConveyorInterface.RunRvs := #sx_PreStartManual           // Pre start conditions to run in manual mode
+	        AND #iqUDT_ConveyorCommand.Reverse                              // Reverse direction
+	        AND (NOT #iqUDT_EquipmentControl.Request.SignalingRequest       // Signaling request done
+	        OR #sx_ManualRunning)
+	        AND (#iqUDT_ConveyorCommand.ManualStartStop                         // Manual mode start to run
+	        OR #iqUDT_ConveyorCommand.ManualJog);                           // Jogging
+	        
+	        #sx_ManualRunning := #iqUDT_ConveyorInterface.RunFwd
+	        OR #iqUDT_ConveyorInterface.RunRvs;
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 7 - Automatic mode active
+	    
+	    IF NOT #sx_ManualModeActive // Manual mode is not active
+	    THEN
+	        REGION 7.1 - Head to End
+	            
+	            (*  Function to calculate when the head of the parcel reaches the end of the conveyor
+	                When PEC detects parcels head, the functionality increments the displacement of the conveyor until reach the value of the distance
+	                between PEC and the end of the conveyor. After that, the counter is reset and the bit #sx_AuxHeadToEnd is triggered to inform the system. *)
+	            IF NOT #sx_ReverseDirection
+	            THEN
+	                REGION 7.1.1 - Forward
+	                    
+	                    IF #sF_TRIG_PEC_EoSFiltered_Fwd.Q      // Detects the product's head
+	                    THEN
+	                        
+	                        #sdi_HeadToEndFwd := #sdi_PECtoEndDistanceFwd;                // move the distance between PE and the end of the conveyor to auxiliary variable 
+	                        #sx_AuxHeadToEndFwd := TRUE;                             // Active head to end function
+	                        
+	                        #sdi_GapHeadToHeadFwd := #sdi_AuxGapHeadToHeadCounterFwd;     // Move gap calculated to variable
+	                        #sdi_AuxGapHeadToHeadCounterFwd := 0;                     // Reset gap counter
+	                        
+	                        #sdi_GapFwd := #sdi_AuxGapTailtoHeadCounterFwd;    // Move gap calculated to variable
+	                        #sdi_AuxGapTailtoHeadCounterFwd := 0;                     // Reset gap counter
+	                        
+	                        #iqUDT_HandShake.RTS := TRUE;                         // Set ready to send true when a parcel is detected in the PEC
+	                        
+	                    END_IF;
+	                    
+	                    IF #sx_AuxHeadToEndFwd                 // Parcel's head detected in photo cell
+	                        AND (#sdi_HeadToEndFwd > 0)         // Psrcel's head do not arrive in the end of the conveyor yet
+	                    THEN
+	                        
+	                        #sdi_HeadToEndFwd -= #iqUDT_ConveyorInterface.Displacement;   // Count displacement until arrive to the end of the conveyor
+	                        
+	                    ELSE
+	                        
+	                        #sx_AuxHeadToEndFwd := FALSE;      // Stop function head to end
+	                        
+	                    END_IF;
+	                    
+	                    // Falling edge trigger Aux Head to End bit
+	                    #sF_TRIG_AuxHeadToEnd_Fwd(CLK := #sx_AuxHeadToEndFwd);
+	                    
+	                    IF #sF_TRIG_AuxHeadToEnd_Fwd.Q
+	                    THEN
+	                        #sx_AuxHeadAtEndFwd := TRUE;                       // The head of the parcel is at the front positon of the conveyor
+	                    END_IF;
+	                    
+	                    
+	                    #sF_TRIG_HeadAtEnd_Fwd(CLK := #sx_AuxHeadAtEndFwd);
+	                    
+	                END_REGION
+	            ELSE
+	                REGION 7.1.2 - Reverse
+	                    
+	                    IF #sF_TRIG_PEC_EoSFiltered_Rvs.Q      // Detects the product's head
+	                    THEN
+	                        
+	                        #sdi_HeadToEndRvs := #sdi_PECtoEndDistanceRvs;                // move the distance between PE and the end of the conveyor to auxiliary variable 
+	                        #sx_AuxHeadToEndRvs := TRUE;                             // Active head to end function
+	                        
+	                        #sdi_GapHeadToHeadRvs := #sdi_AuxGapHeadToHeadCounterRvs;     // Move gap calculated to variable
+	                        #sdi_AuxGapHeadToHeadCounterRvs := 0;                     // Reset gap counter
+	                        
+	                        #sdi_Gap_Rvs := #sdi_AuxGapTailtoHeadCounterRvs;    // Move gap calculated to variable
+	                        #sdi_AuxGapTailtoHeadCounterRvs := 0;                     // Reset gap counter
+	                        
+	                        #iqUDT_HandShakeUp.RTS := TRUE;                         // Set ready to send true when a parcel is detected in the PEC
+	                        
+	                    END_IF;
+	                    
+	                    IF #sx_AuxHeadToEndRvs                 // Parcel's head detected in photo cell
+	                        AND (#sdi_HeadToEndRvs > 0)         // Psrcel's head do not arrive in the end of the conveyor yet
+	                    THEN
+	                        
+	                        #sdi_HeadToEndRvs += #iqUDT_ConveyorInterface.Displacement;   // Count displacement until arrive to the end of the conveyor
+	                        
+	                    ELSE
+	                        
+	                        #sx_AuxHeadToEndRvs := FALSE;      // Stop function head to end
+	                        
+	                    END_IF;
+	                    
+	                    // Falling edge trigger Aux Head to End bit
+	                    #sF_TRIG_AuxHeadToEnd_Rvs(CLK := #sx_AuxHeadToEndRvs);
+	                    
+	                    IF #sF_TRIG_AuxHeadToEnd_Rvs.Q
+	                    THEN
+	                        #sx_AuxHeadAtEndRvs := TRUE;                       // The head of the parcel is at the front positon of the conveyor
+	                    END_IF;
+	                    
+	                    
+	                    #sF_TRIG_HeadAtEnd_Rvs(CLK := #sx_AuxHeadAtEndRvs);
+	                    
+	                END_REGION
+	            END_IF;
+	        END_REGION
+	        
+	        REGION 7.2 - Tail to Begin
+	            
+	            (*   This function tracks when parcels tail reaches the begin of downstream conveyor
+	                 When the PEC is clear, the function start to increase the displacement until reaches the distance
+	                 between PEC and the end of conveyor. *)
+	            IF NOT #sx_ReverseDirection
+	            THEN
+	                REGION 7.2.1 - Forward
+	                    
+	                    IF #sR_TRIG_PE_EoSFiltered_Fwd.Q                     // Detects product's tail
+	                    THEN
+	                        
+	                        #sdi_TailToBeginFwd := (#sdi_PECEoSDistanceFwd / 10);   // move distance between PE and the end of the conveyor to auxiliar variable
+	                        
+	                    END_IF;
+	                    
+	                    IF (#sdi_TailToBeginFwd > 0)                                           // While tails parcel do not reach the beginning of next conveyor
+	                    THEN
+	                        
+	                        #sdi_TailToBeginFwd -= #iqUDT_ConveyorInterface.Displacement;   // count displacement until the product's tail arrive to the next conveyor
+	                        #sx_TailToBeginFwd := FALSE;                                    // Reset tail to begin bit
+	                        
+	                    ELSE
+	                        
+	                        #sx_TailToBeginFwd := TRUE;                                     // Product's tail arrived at the begin OF next conveyor
+	                        
+	                    END_IF;
+	                    
+	                    // Rising edge trigger Aux tail to Begin bit
+	                    #sR_TRIG_TailToBegin_Fwd(CLK := #sx_TailToBeginFwd);
+	                    
+	                END_REGION
+	            ELSE
+	                REGION 7.2.2 - Reverse
+	                    
+	                    IF #sR_TRIG_PE_EoSFiltered_Rvs.Q                     // Detects product's tail
+	                    THEN
+	                        
+	                        #sdi_TailToBeginRvs := (#sdi_PEC_EoSDistanceRvs / 10);   // move distance between PE and the end of the conveyor to auxiliar variable
+	                        
+	                    END_IF;
+	                    
+	                    IF (#sdi_TailToBeginRvs > 0)                                           // While tails parcel do not reach the beginning of next conveyor
+	                    THEN
+	                        
+	                        #sdi_TailToBeginRvs += #iqUDT_ConveyorInterface.Displacement;   // count displacement until the product's tail arrive to the next conveyor
+	                        #sx_TailToBeginRvs := FALSE;                                    // Reset tail to begin bit
+	                        
+	                    ELSE
+	                        
+	                        #sx_TailToBeginRvs := TRUE;                                     // Product's tail arrived at the begin OF next conveyor
+	                        
+	                    END_IF;
+	                    
+	                    // Rising edge trigger Aux tail to Begin bit
+	                    #sR_TRIG_TailToBegin_Rvs(CLK := #sx_TailToBeginRvs);
+	                    
+	                END_REGION
+	            END_IF;
+	        END_REGION
+	        
+	        REGION 7.3 - Gap
+	            
+	            (*    Gap tail TO head function calculates the distance (Gap) between two parcels.                                       
+	                  The function increases the Counter WHILE the photo eye is clear.                                                    
+	                  Everytime a parcel trigger the photo eye, gap value is save AND the counter is reset.  *)
+	            IF NOT #sx_ReverseDirection
+	            THEN
+	                REGION 7.3.1 - Forward
+	                    
+	                    IF #ix_PECEoS       // Count displacement when the PE do not detects the product
+	                    THEN
+	                        
+	                        IF #sdi_AuxGapTailtoHeadCounterFwd < #ci_OverflowLimit        // Prevent integer variable overflow
+	                        THEN
+	                            IF #iqUDT_HandShake.RTR THEN
+	                                #sdi_AuxGapTailtoHeadCounterFwd += #iqUDT_ConveyorInterface.Displacement;    // Calculate the gap
+	                            END_IF;
+	                            
+	                        END_IF;
+	                        
+	                    END_IF;
+	                    
+	                END_REGION
+	            ELSE
+	                REGION 7.3.2 - Reverse
+	                    
+	                    IF #ix_PECBoS       // Count displacement when the PE do not detects the product
+	                    THEN
+	                        
+	                        IF #sdi_AuxGapTailtoHeadCounterRvs < #ci_OverflowLimit        // Prevent integer variable overflow
+	                        THEN
+	                            
+	                            #sdi_AuxGapTailtoHeadCounterRvs -= #iqUDT_ConveyorInterface.Displacement;    // Calculate the gap
+	                            
+	                        END_IF;
+	                    END_IF;
+	                    
+	                END_REGION
+	            END_IF;
+	        END_REGION
+	        
+	        REGION 7.4 - Head to head
+	            
+	            // The functionality head to head is used to calculate the distance between one head's parcel and the head's parcel behind.
+	            // To do it, everytime the PEC is triggered, the function save the distance calculated and reset the counter to start
+	            // counting again, over and over again.
+	            IF NOT #sx_ReverseDirection
+	            THEN
+	                REGION 7.4.1 - Forward
+	                    
+	                    IF #sdi_AuxGapHeadToHeadCounterFwd < #ci_OverflowLimit        // Prevent integer variable overflow
+	                    THEN
+	                        
+	                        #sdi_AuxGapHeadToHeadCounterFwd += #iqUDT_ConveyorInterface.Displacement;   // measure the distance between two products
+	                        
+	                    END_IF;
+	                    
+	                END_REGION
+	            ELSE
+	                REGION 7.4.2 - Reverse
+	                    
+	                    IF #sdi_AuxGapHeadToHeadCounterRvs < #ci_OverflowLimit        // Prevent integer variable overflow
+	                    THEN
+	                        
+	                        #sdi_AuxGapHeadToHeadCounterRvs -= #iqUDT_ConveyorInterface.Displacement;   // measure the distance between two products
+	                        
+	                    END_IF;
+	                    
+	                END_REGION
+	            END_IF;
+	        END_REGION
+	        
+	        REGION 7.5 - Check gaps between products
+	            
+	            // Check gaps is a routine that checks all the time if the gap and head to head distance is acording to the configuration.
+	            // If not, the bit "sx_Gapping" is set true and the conveyor stops to gap.
+	            // Compare gaps calculated with the configured gaps 
+	            IF NOT #sx_ReverseDirection
+	            THEN
+	                REGION 7.5.1 - Forward
+	                    
+	                    IF ((#sdi_GapHeadToHeadConfigurationFwd > #sdi_GapHeadToHeadFwd               // Compare head to head configured with real distance
+	                        OR #sdi_GapTailToHeadConfigurationFwd > #sdi_GapFwd
+	                        OR #sdi_GapTailToHeadConfigurationFwd > #sdi_DownstreamGapTailtoHeadFwd           // Compare gap configured with real gap
+	                        OR #sdi_GapHeadToHeadConfigurationFwd > #sdi_DownstreamGapHeadToHeadFwd)
+	                        AND #sF_TRIG_AuxHeadToEnd_Fwd.Q)                                                         // Trigger when parcel arrive in the end of the conveyor
+	                    THEN
+	                        
+	                        #sx_GappingFwd := TRUE;        // Bit to inform the system that conveyor needs to stop to apply gap
+	                        
+	                    END_IF;
+	                    
+	                END_REGION
+	            ELSE
+	                REGION 7.5.1 - Reverse
+	                    
+	                    IF ((#sdi_GapHeadToHeadConfigurationRvs > #sdi_GapHeadToHeadRvs               // Compare head to head configured with real distance
+	                        OR #sdi_GapTailToHeadConfigurationRvs > #sdi_Gap_Rvs
+	                        OR #sdi_GapTailToHeadConfigurationRvs > #sdi_DownstreamGapTailtoHeadRvs           // Compare gap configured with real gap
+	                        OR #sdi_GapHeadToHeadConfigurationRvs > #sdi_DownstreamGapHeadToHeadRvs)
+	                        AND #sF_TRIG_AuxHeadToEnd_Rvs.Q)                                                         // Trigger when parcel arrive in the end of the conveyor
+	                    THEN
+	                        
+	                        #sx_GappingRvs := TRUE;        // Bit to inform the system that conveyor needs to stop to apply gap
+	                        
+	                    END_IF;
+	                    
+	                END_REGION
+	            END_IF;
+	            //    When conveyor stops to gapping, displacement values from downstream are used to 
+	            //    apply new gap.
+	            //    When the new gap applied fits with the configured one, the conveyor starts running again.
+	            //    If the conveyor stops for die back reason and the gap its been applied, and extra gap value it will be applied.
+	            //    This recovery gap it helps to recovery the system after die back.
+	            IF NOT #sx_ReverseDirection
+	            THEN
+	                REGION 7.5.3 - Forward
+	                    
+	                    IF (#sx_GappingFwd          // Gapping needs to be applied bit
+	                        AND ((#sdi_GapHeadToHeadConfigurationFwd > #sdi_GapHeadToHeadFwd    // Configured head to head bigger than the actual one
+	                        OR #sdi_GapHeadToHeadConfigurationFwd - #idi_PECEoSDistance / 10 + #sdi_PECtoEndDistanceFwd > #sdi_DownstreamGapHeadToHeadFwd
+	                        OR #sdi_GapTailToHeadConfigurationFwd > #sdi_GapFwd     // Configured gap bigger than the actual one
+	                        OR #sdi_GapTailToHeadConfigurationFwd - #idi_PECEoSDistance / 10 + #sdi_PECtoEndDistanceFwd > #sdi_DownstreamGapTailtoHeadFwd)
+	                        AND NOT #sx_RecoveryGapFwd)                                                // Die back recovery gap bit not active
+	                        OR (((#sdi_GapHeadToHeadConfigurationFwd + #iUDT_ConveyorConfiguration.ExtraGapRecovery)   // Add recovery gap to the configured
+	                        > #sdi_GapHeadToHeadFwd                                                                                 // Actual head to head distance
+	                        OR (#sdi_GapHeadToHeadConfigurationFwd - #idi_PECEoSDistance / 10 + #sdi_PECtoEndDistanceFwd + #iUDT_ConveyorConfiguration.ExtraGapRecovery)
+	                        > #sdi_DownstreamGapHeadToHeadFwd
+	                        OR (#sdi_GapTailToHeadConfigurationFwd + #iUDT_ConveyorConfiguration.ExtraGapRecovery)    // Add recovery gap to the configured
+	                        > #sdi_GapFwd                                                                               // Actual gap between parcels
+	                        OR (#sdi_GapTailToHeadConfigurationFwd - #idi_PECEoSDistance / 10 + #sdi_PECtoEndDistanceFwd + #iUDT_ConveyorConfiguration.ExtraGapRecovery)
+	                        > #sdi_DownstreamGapTailtoHeadFwd)
+	                        AND #sx_RecoveryGapFwd))                                                                       // Recovery gap bit activate
+	                    THEN
+	                        
+	                        #sdi_GapHeadToHeadFwd += #iqUDT_HandShake.DownstreamDisplacement;      // Increase head to head counter with conveyor downstream displacement
+	                        #sdi_GapFwd += #iqUDT_HandShake.DownstreamDisplacement;     // Increase gap counter with conveyor downstream displacement
+	                        
+	                    ELSE
+	                        
+	                        #sx_GappingFwd := FALSE;                   // Set gapping bit to false
+	                        
+	                    END_IF;
+	                    
+	                    IF #sx_GappingFwd                              // Gapping bit active
+	                        AND NOT #iqUDT_HandShake.RTR           // Ready to receive not active
+	                    THEN
+	                        
+	                        #sx_RecoveryGapFwd := TRUE;                // Recovery gap activation after die back
+	                        
+	                    END_IF;
+	                    
+	                    IF #sx_RecoveryGapFwd                          // Recovery gap active
+	                        AND NOT #sx_GappingFwd                     // Gapping bit not active
+	                    THEN
+	                        
+	                        #sx_RecoveryGapFwd := FALSE;               // Recovery gap disable
+	                        
+	                    END_IF;
+	                    
+	                END_REGION
+	            ELSE
+	                REGION 7.5.4 - Reverse
+	                    
+	                    IF (#sx_GappingRvs          // Gapping needs to be applied bit
+	                        AND ((#sdi_GapHeadToHeadConfigurationRvs > #sdi_GapHeadToHeadRvs    // Configured head to head bigger than the actual one
+	                        OR #sdi_GapHeadToHeadConfigurationRvs - #idi_PECBoSDistance / 10 + #sdi_PECtoEndDistanceRvs > #sdi_DownstreamGapHeadToHeadRvs
+	                        OR #sdi_GapTailToHeadConfigurationRvs > #sdi_Gap_Rvs     // Configured gap bigger than the actual one
+	                        OR #sdi_GapTailToHeadConfigurationRvs - #idi_PECBoSDistance / 10 + #sdi_PECtoEndDistanceRvs > #sdi_DownstreamGapTailtoHeadRvs)
+	                        AND NOT #sx_RecoveryGapRvs)                                                // Die back recovery gap bit not active
+	                        OR (((#sdi_GapHeadToHeadConfigurationRvs + #iUDT_ConveyorConfiguration.ExtraGapRecovery)   // Add recovery gap to the configured
+	                        > #sdi_GapHeadToHeadRvs                                                                                 // Actual head to head distance
+	                        OR (#sdi_GapHeadToHeadConfigurationRvs - #idi_PECBoSDistance / 10 + #sdi_PECtoEndDistanceRvs + #iUDT_ConveyorConfiguration.ExtraGapRecovery)
+	                        > #sdi_DownstreamGapHeadToHeadRvs
+	                        OR (#sdi_GapTailToHeadConfigurationRvs + #iUDT_ConveyorConfiguration.ExtraGapRecovery)    // Add recovery gap to the configured
+	                        > #sdi_Gap_Rvs                                                                               // Actual gap between parcels
+	                        OR (#sdi_GapTailToHeadConfigurationRvs - #idi_PECBoSDistance / 10 + #sdi_PECtoEndDistanceRvs + #iUDT_ConveyorConfiguration.ExtraGapRecovery)
+	                        > #sdi_DownstreamGapTailtoHeadRvs)
+	                        AND #sx_RecoveryGapRvs))                                                                                // Recovery gap bit activate
+	                    THEN
+	                        
+	                        #sdi_GapHeadToHeadRvs -= #iqUDT_HandShakeUp.DownstreamDisplacement;      // Increase head to head counter with conveyor downstream displacement
+	                        #sdi_Gap_Rvs -= #iqUDT_HandShakeUp.DownstreamDisplacement;     // Increase gap counter with conveyor downstream displacement
+	                        
+	                    ELSE
+	                        
+	                        #sx_GappingRvs := FALSE;                   // Set gapping bit to false
+	                        
+	                    END_IF;
+	                    
+	                    IF #sx_GappingRvs                              // Gapping bit active
+	                        AND NOT #iqUDT_HandShakeUp.RTR           // Ready to receive not active
+	                    THEN
+	                        
+	                        #sx_RecoveryGapRvs := TRUE;                // Recovery gap activation after die back
+	                        
+	                    END_IF;
+	                    
+	                    IF #sx_RecoveryGapRvs                          // Recovery gap active
+	                        AND NOT #sx_GappingRvs                     // Gapping bit not active
+	                    THEN
+	                        
+	                        #sx_RecoveryGapRvs := FALSE;               // Recovery gap disable
+	                        
+	                    END_IF;
+	                    
+	                END_REGION
+	            END_IF;
+	        END_REGION
+	        
+	        REGION 7.6 - Ready to send and Transfer in progress
+	            IF NOT #sx_ReverseDirection
+	            THEN
+	                REGION 7.6.1 - Forward
+	                    
+	                    IF #iqUDT_HandShake.RTR                                            // Ready to receive bit
+	                        AND NOT #sx_GappingFwd
+	                        AND #sx_AuxHeadAtEndFwd                                            // Parcel is at end of conveyor
+	                        AND NOT #ix_ExternalRequestDieBack
+	                    THEN
+	                        
+	                        #iqUDT_HandShake.TIP := TRUE;      // Transfer in progress bit
+	                        #iqUDT_HandShake.RTS := FALSE;     // Ready to send bit
+	                        #sx_AuxHeadAtEndFwd := FALSE;
+	                        
+	                    END_IF;
+	                    
+	                    IF #sR_TRIG_TailToBegin_Fwd.Q               // Reset TIP when the parcel leaves interlock
+	                    THEN
+	                        
+	                        #iqUDT_HandShake.TIP := FALSE;     // Transfer in progress bit
+	                        
+	                    END_IF;
+	                    
+	                END_REGION
+	            ELSE
+	                REGION 7.6.2 - Reverse
+	                    
+	                    IF #iqUDT_HandShakeUp.RTR                                            // Ready to receive bit
+	                        AND #iqUDT_HandShake.RTR
+	                        AND NOT #sx_GappingRvs
+	                        AND #sx_AuxHeadAtEndRvs                                            // Parcel is at end of conveyor
+	                        AND NOT #ix_ExternalRequestDieBack
+	                    THEN
+	                        
+	                        #iqUDT_HandShakeUp.TIP := TRUE;      // Transfer in progress bit
+	                        #iqUDT_HandShakeUp.RTS := FALSE;     // Ready to send bit
+	                        #sx_AuxHeadAtEndRvs := FALSE;
+	                        
+	                    END_IF;
+	                    
+	                    IF #sR_TRIG_TailToBegin_Rvs.Q               // Reset TIP when the parcel leaves interlock
+	                    THEN
+	                        
+	                        #iqUDT_HandShakeUp.TIP := FALSE;     // Transfer in progress bit
+	                        
+	                    END_IF;
+	                    
+	                END_REGION
+	            END_IF;
+	        END_REGION
+	        
+	        REGION 7.7 - Downstream gap
+	            
+	            (* This functionality is used to maintain the gap between parcel conveyor's downstream.
+	               To do this, is used the downstream displacement.  *)
+	            IF NOT #sx_ReverseDirection
+	            THEN
+	                REGION 7.7.1 - Forward
+	                    
+	                    IF #sR_TRIG_TailToBegin_Fwd.Q                       // When the parcel's tail reach the beginning of downstream conveyor
+	                    THEN
+	                        
+	                        #sdi_DownstreamGapTailtoHeadFwd := 0;                     // Reset downstream gap counter
+	                        
+	                    END_IF;
+	                    
+	                    IF #sdi_DownstreamGapTailtoHeadFwd < #ci_OverflowLimit        // Prevent integer variable overflow
+	                    THEN
+	                        
+	                        #sdi_DownstreamGapTailtoHeadFwd += #iqUDT_HandShake.DownstreamDisplacement;          // Downstream displacement gap counter
+	                        
+	                    END_IF;
+	                    
+	                END_REGION
+	            ELSE
+	                REGION 7.7.2 - Reverse
+	                    
+	                    IF #sR_TRIG_TailToBegin_Rvs.Q                       // When the parcel's tail reach the beginning of downstream conveyor
+	                    THEN
+	                        
+	                        #sdi_DownstreamGapTailtoHeadRvs := 0;                     // Reset downstream gap counter
+	                        
+	                    END_IF;
+	                    
+	                    IF #sdi_DownstreamGapTailtoHeadRvs < #ci_OverflowLimit        // Prevent integer variable overflow
+	                    THEN
+	                        
+	                        #sdi_DownstreamGapTailtoHeadRvs -= #iqUDT_HandShakeUp.DownstreamDisplacement;          // Downstream displacement gap counter
+	                        
+	                    END_IF;
+	                    
+	                END_REGION
+	            END_IF;
+	        END_REGION
+	        
+	        REGION 7.8 - Downstream Head to Head
+	            IF NOT #sx_ReverseDirection
+	            THEN
+	                REGION 7.8.1 - Forward
+	                    
+	                    #sR_TRIG_Transfering_Fwd(CLK := #iqUDT_HandShake.TIP);
+	                    
+	                    IF #sR_TRIG_Transfering_Fwd.Q                                                           // Transfering aux bit rising trigger
+	                    THEN
+	                        
+	                        #sdi_DownstreamGapHeadToHeadFwd := 0;                                              // Downstream head to head reset counter
+	                        
+	                    END_IF;
+	                    
+	                    IF #sdi_DownstreamGapHeadToHeadFwd < #ci_OverflowLimit                                 // Prevent integer variable overflow
+	                    THEN
+	                        
+	                        #sdi_DownstreamGapHeadToHeadFwd += #iqUDT_HandShake.DownstreamDisplacement;       // Downstream displacement head to head counter 
+	                        
+	                    END_IF;
+	                    
+	                END_REGION
+	            ELSE
+	                REGION 7.8.2 - Reverse
+	                    
+	                    #sR_TRIG_Transfering_Rvs(CLK := #iqUDT_HandShake.TIP);
+	                    
+	                    IF #sR_TRIG_Transfering_Rvs.Q                                                           // Transfering aux bit rising trigger
+	                    THEN
+	                        
+	                        #sdi_DownstreamGapHeadToHeadRvs := 0;                                              // Downstream head to head reset counter
+	                        
+	                    END_IF;
+	                    
+	                    IF #sdi_DownstreamGapHeadToHeadRvs < #ci_OverflowLimit                                 // Prevent integer variable overflow
+	                    THEN
+	                        
+	                        #sdi_DownstreamGapHeadToHeadRvs -= #iqUDT_HandShakeUp.DownstreamDisplacement;       // Downstream displacement head to head counter 
+	                        
+	                    END_IF;
+	                    
+	                END_REGION
+	            END_IF;
+	        END_REGION
+	        
+	        REGION 7.9 - Energy save
+	            
+	            (* Save energy functionality is used to stop conveyor if no parcels are in the system to save energy
+	               Save energy function counts displacement if the photo eye do not detects parcels. The counter is reset if:
+	               - Photo eye is triggered.
+	               - Reset is required from external.
+	               - Ready to send is active from upstream. *)
+	            
+	            IF #iUDT_ConveyorConfiguration.Energy                                       // Energy save functionality enable from configuration
+	            THEN
+	                
+	                IF #sdi_AuxEnergySaveFwd >= #iUDT_ConveyorConfiguration.Forward_Direction.EnergySaveLenght        // Compare energy save counter with configured lenght
+	                    OR #sdi_AuxEnergySaveRvs >= #iUDT_ConveyorConfiguration.Reverse_Direction.EnergySaveLenght
+	                THEN
+	                    #sx_EnergySaveActive := TRUE;                                           // Set energy save active true
+	                END_IF;
+	                
+	                IF ((NOT #ix_PECEoS OR NOT #ix_PECBoS)                                  // Photo eye detects a parcel
+	                    AND NOT #sx_EnergySaveActive)                                         // Energy save active bit
+	                    OR #ix_ResetEnergySave                                               // Reset energy save
+	                    OR (#iqUDT_HandShakeUp.ResetEnergySave AND NOT #sx_ReverseDirection)                               // Reset energy save externaly 
+	                    OR (#iqUDT_HandShake.ResetEnergySave AND #sx_ReverseDirection)
+	                    OR NOT #iqUDT_EquipmentControl.Command.AutomaticOn                  // Automatic ON from control block
+	                    OR #iqUDT_EquipmentControl.Command.Stop                             // Stop command from control block
+	                THEN
+	                    #sdi_AuxEnergySaveFwd := 0;                                        // Reset energy save counter
+	                    #sdi_AuxEnergySaveRvs := 0;                                        // Reset energy save counter
+	                    #sx_EnergySaveActive := FALSE;                                      // Set energy save active to false
+	                ELSE
+	                    // Increament displacement counter
+	                    IF NOT #sx_ReverseDirection
+	                    THEN
+	                        #sdi_AuxEnergySaveFwd += #iqUDT_ConveyorInterface.Displacement;
+	                    ELSE
+	                        #sdi_AuxEnergySaveRvs -= #iqUDT_ConveyorInterface.Displacement;
+	                    END_IF;
+	                END_IF;
+	                
+	            ELSE
+	                // If energy save functionality is disable from configuration
+	                #sdi_AuxEnergySaveFwd := 0;                                             // Reset energy save counter
+	                #sx_EnergySaveActive := FALSE;                                      // Set energy save false
+	            END_IF;
+	            // Reset to downstream when not already in enery save on signal of PEC
+	            // When slave conveyor pass reset esave command to master conveyor
+	            
+	            IF NOT #sx_ReverseDirection
+	            THEN
+	                #iqUDT_HandShake.ResetEnergySave := (NOT #ix_PECEoS OR #sx_AuxHeadAtEndFwd OR #iqUDT_HandShake.TIP) AND NOT #sx_EnergySaveActive
+	                OR (#iUDT_ConveyorConfiguration.Forward_Direction.Mode = 1 AND #iqUDT_HandShakeUp.ResetEnergySave);
+	            ELSE
+	                #iqUDT_HandShakeUp.ResetEnergySave := NOT #ix_PECBoS AND NOT #sx_EnergySaveActive
+	                OR (#iUDT_ConveyorConfiguration.Reverse_Direction.Mode = 1 AND #iqUDT_HandShake.ResetEnergySave);
+	            END_IF;
+	        END_REGION
+	        
+	        REGION 7.10 - Operation modes
+	            
+	            // Different modes in automatic can be configured
+	            // 1 - Slave
+	            // 2 - Queue
+	            // 3 - Bulk flow
+	            
+	            IF #sx_AutomaticActive                                          // Automatic mode active
+	                AND #tx_CascadeStart                                        // Cascade startup
+	            THEN
+	                
+	                IF NOT #sx_ReverseDirection
+	                THEN
+	                    
+	                    CASE #iUDT_ConveyorConfiguration.Forward_Direction.Mode OF                   // Operation mode configured 
+	                            
+	                        1:  // Slave
+	                            
+	                            // Run conveyor if ready to receive if on, and conveyor is not gapping,
+	                            // and not halt request and not energy save active
+	                            
+	                            #iqUDT_ConveyorInterface.RunFwd := #sx_AutomaticActive     // Automatic mode active
+	                            AND #sx_Ready                                               // Ready active
+	                            AND NOT #ix_ExternalRequestHold                             // Halt request is not active
+	                            AND NOT #sx_EnergySaveActive                                // Energy save not active
+	                            AND #iqUDT_HandShake.RTR                               // Ready to receive active
+	                            AND NOT #sx_DirectionChanged;
+	                            
+	                            #iqUDT_HandShakeUp.RTR := #iqUDT_ConveyorInterface.RunFwd;
+	                            
+	                        2:  // Master 
+	                            
+	                            // With queue configuration, conveyor runs if ready to receive is true.
+	                            // If ready to receive is false, conveyor runs until parcel reach the end of the conveyor.
+	                            
+	                            // Conveyor stops if heads parcel reache the end of the conveyor and:
+	                            // - Ready to receive is false
+	                            // - Or die back requested.
+	                            // - Or halt requested
+	                            // Conveyor also stops if gapping is active or energy save mode active.
+	                            
+	                            #iqUDT_ConveyorInterface.RunFwd := #sx_AutomaticActive             // Automatic mode active
+	                            AND #sx_Ready                                                       // Ready active
+	                            AND NOT #sx_DirectionChanged
+	                            AND NOT #sx_GappingFwd                                                 // Gapping request
+	                            AND NOT #sx_EnergySaveActive                                        // Energy save request
+	                            AND NOT #ix_ExternalRequestHold                                     // Halt requested from external
+	                            AND ((NOT #ix_ExternalRequestDieBack
+	                            AND #iqUDT_HandShake.RTR)
+	                            OR (NOT #sx_AuxHeadAtEndFwd
+	                            AND NOT #iqUDT_HandShake.TIP)
+	                            OR (#iqUDT_HandShake.RTR
+	                            AND NOT #sx_AuxHeadAtEndFwd));
+	                            
+	                            #iqUDT_HandShakeUp.RTR := #iqUDT_ConveyorInterface.RunFwd;
+	                            
+	                            
+	                        3: //Master at bulk flow
+	                            
+	                            #iqUDT_ConveyorInterface.RunFwd := #sx_AutomaticActive             // Automatic mode active
+	                            AND #sx_Ready                                                       // Ready active
+	                            AND NOT #sx_DirectionChanged
+	                            AND NOT #sx_EnergySaveActive                                        // Energy save request
+	                            AND NOT #ix_ExternalRequestHold                                     // Halt requested from external
+	                            AND (
+	                            (NOT #ix_ExternalRequestDieBack                                     //no die back request and the downstream is running
+	                            AND #iqUDT_HandShake.RTR)
+	                            OR                                                                  //..or..
+	                            (#sdi_TransitionZone = 0)                                            // no parcels at the transition zone
+	                            OR                                                                  //..or..
+	                            (#iqUDT_HandShake.RTR
+	                            AND NOT #ix_ExternalRequestDieBack
+	                            AND NOT (#sdi_TransitionZone = 0)));                                  //downstream is running and there are   
+	                            
+	                            //If PEC is blocked, reset tracking counter
+	                            IF NOT #ix_PECEoS THEN
+	                                #sdi_TransitionZone := (#idi_PECEoSDistance / 10);
+	                            END_IF;
+	                            
+	                            //Track parcels at the zone between EoS and conveyor end (Transition Zone)
+	                            #sdi_TransitionZone := #sdi_TransitionZone - #iqUDT_ConveyorInterface.Displacement;
+	                            
+	                            //If Value is negative then set to 0
+	                            IF #sdi_TransitionZone < 0 THEN
+	                                #sdi_TransitionZone := 0;
+	                            END_IF;
+	                            
+	                            #iqUDT_HandShakeUp.RTR := #iqUDT_ConveyorInterface.RunFwd;
+	                            
+	                    END_CASE;
+	                    
+	                ELSE
+	                    
+	                    CASE #iUDT_ConveyorConfiguration.Reverse_Direction.Mode OF                   // Operation mode configured 
+	                            
+	                        1:  // Slave
+	                            
+	                            // Run conveyor if ready to receive if on, and conveyor is not gapping,
+	                            // and not halt request and not energy save active
+	                            
+	                            #iqUDT_ConveyorInterface.RunRvs := #sx_AutomaticActive     // Automatic mode active
+	                            AND #sx_Ready                                               // Ready active
+	                            AND NOT #ix_ExternalRequestHold                             // Halt request is not active
+	                            AND NOT #sx_EnergySaveActive                                // Energy save not active
+	                            AND #iqUDT_HandShakeUp.RTR                                 // Ready to receive active
+	                            AND NOT #sx_DirectionChanged;
+	                            
+	                            #iqUDT_HandShake.RTR := #iqUDT_ConveyorInterface.RunRvs;
+	                            
+	                        2:  // Master 
+	                            
+	                            // With queue configuration, conveyor runs if ready to receive is true.
+	                            // If ready to receive is false, conveyor runs until parcel reach the end of the conveyor.
+	                            
+	                            // Conveyor stops if heads parcel reache the end of the conveyor and:
+	                            // - Ready to receive is false
+	                            // - Or die back requested.
+	                            // - Or halt requested
+	                            // Conveyor also stops if gapping is active or energy save mode active.
+	                            
+	                            #iqUDT_ConveyorInterface.RunRvs := #sx_AutomaticActive             // Automatic mode active
+	                            AND #sx_Ready                                                       // Ready active
+	                            AND NOT #sx_DirectionChanged
+	                            AND NOT #sx_GappingRvs                                             // Gapping request
+	                            AND NOT #sx_EnergySaveActive                                        // Energy save request
+	                            AND NOT #ix_ExternalRequestHold                                     // Halt requested from external
+	                            AND ((NOT #ix_ExternalRequestDieBack
+	                            AND #iqUDT_HandShakeUp.RTR)
+	                            OR (NOT #sx_AuxHeadAtEndRvs
+	                            AND NOT #iqUDT_HandShakeUp.TIP)
+	                            OR (#iqUDT_HandShakeUp.RTR
+	                            AND NOT #sx_AuxHeadAtEndRvs));
+	                            
+	                            #iqUDT_HandShake.RTR := #iqUDT_ConveyorInterface.RunRvs;
+	                            
+	                            
+	                        3: //Master at bulk flow
+	                            
+	                            #iqUDT_ConveyorInterface.RunRvs := #sx_AutomaticActive             // Automatic mode active
+	                            AND #sx_Ready                                                       // Ready active
+	                            AND NOT #sx_DirectionChanged
+	                            AND NOT #sx_EnergySaveActive                                        // Energy save request
+	                            AND NOT #ix_ExternalRequestHold                                     // Halt requested from external
+	                            AND (
+	                            (NOT #ix_ExternalRequestDieBack                                     //no die back request and the downstream is running
+	                            AND #iqUDT_HandShakeUp.RTR)
+	                            OR                                                                  //..or..
+	                            (#sdi_TransitionZone = 0)                                            // no parcels at the transition zone
+	                            OR                                                                  //..or..
+	                            (#iqUDT_HandShakeUp.RTR
+	                            AND NOT #ix_ExternalRequestDieBack
+	                            AND NOT (#sdi_TransitionZone = 0)));                                  //downstream is running and there are   
+	                            
+	                            //If PEC is blocked, reset tracking counter
+	                            IF NOT #ix_PECBoS THEN
+	                                #sdi_TransitionZone := #idi_PECEoSDistance / 10;
+	                            END_IF;
+	                            //Track parcels at the zone between EoS and conveyor end (Transition Zone)
+	                            #sdi_TransitionZone := #sdi_TransitionZone - #iqUDT_ConveyorInterface.Displacement;
+	                            
+	                            //If Value is negative then set to 0
+	                            IF #sdi_TransitionZone < 0 THEN
+	                                #sdi_TransitionZone := 0;
+	                            END_IF;
+	                            
+	                            #iqUDT_HandShake.RTR := #iqUDT_ConveyorInterface.RunRvs;
+	                    END_CASE;
+	                    
+	                END_IF;
+	                
+	            ELSE
+	                
+	                // If conveyor is not in manual mode and not ready
+	                IF NOT #sx_ReverseDirection
+	                THEN
+	                    #iqUDT_ConveyorInterface.RunFwd := FALSE;                      // Order to VFD stop conveyor
+	                    #iqUDT_HandShakeUp.RTR := FALSE;                               // Set ready to receive false
+	                ELSE
+	                    #iqUDT_ConveyorInterface.RunRvs := FALSE;                      // Order to VFD stop conveyor
+	                    #iqUDT_HandShake.RTR := FALSE;                               // Set ready to receive false
+	                END_IF;
+	                
+	            END_IF;
+	            
+	        END_REGION
+	        
+	    END_IF;
+	END_REGION
+	
+	REGION 8 - Speed control
+	    
+	    (*In manual mode, conveyor default runs with manual speed which is calculated as a percentage of nominal speed. If "ManualFullSpeed" is set true, conveyor runs with high speed in manual mode. 
+	     In jog mode conveyor always runs in low speed. In automatic mode, conveyor runs with full speed if external is zero. If external speed is bigger than zero, conveyor will run with that speed. *)
+	    
+	    
+	    // security
+	    IF #iqUDT_ConveyorCommand.ManualSpeed > 100 THEN
+	        #iqUDT_ConveyorCommand.ManualSpeed := 100;
+	    END_IF;
+	    
+	    IF #iqUDT_ConveyorCommand.ManualSpeed < 0 THEN
+	        #iqUDT_ConveyorCommand.ManualSpeed := 0;
+	    END_IF;
+	    
+	    
+	    
+	    IF #sx_ManualModeActive                                                                         // Manual mode active
+	    THEN
+	        
+	        IF #iqUDT_ConveyorCommand.ManualStartStop                                              // Full speed in manual mode
+	        THEN
+	            
+	            IF #iqUDT_ConveyorCommand.ManualFullSpeed                                                  // Full speed in manual mode
+	            THEN
+	                #iqUDT_ConveyorInterface.SpeedSetpoint := #iUDT_ConveyorConfiguration.SpeedSetpointNominal;    // Move nominal setpoint to the VDF
+	                
+	            ELSE
+	                #iqUDT_ConveyorInterface.SpeedSetpoint := REAL_TO_INT(INT_TO_REAL(#iqUDT_ConveyorCommand.ManualSpeed) * (INT_TO_REAL(#iUDT_ConveyorConfiguration.SpeedSetpointNominal) / 100));     // Calculate and Move manual speed setpoint to VFD
+	                
+	            END_IF;
+	            
+	        ELSE                                                                                             //low speed for jog mode
+	            
+	            IF #iUDT_ConveyorConfiguration.SpeedSetpointLow < #iUDT_ConveyorConfiguration.SpeedSetpointNominal  //Low speed can't be higher than nominal speed 
+	            THEN
+	                #iqUDT_ConveyorInterface.SpeedSetpoint := #iUDT_ConveyorConfiguration.SpeedSetpointLow;    // Move low speed setpoint to the VDF
+	                
+	            ELSE
+	                
+	                #iqUDT_ConveyorInterface.SpeedSetpoint := #iUDT_ConveyorConfiguration.SpeedSetpointNominal;    // Move low speed setpoint to the VDF
+	            END_IF;
+	        END_IF;
+	        
+	        
+	        
+	    ELSE
+	        
+	        IF #ii_ExternalSpeed > 0                                                                      // If external speed bigger than zero
+	        THEN
+	            #iqUDT_ConveyorInterface.SpeedSetpoint := #ii_ExternalSpeed;                                     // Move external speed to VFD
+	        ELSE
+	            #iqUDT_ConveyorInterface.SpeedSetpoint := #iUDT_ConveyorConfiguration.SpeedSetpointNominal;       // Move nominal setpoint to VFD
+	        END_IF;
+	        
+	    END_IF;
+	    
+	    
+	    
+	END_REGION
+	
+	
+	REGION 9 - Status
+	    #sUDT_HMIStatus.Specific.Reverse := #sx_ReverseDirection;
+	    
+	    // stopped 
+	    #sUDT_CommonStatus.Stopped := NOT #sx_Ready OR NOT #sx_AutomaticActive;
+	    
+	    // Auto ON
+	    #sUDT_CommonStatus.AutoON := #sx_Ready AND #sx_AutomaticActive;
+	    
+	    // Running
+	    #sUDT_CommonStatus.Running := #iqUDT_ConveyorInterface.RunFwd
+	    OR #iqUDT_ConveyorInterface.RunRvs;
+	    
+	    // Halted
+	    #sUDT_CommonStatus.Halted := #ix_ExternalRequestHold
+	    AND #sUDT_CommonStatus.AutoON
+	    AND NOT #sUDT_CommonStatus.EnergySave;
+	    
+	    // Energy save active
+	    #sUDT_CommonStatus.EnergySave := #sx_EnergySaveActive AND #sx_AutomaticActive;
+	    
+	    // Die back
+	    #sUDT_CommonStatus.Dieback := #sUDT_CommonStatus.AutoON
+	    AND NOT #sUDT_CommonStatus.EnergySave
+	    AND NOT #sUDT_CommonStatus.Running;
+	    
+	    // Manual
+	    #sUDT_CommonStatus.Manual := #sx_ManualModeActive;
+	    
+	    // Manual Running
+	    #sUDT_CommonStatus.ManualRun := #sx_ManualModeActive AND #sUDT_CommonStatus.Running;
+	    
+	    // Safety not ok
+	    #sUDT_CommonStatus.SafetyStop := NOT #ix_SafetyOk AND #ix_HardwareOk;
+	    
+	    // HMI status update
+	    IF #sUDT_CommonStatusOld <> #sUDT_CommonStatus                                            // update on change
+	        OR (#sR_TRIG_Reverse.Q OR #sF_TRIG_Reverse.Q)
+	    THEN
+	        // HMI status initialization
+	        #sUDT_HMIStatus.Status := 0;
+	        
+	        // Energy save
+	        IF #sUDT_CommonStatus.EnergySave
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".EnergySave;
+	        END_IF;
+	        
+	        // Running
+	        IF #sUDT_CommonStatus.Running
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Running;
+	        END_IF;
+	        
+	        // Stopped
+	        IF #sUDT_CommonStatus.Stopped
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Stopped;
+	        END_IF;
+	        
+	        // Dieback
+	        IF #sUDT_CommonStatus.Dieback
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Dieback;
+	        END_IF;
+	        
+	        // Halted
+	        IF #sUDT_CommonStatus.Halted
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Halted;
+	        END_IF;
+	        
+	        // Manual
+	        IF #sUDT_CommonStatus.Manual
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Manual;
+	        END_IF;
+	        
+	        // Running in manual mode
+	        IF #sUDT_CommonStatus.ManualRun
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".ManualRun;
+	        END_IF;
+	        
+	(*        // Internal tracking warning
+	        IF #iq_UDT_ConveyorInterface.InternalWarningTracking
+	        THEN
+	            #s_UDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Warning;
+	        END_IF; *)
+	        
+	        // Internal tracking error
+	        IF #iqUDT_ConveyorInterface.InternalErrorTracking
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".TrackingError;
+	        END_IF;
+	        
+	        // Internal PEC error
+	        IF #iqUDT_ConveyorInterface.InternalErrorPEC
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".PECJam;
+	        END_IF;
+	        
+	        // Internal Encoder error
+	        IF #iqUDT_ConveyorInterface.InternalErrorEncoder
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".EncoderError;
+	        END_IF;
+	        
+	        // Internal VFD error
+	        IF #iqUDT_ConveyorInterface.InternalErrorVFD
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".VFDError;
+	        END_IF;
+	        
+	        // Disconnect error
+	        IF #iqUDT_ConveyorInterface.Disconnected
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".CBError;
+	        END_IF;
+	        
+	        // Safety stop
+	        IF (#sUDT_CommonStatus.SafetyStop)
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".SafetyStop;
+	        END_IF;
+	        
+	        #sUDT_CommonStatusOld := #sUDT_CommonStatus;              // Copy status to memory
+	        #qUDT_Status := #sUDT_CommonStatus;                       // Copy status to output
+	        
+	    END_IF;
+	    
+	    // Copy HMI status to output
+	    #qUDT_HMIStatus := #sUDT_HMIStatus;
+	    
+	END_REGION
+	
+	
+	REGION 10 - Statistics
+	    
+	    REGION 10.1 - Conveyor up time
+	        
+	        IF #sx_Up OR #iqUDT_EquipmentControl.Command.ResetData    // Reset statistics
+	        THEN
+	            
+	            "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,      // Reset statistics input
+	                            ix_Activate := #sx_Up,
+	                            ix_RTrigActivate := #sR_TRIG_ConveyorUp.Q,                     // Statistics active trigger
+	                            iqUDT_Statistics := #iqUDT_Statistics.ConveyorUp);      // Statistics values output
+	            
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 10.2 - Energy save
+	        
+	        // Statistics Energy save mode active
+	        IF #sUDT_CommonStatus.EnergySave(* #sx_EnergySaveActive *)                                                        // Energy save active
+	            OR #iqUDT_EquipmentControl.Command.ResetData                               // Reset statistics
+	        THEN
+	            "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,      // Reset statistics input
+	                            ix_Activate := #sUDT_CommonStatus.EnergySave,                         // Activate statistics functions input
+	                            ix_RTrigActivate := #sR_TRIG_EnergySave.Q,                    // Statistics active trigger
+	                            iqUDT_Statistics := #iqUDT_Statistics.EnergySave);         // Statistics values output
+	            
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 10.3 - Conveyor down time
+	        
+	        // Conveyor down is when conveyor is not in manual mode and has an error
+	        IF #sx_Down OR #iqUDT_EquipmentControl.Command.ResetData OR #sUDT_CommonStatus.SafetyStop                                    // Reset statistics
+	        THEN
+	            
+	            "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,             // Reset statistics input
+	                            ix_Activate := #sx_Down OR #sUDT_CommonStatus.SafetyStop, // Activate statistics functions input
+	                            ix_RTrigActivate := #sR_TRIG_ConveyorDownTime.Q,                     // Statistics active trigger
+	                            iqUDT_Statistics := #iqUDT_Statistics.ConveyorDown);              // Statistics values output
+	            
+	        END_IF;
+	    END_REGION
+	    
+	    REGION 10.4 - Conveyor stop time
+	        
+	        IF #sx_Stopped OR #iqUDT_EquipmentControl.Command.ResetData                                           // Reset statistics
+	        THEN
+	            
+	            "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,        // Reset statistics input
+	                            ix_Activate := #sx_Stopped,                                           // Activate statistics functions input
+	                            ix_RTrigActivate := #sR_TRIG_ConveyorStopped.Q,                        // Statistics active trigger
+	                            iqUDT_Statistics := #iqUDT_Statistics.ConveyorStop);                  // Statistics values output
+	            
+	        END_IF;
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 11 - Report to control block    
+	    // Function to manage report between control block and conveyor block
+	    "FC_EquipmentReport"(iUDT_Status := #sUDT_CommonStatus,
+	                         iqUDT_Control := #iqUDT_EquipmentControl);
+	    
+	END_REGION
+	
+	REGION 12 - Internal errors and warnings reset
+	    
+	    IF #iqUDT_EquipmentControl.Command.Reset
+	    THEN
+	        
+	        #iqUDT_ConveyorInterface.InternalErrorEncoder := FALSE;
+	        #iqUDT_ConveyorInterface.InternalErrorPEC := FALSE;
+	        #iqUDT_ConveyorInterface.InternalWarningTracking := FALSE;
+	        #iqUDT_ConveyorInterface.InternalErrorTracking := FALSE;
+	        #iqUDT_ConveyorInterface.InternalWarningVFD := FALSE;
+	        #iqUDT_ConveyorInterface.InternalErrorVFD := FALSE;
+	        #iqUDT_ConveyorInterface.Disconnected := FALSE;
+	        #iqUDT_ConveyorInterface.ConfigurationError := FALSE;
+	    END_IF;
+	    
+	END_REGION
+	
+END_FUNCTION_BLOCK
+

@@ -1,0 +1,110 @@
+﻿TYPE "UDT_TP_UserAlarm"
+VERSION : 0.1
+   STRUCT
+      Language1 : String;   // Language 1 alarm text
+      Language2 : String;   // Language 2 alarm text
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_TPInterfaceV2"
+VERSION : 0.1
+   STRUCT
+      ActiveScreen { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // HMI Actual Screen Number
+      SelectedZone { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // HMI Selected Zone
+      SelectedZoneNumber { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // HMI Selected Zone Number
+      SelectedSection { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // HMI Selected Section
+      SelectedConveyor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // HMI Selected Conveyor
+      ConnectionOK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // HMI Connection ON
+      UserLoggedOn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Actual User Logged
+      HeartBeat { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Heart Beat
+      RequestManual { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Request Manual Mode
+      UserGroup { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // User Group 1 - Admin, 2 - Service, 3 - Operator
+      ActiveUser { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : WString;
+      ActiveLanguage { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;
+      SelectedIndex { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;
+      ScreanNumber { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;
+      UserNumber { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : SInt;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_TP_BiDirectionalConfiguration"
+VERSION : 0.1
+   STRUCT
+      Visibility { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // BiDirectional Configuration Visibility
+      "Name" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;   // BiDirectional Configuration Name
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_TP_Conveyor"
+VERSION : 0.1
+   STRUCT
+      CommandButton { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_TPManualControlButtons";
+      Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorStatus";
+      Interface { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorInterface";
+      CommandState { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorCommand";
+      Configuration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorConfiguration";
+      strConveyorInformation { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;
+      strSelectedConveyorName { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_TP_DMC_interface"
+VERSION : 0.1
+   STRUCT
+      ZoneSelection { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // DMC Zone Selection (1-10)
+      DMC_Sensor_Name1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;   // DMC Sensor Name 1
+      DMC_Sensor_Name2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;   // DMC Sensor Name 2
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_TP_DMC_v2"
+VERSION : 0.1
+   STRUCT
+      DiemensionsCheckCommand { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_DimensionsCheckCommandV2";   // HMI control structure
+      HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_DimensionsCheckStatusV2";   // Dimensions check status error structure
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_TP_Monitornig"
+VERSION : 0.1
+   STRUCT
+      HeartBeatONTimer { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Heart Beat ON
+      HeartBeatOFFTimer { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Heart Beat OFF
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_TP_PUDConfig"
+VERSION : 0.1
+   STRUCT
+      PudSpeed1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;
+      PudSpeed2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;
+      SNCYTimeout1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;
+      SNCYTimeout2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_TP_ServiceCommand"
+VERSION : 0.1
+   STRUCT
+      EnableManualMode : Bool;   // Service button enable manual mode (visibility for button)
+      ServiceVisibility : Bool;   // ServiceVisibility
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_TP_SystemCommonStatus"
+VERSION : 0.1
+   STRUCT
+      Manual : Bool;   // Manual mode ON
+   END_STRUCT;
+
+END_TYPE
+

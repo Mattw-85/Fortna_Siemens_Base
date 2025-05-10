@@ -1,0 +1,192 @@
+﻿FUNCTION_BLOCK "FB_PNNode"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 224
+// END_ATTRIBUTES
+   VAR_INPUT 
+      is_PNNodeDeviceName { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;   //   Name of the slave device
+      ix_24VOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   TRUE when 24VDC is healthy
+      ix_SimulationModeActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   TRUE when simulation mode active
+      ix_HardwareOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE when  hardware is Ok
+   END_VAR
+
+   VAR_OUTPUT 
+      qUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_PNNodeStatus";   //   HMI status structure
+      qUDT_Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_CommonStatus";   //   Common status structure
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_EquipmentControl : "UDT_EquipmentControl";   //   Equipment control structure
+      iqUDT_Statistics : "UDT_PNNodeStatistics";   //   Statistics structure
+   END_VAR
+
+   VAR 
+      sUDT_CommonStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   //   Common status structure
+      sUDT_CommonStatusOld { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   //   Common status structure
+      sUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_PNNodeStatus";   //   HMI status structure
+      s_DT_PNDevice { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_PNDevice";   //   PN device info structure
+      sa_PNPortsStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[1..8] of Bool;   // TRUE when specific port has an error
+      sFB_TimerOnOffDelayCheckSupply { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   //   MHS "TimerOnOffDelay" - to delay time for VFD supply contactor
+      sR_TRIG_PNSlaveNotOnline {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Rising edge for trigger Profinet slave not online statistics
+      sR_TRIG_PNSlaveError {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Rising edge for trigger Profinet slave error statistics
+      sx_PowerOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   True = External Power OK
+   END_VAR
+
+   VAR CONSTANT 
+      ci_PowerSupplyDelayTime : UInt := 4000;   //   Power supply delay time
+      ci_NumberOfProfinetPorts : Int := 2;   // Number of Profinet ports in device
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	28/01/2020  | 3.0       | M. Kurpiers   | first release MHS TIA 15.1
+	21/04/2020  | 3.1       | S. Theocharis | renamed to PN Node
+	09/07/2020  | 3.2       | S.Theocharis  | Bug fix in status update. Initialize static status instead output status
+	03/11/2020  | 3.5       | K.Pokorski    | Profinet ports diagnostics added 
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	16/11/2024  | 4.1       | K.Pokorski    | add hardware ok
+	*)
+	REGION 1 - Get Device Profinet information
+	    
+	    "FC_GetDevicePN"(is_PNDeviceName := #is_PNNodeDeviceName,
+	                     ix_SimulationModeActive := #ix_SimulationModeActive,
+	                     iqUDT_PND := #s_DT_PNDevice);
+	    
+	    
+	    "FC_GetPNPortStatus"(ii_NumberOfPorts := #ci_NumberOfProfinetPorts,
+	                         iUDT_DevicePNInfo := #s_DT_PNDevice,
+	                         qa_PortFault => #sa_PNPortsStatus);
+	    
+	END_REGION
+	
+	REGION 2 - Reset errors
+	    
+	    // Reset Profinet Slave error/not online  
+	    IF #iqUDT_EquipmentControl.Command.Reset OR (NOT #ix_HardwareOk AND #sUDT_HMIStatus.Specific.PNSlaveNotOnline)
+	    THEN
+	        
+	        #sUDT_HMIStatus.Specific.PNSlaveNotOnline := FALSE;
+	        #sUDT_HMIStatus.Specific.PNSlaveError := FALSE;
+	        #sUDT_HMIStatus.Specific.PNSlaveWarning := FALSE;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 3 - Update PN slave device status
+	    
+	    // Hardware will only be available after the delay, so the device has time for the initialisation
+	    #sFB_TimerOnOffDelayCheckSupply(iudi_OnDelayTime := #ci_PowerSupplyDelayTime,
+	                                    ix_SignalToDelay := #ix_24VOk,
+	                                    qx_DelayedSignal => #sx_PowerOk);
+	    
+	    
+	    // Check if PN device is online
+	    IF (NOT "DB_ProfinetDiagnostic".ProfinetNetworks[#s_DT_PNDevice.PNNetworknumber].DeviceStatus[#s_DT_PNDevice.PNDeviceNumber].DeviceState.Exist
+	        OR NOT #s_DT_PNDevice.PNDeviceFound)
+	        AND #sx_PowerOk
+	        AND NOT #ix_SimulationModeActive
+	        AND #ix_HardwareOk
+	    THEN
+	        
+	        #sUDT_HMIStatus.Specific.PNSlaveNotOnline := TRUE;
+	        
+	    END_IF;
+	    
+	    // Check if PN ports are healthy 
+	    IF #sa_PNPortsStatus[1] XOR #sa_PNPortsStatus[2] THEN
+	        #sUDT_HMIStatus.Specific.PNSlaveWarning := TRUE;
+	    END_IF;
+	    
+	    // Check if PN device has an error
+	    IF "DB_ProfinetDiagnostic".ProfinetNetworks[#s_DT_PNDevice.PNNetworknumber].DeviceStatus[#s_DT_PNDevice.PNDeviceNumber].DeviceState.Error
+	        AND #sx_PowerOk
+	        AND NOT #ix_SimulationModeActive
+	        AND NOT #sUDT_HMIStatus.Specific.PNSlaveWarning
+	        AND #ix_HardwareOk
+	    THEN
+	        
+	        #sUDT_HMIStatus.Specific.PNSlaveError := TRUE;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 4 - Statistics
+	    
+	    // Create trigger on error and create statistics for profinet slave not online
+	    #sR_TRIG_PNSlaveNotOnline(CLK := #sUDT_HMIStatus.Specific.PNSlaveNotOnline);
+	    
+	    IF #iqUDT_EquipmentControl.Command.ResetData OR #sUDT_HMIStatus.Specific.PNSlaveNotOnline
+	    THEN
+	        
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #sUDT_HMIStatus.Specific.PNSlaveNotOnline,
+	                        ix_RTrigActivate := #sR_TRIG_PNSlaveNotOnline.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.PNSlaveNotOnline);
+	        
+	    END_IF;
+	    
+	    // Create trigger on error and create statistics for profinet slave error
+	    #sR_TRIG_PNSlaveError(CLK := #sUDT_HMIStatus.Specific.PNSlaveError);
+	    
+	    IF #iqUDT_EquipmentControl.Command.ResetData OR #sUDT_HMIStatus.Specific.PNSlaveError
+	    THEN
+	        
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #sUDT_HMIStatus.Specific.PNSlaveError,
+	                        ix_RTrigActivate := #sR_TRIG_PNSlaveError.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.PNSlaveError);
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 5 - Status
+	    
+	    #sUDT_CommonStatus.Error := #sUDT_HMIStatus.Specific.PNSlaveError
+	    OR #sUDT_HMIStatus.Specific.PNSlaveNotOnline;
+	    
+	    
+	    // HMI status update
+	    IF #sUDT_CommonStatusOld <> #sUDT_CommonStatus                    // update on change
+	    THEN
+	        
+	        // HMI status initialization
+	        #sUDT_HMIStatus.Status := 0;
+	        
+	        // HMI status calculation
+	        IF #sUDT_HMIStatus.Specific.PNSlaveError                       // Profinet error
+	            OR #sUDT_HMIStatus.Specific.PNSlaveNotOnline
+	        THEN
+	            
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".ProfinetError;
+	            
+	        END_IF;
+	        
+	        #sUDT_CommonStatusOld := #sUDT_CommonStatus;                 // Copy status to memory
+	        #qUDT_Status := #sUDT_CommonStatus;                          // Copy status to output
+	        
+	    END_IF;
+	    
+	    #qUDT_HMIStatus := #sUDT_HMIStatus;                          // Copy HMI status to output
+	    
+	END_REGION
+	
+	REGION 6 - Report to control block
+	    
+	    // Function to manage report between control block and conveyor block
+	    "FC_EquipmentReport"(iUDT_Status := #sUDT_CommonStatus,
+	                         iqUDT_Control := #iqUDT_EquipmentControl);
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

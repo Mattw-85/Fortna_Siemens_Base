@@ -1,0 +1,67 @@
+﻿TYPE "UDT_EventStatistic"
+TITLE = UDT_EventStatistic
+VERSION : 0.1
+//User-defined structure of event statistic data.
+   STRUCT
+      NumberOfTimes : DInt;   // Number of times the event occurred since last reset
+      LastEventSeconds : DInt;   // Number of seconds of the current or last event
+      TotalEventSeconds : DInt;   // Total number of seconds the event occurred since last reset
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_LoaderStatus"
+TITLE = UDT_LoaderStatus
+VERSION : 0.1
+//User-defined structure of FB_Loader function block status.
+   STRUCT
+      Status : Int;   // Status number
+      Specific : Struct   // Equipment specific warnings and errors
+         Disabled { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Loader is disabled by HMI
+         VFDError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Loader has an VFD error
+         NotHealthy { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Loader is not healthy
+         StoreMode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Extendable is in store mode
+         FeedMode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Extendable is in feed mode
+         RunMode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Extendable is in run mode
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_LoaderStatistics"
+TITLE = UDT_LoaderStatistics
+VERSION : 0.1
+//User-defined structure of FB_Loader function block statistics.
+   STRUCT
+      EnergySave { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Number of times that save energy mode occurs
+      ExtendableUpTime { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Conveyor up time
+      ExtendableDownTime { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Conveyor down time
+      VFDError { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // VFD Error
+      NotHealthy { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Extendable not healthy
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_LoaderConfiguration"
+TITLE = UDT_LoaderConfiguration
+VERSION : 0.1
+//User-defined structure of loader parameters.
+   STRUCT
+      PEC_EoSTimeOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Photo eye time on delay
+      PEC_EoSTimeOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Photo eye time off delay
+      CascadeTimeOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Cascade time on delay
+      Speedsetpoint { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Speedsetpoint: 0=Low, 1=Nom, 2=High
+      EnergySaveLength { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Distance conveyor travelled before energy save activate [cm]
+      Energy { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Energy save mode enable
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_LoaderCommand"
+VERSION : 0.1
+   STRUCT
+      Disable : Bool;   // Disable loader
+   END_STRUCT;
+
+END_TYPE
+

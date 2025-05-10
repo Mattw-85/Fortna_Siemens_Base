@@ -1,0 +1,282 @@
+﻿TYPE "UDT_WSRCommonStatus"
+VERSION : 0.1
+   STRUCT
+      "010" { S7_SetPoint := 'False'} : "UDT_CommonStatus";
+      "020" { S7_SetPoint := 'False'} : "UDT_CommonStatus";
+      "030" { S7_SetPoint := 'False'} : "UDT_CommonStatus";
+      "040" { S7_SetPoint := 'False'} : "UDT_CommonStatus";
+      "041" { S7_SetPoint := 'False'} : "UDT_CommonStatus";
+      "050" { S7_SetPoint := 'False'} : "UDT_CommonStatus";
+      "060" { S7_SetPoint := 'False'} : "UDT_CommonStatus";
+      "070" { S7_SetPoint := 'False'} : "UDT_CommonStatus";
+      "080" { S7_SetPoint := 'False'} : "UDT_CommonStatus";
+      "110" { S7_SetPoint := 'False'} : "UDT_CommonStatus";
+      "120" { S7_SetPoint := 'False'} : "UDT_CommonStatus";
+      "130" { S7_SetPoint := 'False'} : "UDT_CommonStatus";
+      "140" { S7_SetPoint := 'False'} : "UDT_CommonStatus";
+      "141" { S7_SetPoint := 'False'} : "UDT_CommonStatus";
+      "150" { S7_SetPoint := 'False'} : "UDT_CommonStatus";
+      "160" { S7_SetPoint := 'False'} : "UDT_CommonStatus";
+      "170" { S7_SetPoint := 'False'} : "UDT_CommonStatus";
+      "180" { S7_SetPoint := 'False'} : "UDT_CommonStatus";
+      "210" { S7_SetPoint := 'False'} : "UDT_CommonStatus";
+      "220" { S7_SetPoint := 'False'} : "UDT_CommonStatus";
+      "230" { S7_SetPoint := 'False'} : "UDT_CommonStatus";
+      "240" { S7_SetPoint := 'False'} : "UDT_CommonStatus";
+      "241" { S7_SetPoint := 'False'} : "UDT_CommonStatus";
+      "250" { S7_SetPoint := 'False'} : "UDT_CommonStatus";
+      "260" { S7_SetPoint := 'False'} : "UDT_CommonStatus";
+      "270" { S7_SetPoint := 'False'} : "UDT_CommonStatus";
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_WSRConfiguration"
+VERSION : 0.1
+   STRUCT
+      GlobalConfig { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct
+         LeftStationAvailable { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Bool := TRUE;
+         RightStationAvailable { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Bool := TRUE;
+         OperationTimeout { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : UDInt;
+         DestinationEmpty { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Int;
+         DestinationPartialy { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Int;
+         GINRangeStart { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Int;
+         GINRangeEnd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Int;
+         BinReleaseDistance { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Int;
+         BinOrderTimeout { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Int;
+      END_STRUCT;
+      "010" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct
+         Conveyor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ConveyorConfiguration";
+         PEC_EoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_PECUpdateConfiguration";
+         MCO_M01 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_AixPlcFullControllerConfiguration";
+      END_STRUCT;
+      "020" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct
+         Conveyor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ConveyorConfiguration";
+         PEC_EoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_PECUpdateConfiguration";
+         MCO_M01 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_AixPlcFullControllerConfiguration";
+      END_STRUCT;
+      "030" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct
+         Conveyor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ConveyorConfiguration";
+         PEC_EoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_PECUpdateConfiguration";
+         MCO_M01 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_AixPlcFullControllerConfiguration";
+      END_STRUCT;
+      "040" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct
+         Conveyor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ConveyorConfiguration";
+         PEC_EoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_PECConfiguration";
+         MCO_M01 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_AixPlcFullControllerConfiguration";
+         BladeStopEoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ValveConfiguration";
+      END_STRUCT;
+      "041" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct
+         Conveyor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ConveyorConfiguration";
+         RightAngledTransfer { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_RATConfiguration";
+         MCO_M01 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_AixPlcFullControllerConfiguration";
+      END_STRUCT;
+      "050" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct
+         Conveyor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ConveyorConfiguration";
+         PEC_EoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_PECUpdateConfiguration";
+         MCO_M01 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_AixPlcFullControllerConfiguration";
+      END_STRUCT;
+      "060" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct
+         Conveyor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ConveyorConfiguration";
+         PEC_EoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_PECUpdateConfiguration";
+         MCO_M01 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_AixPlcFullControllerConfiguration";
+      END_STRUCT;
+      "070" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct
+         Conveyor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ConveyorConfiguration";
+         PEC_EoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_PECUpdateConfiguration";
+         MCO_M01 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_AixPlcFullControllerConfiguration";
+      END_STRUCT;
+      "080" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct
+         Conveyor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ConveyorConfiguration";
+         PEC_EoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_PECUpdateConfiguration";
+         MCO_M01 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_AixPlcFullControllerConfiguration";
+      END_STRUCT;
+      "110" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct
+         Conveyor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ConveyorConfiguration";
+         PEC_EoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_PECUpdateConfiguration";
+         MCO_M01 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_AixPlcFullControllerConfiguration";
+      END_STRUCT;
+      "120" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct
+         Conveyor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ConveyorConfiguration";
+         PEC_EoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_PECUpdateConfiguration";
+         MCO_M01 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_AixPlcFullControllerConfiguration";
+      END_STRUCT;
+      "130" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct
+         Conveyor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ConveyorConfiguration";
+         PEC_EoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_PECUpdateConfiguration";
+         MCO_M01 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_AixPlcFullControllerConfiguration";
+      END_STRUCT;
+      "140" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct
+         Conveyor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ConveyorConfiguration";
+         PEC_EoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_PECConfiguration";
+         MCO_M01 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_AixPlcFullControllerConfiguration";
+         BladeStopEoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ValveConfiguration";
+      END_STRUCT;
+      "141" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct
+         Conveyor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ConveyorConfiguration";
+         RightAngledTransfer { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_RATConfiguration";
+         MCO_M01 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_AixPlcFullControllerConfiguration";
+      END_STRUCT;
+      "150" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct
+         Conveyor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ConveyorConfiguration";
+         PEC_EoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_PECUpdateConfiguration";
+         MCO_M01 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_AixPlcFullControllerConfiguration";
+      END_STRUCT;
+      "160" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct
+         Conveyor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ConveyorConfiguration";
+         PEC_EoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_PECUpdateConfiguration";
+         MCO_M01 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_AixPlcFullControllerConfiguration";
+      END_STRUCT;
+      "170" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct
+         Conveyor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ConveyorConfiguration";
+         PEC_EoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_PECUpdateConfiguration";
+         MCO_M01 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_AixPlcFullControllerConfiguration";
+      END_STRUCT;
+      "180" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct
+         Conveyor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ConveyorConfiguration";
+         PEC_EoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_PECConfiguration";
+         MCO_M01 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_AixPlcFullControllerConfiguration";
+      END_STRUCT;
+      "210" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct
+         Conveyor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ConveyorConfiguration";
+         PEC_EoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_PECUpdateConfiguration";
+         MCO_M01 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_AixPlcFullControllerConfiguration";
+      END_STRUCT;
+      "220" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct
+         Conveyor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ConveyorConfiguration";
+         PEC_EoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_PECUpdateConfiguration";
+         MCO_M01 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_AixPlcFullControllerConfiguration";
+      END_STRUCT;
+      "230" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct
+         Conveyor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ConveyorConfiguration";
+         PEC_EoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_PECUpdateConfiguration";
+         MCO_M01 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_AixPlcFullControllerConfiguration";
+      END_STRUCT;
+      "240" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct
+         Conveyor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ConveyorConfiguration";
+         PEC_EoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_PECConfiguration";
+         MCO_M01 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_AixPlcFullControllerConfiguration";
+      END_STRUCT;
+      "241" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct
+         Conveyor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ConveyorConfiguration";
+         RightAngledTransfer { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_RATConfiguration";
+         MCO_M01 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_AixPlcFullControllerConfiguration";
+      END_STRUCT;
+      "250" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct
+         Conveyor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ConveyorConfiguration";
+         PEC_EoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_PECUpdateConfiguration";
+         MCO_M01 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_AixPlcFullControllerConfiguration";
+      END_STRUCT;
+      "260" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct
+         Conveyor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ConveyorConfiguration";
+         PEC_EoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_PECUpdateConfiguration";
+         MCO_M01 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_AixPlcFullControllerConfiguration";
+      END_STRUCT;
+      "270" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct
+         Conveyor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ConveyorConfiguration";
+         PEC_EoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_PECUpdateConfiguration";
+         MCO_M01 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_AixPlcFullControllerConfiguration";
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_WSRHmiCommands"
+VERSION : 0.1
+   STRUCT
+      "010" { S7_SetPoint := 'False'} : "UDT_HMICommandTCxx";
+      "020" { S7_SetPoint := 'False'} : "UDT_HMICommandTCxx";
+      "030" { S7_SetPoint := 'False'} : "UDT_HMICommandTCxx";
+      "040" { S7_SetPoint := 'False'} : "UDT_HMICommandTC07";
+      "041" { S7_SetPoint := 'False'} : "UDT_HMICommandTC36";
+      "050" { S7_SetPoint := 'False'} : "UDT_HMICommandTCxx";
+      "060" { S7_SetPoint := 'False'} : "UDT_HMICommandTCxx";
+      "070" { S7_SetPoint := 'False'} : "UDT_HMICommandTCxx";
+      "080" { S7_SetPoint := 'False'} : "UDT_HMICommandTCxx";
+      "110" { S7_SetPoint := 'False'} : "UDT_HMICommandTCxx";
+      "120" { S7_SetPoint := 'False'} : "UDT_HMICommandTCxx";
+      "130" { S7_SetPoint := 'False'} : "UDT_HMICommandTCxx";
+      "140" { S7_SetPoint := 'False'} : "UDT_HMICommandTC07";
+      "141" { S7_SetPoint := 'False'} : "UDT_HMICommandTC36";
+      "150" { S7_SetPoint := 'False'} : "UDT_HMICommandTCxx";
+      "160" { S7_SetPoint := 'False'} : "UDT_HMICommandTCxx";
+      "170" { S7_SetPoint := 'False'} : "UDT_HMICommandTCxx";
+      "180" { S7_SetPoint := 'False'} : "UDT_HMICommandTCxx";
+      "210" { S7_SetPoint := 'False'} : "UDT_HMICommandTCxx";
+      "220" { S7_SetPoint := 'False'} : "UDT_HMICommandTCxx";
+      "230" { S7_SetPoint := 'False'} : "UDT_HMICommandTCxx";
+      "240" { S7_SetPoint := 'False'} : "UDT_HMICommandTCxx";
+      "241" { S7_SetPoint := 'False'} : "UDT_HMICommandTC36";
+      "250" { S7_SetPoint := 'False'} : "UDT_HMICommandTCxx";
+      "260" { S7_SetPoint := 'False'} : "UDT_HMICommandTCxx";
+      "270" { S7_SetPoint := 'False'} : "UDT_HMICommandTCxx";
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_WSRStatistics"
+VERSION : 0.1
+   STRUCT
+      "010" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatisticsTC03";
+      "020" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatisticsTC13";
+      "030" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatisticsTC03";
+      "040" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatisticsTC07";
+      "041" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatisticsTC36";
+      "050" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatisticsTC03";
+      "060" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatisticsTC13";
+      "070" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatisticsTC03";
+      "080" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatisticsTC13";
+      "110" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatisticsTC03";
+      "120" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatisticsTC13";
+      "130" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatisticsTC03";
+      "140" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatisticsTC07";
+      "141" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatisticsTC36";
+      "150" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatisticsTC03";
+      "160" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatisticsTC13";
+      "170" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatisticsTC03";
+      "180" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatisticsTC11";
+      "210" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatisticsTC03";
+      "220" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatisticsTC13";
+      "230" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatisticsTC03";
+      "240" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatisticsTC02";
+      "241" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatisticsTC36";
+      "250" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatisticsTC03";
+      "260" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatisticsTC13";
+      "270" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatisticsTC03";
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_WSRStatus"
+VERSION : 0.1
+   STRUCT
+      "010" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatusTC03";
+      "020" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatusTC13";
+      "030" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatusTC03";
+      "040" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatusTC07";
+      "041" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatusTC36";
+      "050" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatusTC03";
+      "060" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatusTC13";
+      "070" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatusTC03";
+      "080" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatusTC13";
+      "110" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatusTC03";
+      "120" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatusTC13";
+      "130" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatusTC03";
+      "140" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatusTC07";
+      "141" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatusTC36";
+      "150" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatusTC03";
+      "160" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatusTC13";
+      "170" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatusTC03";
+      "180" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatusTC12";
+      "210" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatusTC03";
+      "220" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatusTC13";
+      "230" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatusTC03";
+      "240" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatusTC02";
+      "241" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatusTC36";
+      "250" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatusTC03";
+      "260" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatusTC13";
+      "270" { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StatusTC03";
+   END_STRUCT;
+
+END_TYPE
+

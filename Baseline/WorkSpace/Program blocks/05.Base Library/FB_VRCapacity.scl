@@ -1,0 +1,201 @@
+﻿FUNCTION_BLOCK "FB_VRCapacity"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 40
+// END_ATTRIBUTES
+   VAR_INPUT 
+      iUDT_CapacityConfiguration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_CapacityConfiguration";   // Capacity configuration structure
+      ix_PECFiltered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when the end of section photoeye is not blocked
+      ix_ResetData { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reset data
+   END_VAR
+
+   VAR_OUTPUT 
+      qx_Error { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when collective block error occurred
+      qx_Warning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when collective block warning occurred
+      qi_Capacity { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Capacity value
+      qa_CapacityBuffer { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[0..#Samples] of Int;   // Capacity buffer
+      qa_PPHBuffer { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[0..#Samples] of Int;   // Parcel per hour buffer
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_ConveyorInterface : "UDT_ConveyorInterface";   // Conveyor interface
+   END_VAR
+
+   VAR 
+      sFB_Pulse { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_Pulse";   // Function block to generate custom pulse signal.
+      sR_TRIG_ParcelDetect {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Parcel detect
+      sa_Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Status structure
+         FifoError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    FIFO block error
+         FifoWarning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    FIFO block warning
+         ConfigurationError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    Collective configuration error
+      END_STRUCT;
+      sr_CollectiveParcelLength { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Colletive parcel length [mm]
+      sr_ParcelCount { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Parcel count
+      sr_RecalculatedWindow { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Window recalculated based on configured avg parcel length
+      sr_ParcelPerHour { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Parcel(s) per hour
+      sr_AveragePackageLength { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Average parcel length [mm]
+      sr_AverageGap { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Average gap size [mm]
+      sr_AverageWindow { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Average window size [mm]
+      sudi_Interval { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Interval [ms]
+      si_Capacity { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Capacity value for the configured package length
+      si_ConveyorDistanceTraveled { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Distance the conveyour travelled this interval
+      sx_ParcelDetected { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool := FALSE;   // Parcel detected
+      sx_SendData { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Send data signal
+   END_VAR
+
+   VAR CONSTANT 
+      Samples : ULInt := 120;
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	21/01/2020  | 3.0       | A.Nowak       | Initial version
+	14/02/2020  | 3.1       | A.Nowak       | Add sample amount and treshold to the configuration and reset data functionality
+	13/03/2020  | 3.2       | M.Kurpiers    | Adapting reviews
+	23/03/2020  | 3.3       | A. Nowak      | Change the values to the mm
+	20/04/2022  | 3.4       | M.Roijen      | Remove MFC logging and added the shift of data
+	06/08/2022  | 3.5       | M.Singh       | add Reset PPH Buffer and used avg Length from Config. 
+	15/05/2023  | 4.0       | F.Baten       | Lib 4.0
+	                                          Removed Displacement memory, SampleAmount, fixed #sr_AveragePackageLength calculation.
+	12/03/2024  | 4.1       | S. Nieswiec   | Small variable name changes according to current standard                                           
+	*)
+	
+	REGION 1 - Configuration check
+	    
+	    // If the block is configured properly, convert interval to the ms and reset the error. Otherwise, set configuration error.
+	    IF #iUDT_CapacityConfiguration.Interval > 0
+	        AND #iUDT_CapacityConfiguration.AveragePackageLengthConfiguration > 0
+	        AND #iUDT_CapacityConfiguration.Treshold >= 0
+	    THEN
+	        #sudi_Interval := #iUDT_CapacityConfiguration.Interval * 1000;
+	        #sa_Status.ConfigurationError := FALSE;
+	    ELSE
+	        #sa_Status.ConfigurationError := TRUE;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 2 - Reset data
+	    
+	    // If there is reset data request, initialize sample amount and data buffer.
+	    IF #ix_ResetData
+	    THEN
+	        FILL_BLK(IN := 0,
+	                 COUNT := #Samples,
+	                 OUT => #qa_CapacityBuffer[0]);
+	        FILL_BLK(IN := 0,
+	                 COUNT := #Samples,
+	                 OUT => #qa_PPHBuffer[0]);
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 4 - PEC
+	    
+	    #sx_ParcelDetected := NOT #ix_PECFiltered;
+	    
+	END_REGION
+	
+	REGION 5 - Interval check
+	    
+	    // Generate puls signal every interval. 
+	    #sFB_Pulse(iudi_PulseTime := #sudi_Interval,
+	               qx_Pulse => #sx_SendData);
+	    
+	END_REGION
+	
+	REGION 6 - Package length measurement and parcel count
+	    
+	    // Parcel is detected.
+	    IF #sx_ParcelDetected
+	    THEN
+	        // Add displacement to the collective parcel length.
+	        #sr_CollectiveParcelLength += (ABS(#iqUDT_ConveyorInterface.Displacement)) * 10;
+	    END_IF;
+	    
+	    #sR_TRIG_ParcelDetect(CLK := #sx_ParcelDetected);
+	    // Increment parcel count when package is detected.
+	    IF #sR_TRIG_ParcelDetect.Q
+	    THEN
+	        #sr_ParcelCount += 1;
+	    END_IF;
+	    
+	    // Measure the distance traveled by conveyor
+	    #si_ConveyorDistanceTraveled += (ABS(#iqUDT_ConveyorInterface.Displacement)) * 10;
+	    
+	END_REGION
+	
+	REGION 7 - Capacity calculation and data send
+	    
+	    // There is no configuration error and there are send data and enable signals.
+	    IF NOT #sa_Status.ConfigurationError
+	        AND #sx_SendData
+	    THEN
+	        // Parcel was detected.
+	        IF #sr_ParcelCount <> 0
+	            AND #sr_CollectiveParcelLength <> 0
+	        THEN
+	            // Calculate average values.
+	            #sr_AveragePackageLength := #sr_CollectiveParcelLength / #sr_ParcelCount;
+	            #sr_AverageWindow := #si_ConveyorDistanceTraveled / #sr_ParcelCount;
+	            #sr_AverageGap := #sr_AverageWindow - #sr_AveragePackageLength;
+	            
+	            // Windowsize calculated based on configured average parcel length
+	            #sr_RecalculatedWindow := #sr_AverageGap + #iUDT_CapacityConfiguration.AveragePackageLengthConfiguration;
+	            
+	            // Calculate parcel per hour value for the configured average parcel length.
+	            #si_Capacity := DINT_TO_INT(TRUNC((#sr_ParcelPerHour * #sr_AverageWindow) / #sr_RecalculatedWindow));
+	            
+	            // Calculate parcel per hour value using data from the interval.
+	            #sr_ParcelPerHour := (#sr_ParcelCount / UDINT_TO_REAL(#iUDT_CapacityConfiguration.Interval)) * 3600;
+	            
+	        ELSE
+	            #si_Capacity := 0;
+	        END_IF;
+	        
+	        #qi_Capacity := #si_Capacity;
+	        
+	        // Capacity value is greater than configured treshold.
+	        IF #si_Capacity >= #iUDT_CapacityConfiguration.Treshold
+	        THEN
+	            
+	            MOVE_BLK(IN := #qa_CapacityBuffer[0],
+	                     COUNT := #Samples,
+	                     OUT => #qa_CapacityBuffer[1]);
+	            #qa_CapacityBuffer[0] := #si_Capacity;
+	            
+	            MOVE_BLK(IN := #qa_PPHBuffer[0],
+	                     COUNT := #Samples,
+	                     OUT => #qa_PPHBuffer[1]);
+	            #qa_PPHBuffer[0] := REAL_TO_INT(#sr_ParcelPerHour);
+	        END_IF;
+	        
+	        // Initialize parcel count and collective parcel length.
+	        #sr_ParcelCount := 0;
+	        #sr_CollectiveParcelLength := 0;
+	        #si_ConveyorDistanceTraveled := 0;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 8 - Status 
+	    
+	    // Collective error.
+	    #qx_Error :=
+	    #sa_Status.ConfigurationError
+	    OR #sa_Status.FifoError;
+	    
+	    // Collective warning.
+	    #qx_Warning := #sa_Status.FifoWarning;
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

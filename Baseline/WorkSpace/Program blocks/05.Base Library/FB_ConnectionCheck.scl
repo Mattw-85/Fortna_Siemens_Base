@@ -1,0 +1,103 @@
+﻿FUNCTION_BLOCK "FB_ConnectionCheck"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 3.2
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 205
+// END_ATTRIBUTES
+   VAR_INPUT 
+      ib_Watchdog { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;   // Input watchdog
+      ix_Trigger100ms { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Cycled 100 ms trigger
+   END_VAR
+
+   VAR_OUTPUT 
+      qb_Watchdog { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;   // Generated watchdog
+   END_VAR
+
+   VAR_IN_OUT 
+      iqudt_ConnectionStatus : "UDT_ConnectStatus";   // Connection status
+   END_VAR
+
+   VAR 
+      s_FB_ConnectionFaultTimerOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // Connection fault timer on delay
+      sb_InWatchdogOld { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;   // Watch dog old
+      sb_GeneratedWatchdog { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Byte;   // Generated watchdog
+      sx_SetConnectionFaultTimer { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Set connection fault timer
+      sx_ConnectionFault { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Connection faulr
+   END_VAR
+
+   VAR CONSTANT 
+      cudi_ConnectionFaultOnDelay : UDInt := 10000;   // Connection On Delay
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	|                                                                                      |
+	|  Copyright  2023             FORTNA Europe BV                                        |
+	|  All Rights Reserved         Netherlands                                             |
+	|                                                                                      |  
+	----------------------------------------------------------------------------------------   
+	                                                                                      
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	31/03/2022  | 3.0       | M. Piela      | First release TIA 16
+	06/09/2023  | 3.1       | S. Nikodem    | Added watchdog generations on output
+	11/09/2023  | 3.2       | S. Theocharis | Corrected variable prefixes
+	*)
+	
+	REGION 1 - Connection check
+	    
+	    #sx_SetConnectionFaultTimer := (#ib_Watchdog = #sb_InWatchdogOld);
+	    
+	    IF #ib_Watchdog <> #sb_InWatchdogOld
+	    THEN
+	        #sb_InWatchdogOld := #ib_Watchdog;
+	    END_IF;
+	    
+	    #s_FB_ConnectionFaultTimerOnDelay(iudi_OnDelayTime := #cudi_ConnectionFaultOnDelay,
+	                                      ix_SignalToDelay := #sx_SetConnectionFaultTimer,
+	                                      ix_Enable := TRUE,
+	                                      qx_DelayedSignal => #sx_ConnectionFault);
+	    
+	END_REGION
+	
+	REGION 2 - Status update
+	    
+	    #iqudt_ConnectionStatus.Specific.CommunicationFault := #sx_ConnectionFault;
+	    #iqudt_ConnectionStatus.Specific.Connected := NOT #sx_ConnectionFault;
+	    
+	    IF #sx_ConnectionFault
+	    THEN
+	        #iqudt_ConnectionStatus.Status := "DB_HMIStatusConfiguration".CommunicationError;
+	    END_IF;
+	    
+	    IF NOT #sx_ConnectionFault
+	    THEN
+	        #iqudt_ConnectionStatus.Status := "DB_HMIStatusConfiguration".AutoON;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 3 - Watchdog generations
+	    
+	    //Watchdog counter to be updated after every 100 msec
+	    IF #ix_Trigger100ms THEN
+	        
+	        IF #sb_GeneratedWatchdog >= 255 OR #sb_GeneratedWatchdog < 0
+	        THEN
+	            #sb_GeneratedWatchdog := 0;
+	        END_IF;
+	        
+	        #sb_GeneratedWatchdog := INT_TO_BYTE(BYTE_TO_INT(#sb_GeneratedWatchdog) + 1);
+	        
+	    END_IF;
+	    
+	    //Copy value
+	    #qb_Watchdog := #sb_GeneratedWatchdog;
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

@@ -1,0 +1,580 @@
+﻿FUNCTION_BLOCK "FB_Induct"
+TITLE = FB_Induct
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : Equipment
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 14
+// END_ATTRIBUTES
+//Function block to control inducting the parcels to a merge conveyor
+   VAR_INPUT 
+      iUDT_InductConfig { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_InductConfiguration";   //       Induct configuration parameters
+      iUDT_MergeGenConfig { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_MergeGeneratorConfig";   //       Merge generator configuration parameters
+      iUDT_MergeConvConfig { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ConveyorCommonConfiguration";   //       Merge conveyor common configuration parameters
+      iUDT_InductConvConfig { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ConveyorConfiguration";   //       Induct conveyor configuration parameters
+      iUDT_InductConvCommonStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_CommonStatus";
+      idi_PECEoSDistance { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //       Distance between photo eye and the end of conveyor [mm]
+      ii_Gin { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //       GIN from induct at photoeye position
+      ix_SafetyOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //       Safety is ok
+      ix_inductEnable { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool := TRUE;   //      Enable the induct to make request
+      ix_TrackingClear { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Tracking area is clear of parcels
+   END_VAR
+
+   VAR_OUTPUT 
+      qx_ExternalRequestDieBack { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // External request dieback
+      qx_EnableAutoRecovey { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Request to enable auto recovery
+   END_VAR
+
+   VAR_IN_OUT 
+      iqs_TrackingData : Array[*] of Int;   //       Tracking data
+      iqUDT_Merge : "UDT_Merge";   //       Gapgeneration data
+      iqUDT_MergeInterface : "UDT_ConveyorInterface";
+      iqUDT_InductInterface : "UDT_ConveyorInterface";
+      iqUDT_HandShake : "UDT_ConveyorHandshake";
+      iqa_ActualTimeData : Struct
+         Offset : Int;
+         Max_number_of_records : Int;
+         Data {InstructionName := 'DTL'; LibVersion := '1.0'} : Array[0..99] of DTL;
+      END_STRUCT;
+   END_VAR
+
+   VAR 
+      sR_TRIG_Displacement {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //       Signal rising edge displacement changed
+      sR_TRIG_SetDelay {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //       Signal rising edge of parcel entering
+      sR_TRIG_TIP {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;
+      sR_TRIG_Enable {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Rising Edge of  Induct Enable signal
+      sF_TRIG_sx_Parcel {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   // Falling Trigger of sx_Parcel
+      sdi_DelayReactivateReq { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //       Actual counter delaying the reactivation request
+      sdi_RunningEmpty { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //       Actual counter distance running empty
+      si_RequestLength { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //       Calculated length to be requested
+      si_GINlength { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //       Length found in GIN DN or set beacuse of invalid length
+      si_Gaplength { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //       Length for this parcel
+      si_ArrayLengthFlexGap { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //       Size of the flexGapsize
+      si_ArrayLengthTracking { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //       Size of the tracking array
+      si_ArrayLengthFIFO { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //       Size of the FIFO
+      si_DistanceToEnd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //       Parcels distance to end of induct conveyor
+      si_InductPoint { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //       Calculated induct point
+      si_StartSearch { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //       Value declaring the start of the search area
+      si_EndSearch { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //       Value declaring the end of the search area
+      si_LoopCountFlexgap { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //       Loopcounter searching in configuration for a match for the parcellength
+      si_LoopCountGapSearch { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //       Loopcounter searching in Trackingdata for a gap
+      si_LoopCountCodeSearch { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //       Loopcounter searching for code -100
+      si_LoopCountSyncSearch { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //       Loopcounter searching for code -100
+      si_LoopCountFIFOSearch { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //       Loopcounter searching FIFO for request to remove
+      si_LoopCountWriteGIN { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //       Loopcounter to write the GIN for the length of the parcel
+      si_LastGIN { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //       Last processed GIN
+      si_Flexgap { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //       Found flexible gapsize [cm]
+      si_PosDataInSearchArea { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //       Length to wait to search for a gap
+      si_WritePosition { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //       Position to write to in tracking
+      si_Syncdifference { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //       Difference in positions pec and tracking
+      si_SyncDistance { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //       Distance to perform the synchronisation in
+      si_MergeRunLength { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //     Distance the merge conveyor has run when Inudct is waiting
+      si_DelayDiebackLength { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //     length Run before applying die back [cm]
+      si_TrackingPointer { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Tracking poitner to search in the tracking
+      sx_Sync { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //       Code search to synchronise
+      sx_ConfigError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //       Error in the configuration
+      sx_FindLength { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //       Find the length of the new parcel
+      sx_Parcel { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //       The parcel is present an not yet handled completely
+      sx_GapRequested { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //       The request is done for the latest parcel
+      sx_SearchGapInTracking { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //       True = Search for space in tracking to induct without merge generation
+      sx_LastCodeNeg { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //       True = Last found code was a negative one
+      sx_FreeGapAvailable { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //       There is a free space found, big enough to insert the parcel
+      sx_ValidWindowCodeFound { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //       There is a valid window code found
+      sx_CodeAtposition { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      sx_InductEnable { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //       The parcel is enabled to induct
+      sx_DiebackInductConveyor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //       Memory to stop the induct conveyor
+      sx_Hold { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //       Hold inducting
+      sx_Active { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      sx_EnableAutoRecovery { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //     Enable Auto Recovery for Induct
+      sx_RecoveryRequest { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+   END_VAR
+
+   VAR CONSTANT 
+      ci_SearchArea : Int := 3;
+   END_VAR
+
+
+BEGIN
+	(* 
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	24/09/2019  | 1.0       | F.Baten       | first release TIA 15.1
+	31/10/2019  | 1.1       | F.Baten       | qi_SpeedSetpoint changed to int because of conveyor interface change
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	07/01/2020  | 3.1       | F.Baten       | Changed RequestInFifo to be handshaking
+	                                        | Merged region 4.3 and 4.4
+	09/01/2020  | 3.2       | F.Baten       | Removed speed calculation
+	14/01/2020  | 3.3       | F.Baten       | Removed global FIFO full signal as it was not generated and made it local
+	14/01/2020  | 3.4       | F.Baten       | Changed displacement detection equal to 0 and not to be 1 as it can also be bigger
+	            | 3.5       |               | Renamed ii_PEC_EoSDistance to idi_PEC_EoSDistance
+	15/01/2020  | 3.6       | L.Klar        | GIN record structure updated, parcel length remapped
+	23/01/2020  | 3.7       | F.Baten       | Added reset when parcel is at end of conveyor but for some reason not detected
+	                                          Modified dieback: alsways goto dieback when parcel is handled
+	18/02/2020  | 3.8       | F.Baten       | Modified "Search 1: Gap '0'" , added +1 to wait to search again. 
+	15/10/2020  | 3.9       | F.Baten       | Reqactivation request: added if active to keep active
+	                                          removed displacement check out of search
+	20/05/2021  | 3.10      | M.Singh       | Enabled Auto Recovery based on the displacemt on Merge
+	20/04/2022  | 3.11      | M.Piela       | Added Auto recovery output
+	24/05/2022  | 3.12      | M.Roijen      | Changed FOR loop region 5.2 copy gin to tracking (add -1).
+	22/07/2022  | 3.13      | M.Piela       | Reset the sx_Active and set dieback induct on falling edge of sx_Parcel instead of rising edge of TIP. 
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5  
+	*)
+	
+	REGION 1 - New GIN received
+	    // When the new GIN is received:
+	    // - first save the GIN and set/reset statuses
+	    // - calculate the requested length for this parcel
+	    // - requeset a gap for this parcel
+	    
+	    REGION 1.1 - New gin received is NOT equal TO '0' AND NOT equal TO last gin
+	        //#s_R_TRIG_TIP(CLK := #iq_UDT_HandShake.TIP);
+	        // IF #ii_Gin <> 0 AND #ii_Gin <> #si_LastGIN AND NOT #iq_UDT_HandShake.TIP AND NOT #s_F_TRIG_TIP.Q
+	        
+	        IF #ii_Gin <> 0 AND #ii_Gin <> #si_LastGIN AND #ix_inductEnable
+	        THEN
+	            #sx_FindLength := FALSE;                                                    // To set length for a flexible gap
+	            #sx_GapRequested := FALSE;                                                  // To initiate length calculation for gap and request the gap to FIFO
+	            #sx_DiebackInductConveyor := TRUE;                                             // Activate dieback to stop the conveyor while waiting on a gap
+	            #sx_Sync := FALSE;                                                          // Sync speed is not calculated 
+	            #sx_Parcel := TRUE;                                                         // Activate the induct search
+	            #sx_Active := TRUE;                                                         // The parcel is not transferred to the next conveyor 
+	            #si_LastGIN := #ii_Gin;                                                     // Memorise
+	            #si_DistanceToEnd := DINT_TO_INT(#idi_PECEoSDistance) / 10;                // Actual distance to end (in tracking array units) 
+	            #si_GINlength := DINT_TO_INT("DB_GIN".GIN[#si_LastGIN].General.Length);     // set length
+	            IF #si_GINlength = 0
+	            THEN
+	                #si_GINlength := #iUDT_InductConfig.MaxParcelSize / 10;
+	            END_IF;
+	            
+	            IF #sx_RecoveryRequest
+	            THEN
+	                
+	                #si_DistanceToEnd := #iUDT_InductConfig.ParcelStopPositionAutoRecovery;                                                     // Actual distance to end (in tracking array units) 
+	                #si_GINlength := (#iUDT_InductConfig.MaxParcelSize / 10) + #iUDT_InductConfig.RecoveryAdditionalGap;
+	                #sx_RecoveryRequest := FALSE;
+	            END_IF;
+	            
+	        END_IF;
+	        
+	        // There is a parcel on the inductconveyor but it had no GIN (not even UFO) 
+	        IF (#iqUDT_HandShake.RTS                                                       // If Induct is ready to Send  
+	            OR #iUDT_InductConvCommonStatus.Dieback)                                   // Or is in die back 
+	            AND NOT #sx_Active                                                          // And Induct is not active
+	            AND #ix_inductEnable
+	        THEN
+	            #si_MergeRunLength := #si_MergeRunLength - #iqUDT_MergeInterface.Displacement;
+	        ELSE
+	            #si_MergeRunLength := #iUDT_InductConfig.DistanceRunBeforeAutoRecovery;
+	        END_IF;
+	        
+	        #sx_EnableAutoRecovery := FALSE;
+	        
+	        IF #si_MergeRunLength <= 0
+	        THEN
+	            #sx_EnableAutoRecovery := True;
+	            #si_MergeRunLength := #iUDT_InductConfig.DistanceRunBeforeAutoRecovery;
+	        END_IF;
+	        
+	        #sR_TRIG_Enable(CLK := #ix_inductEnable);
+	        
+	        IF #sx_EnableAutoRecovery                                                     // Make a new request to autorecover
+	            OR (#sR_TRIG_Enable.Q
+	            AND NOT #ix_TrackingClear)
+	        THEN
+	            #sx_FindLength := FALSE;                                                    // To set length for a flexible gap
+	            #sx_GapRequested := FALSE;                                                  // To initiate length calculation for gap and request the gap to FIFO
+	            #sx_DiebackInductConveyor := TRUE;                                             // Activate dieback to stop the conveyor while waiting on a gap
+	            #sx_Sync := FALSE;                                                          // Sync speed is not calculated 
+	            #sx_Parcel := TRUE;                                                         // Activate the induct search
+	            #sx_Active := TRUE;                                                         // The parcel is not transferred to the next conveyor 
+	            #si_LastGIN := -50;                                                         // Memorise
+	            #si_DistanceToEnd := #iUDT_InductConfig.ParcelStopPositionAutoRecovery;                                                     // Actual distance to end (in tracking array units) 
+	            #si_GINlength := (#iUDT_InductConfig.MaxParcelSize / 10) + #iUDT_InductConfig.RecoveryAdditionalGap;
+	            #sx_RecoveryRequest := TRUE;
+	            
+	            
+	            
+	            // temp code 
+	            #iqa_ActualTimeData.Data[#iqa_ActualTimeData.Offset] := "DB_Time".ActualTimeDTL;
+	            #iqa_ActualTimeData.Offset := #iqa_ActualTimeData.Offset + 1;
+	        END_IF;
+	        
+	        #qx_EnableAutoRecovey := #sx_EnableAutoRecovery;
+	        
+	        IF #iqa_ActualTimeData.Offset = #iqa_ActualTimeData.Max_number_of_records
+	        THEN
+	            #iqa_ActualTimeData.Offset := 1;
+	        END_IF;
+	        
+	        
+	    END_REGION
+	    
+	    REGION 1.2 - Calculate the required gap depending on the mode
+	        CASE #iUDT_InductConfig.GapMode OF
+	                
+	            1:  // Gap is Head to head
+	                #si_RequestLength := #iUDT_InductConfig.GapHeadToHead;
+	                #si_Gaplength := #si_RequestLength - #si_GINlength;
+	                #sx_FindLength := TRUE;                                                 // New GIN length is set 
+	                
+	            2:  // Gap is parcel length + tail to head (fixed)
+	                #si_RequestLength := #si_GINlength + #iUDT_InductConfig.GapTailToHead;
+	                #si_Gaplength := #iUDT_InductConfig.GapTailToHead;
+	                #sx_FindLength := TRUE;                                                 // New GIN length is set
+	                
+	            3:  // Gap is parcel length + gap depending on length of parcel
+	                IF NOT #sx_FindLength
+	                THEN
+	                    #si_ArrayLengthFlexGap := "FC_GetNrOfArrayEl"(#iUDT_InductConfig.FlexGap); // Determine size of search area 
+	                    FOR #si_LoopCountFlexgap := 1 TO #si_ArrayLengthFlexGap BY 1 DO                   // Set the loopcounter
+	                        #si_Flexgap := #iUDT_InductConfig.MinParcelSize / 10;      // set minimal gapsize
+	                        IF #si_GINlength < #iUDT_InductConfig.FlexGap[#si_LoopCountFlexgap]."Maximal length"
+	                        THEN
+	                            #si_Flexgap := #iUDT_InductConfig.FlexGap[#si_LoopCountFlexgap].Gap;
+	                            EXIT;
+	                        END_IF;
+	                    END_FOR;
+	                    #sx_FindLength := TRUE;                                             // New GIN length is calculated    
+	                END_IF;
+	                #si_RequestLength := #si_GINlength + #si_Flexgap;
+	                #si_Gaplength := #si_Flexgap;
+	                ;
+	                
+	        END_CASE;
+	    END_REGION
+	    
+	    REGION 1.3 - General
+	        // When the transfer is finished set the induct to dieback
+	        
+	        // IF #s_R_TRIG_TIP.Q  AND NOT #sx_Parcel
+	        IF #sF_TRIG_sx_Parcel.Q
+	        THEN
+	            //     #si_DelayDiebackLength := #i_UDT_InductConfig.MinParcelSize;
+	            
+	            // END_IF;
+	            
+	            // IF #si_DelayDiebackLength > 0
+	            // THEN
+	            //     #si_DelayDiebackLength := #si_DelayDiebackLength - #iq_UDT_InductInterface.Displacement;
+	            // END_IF;
+	            // IF #si_DelayDiebackLength <= 0
+	            // THEN
+	            #sx_DiebackInductConveyor := TRUE;                                             // Activate dieback to stop the conveyor while waiting on a gap
+	            #sx_Active := FALSE;                                                            // The parcel is now transferred to the next conveyor 
+	        END_IF;
+	        //  #s_R_TRIG_TIP(CLK := #iq_UDT_HandShake.TIP);
+	        #sF_TRIG_sx_Parcel(CLK := #sx_Parcel);
+	        // When safety is not ok, load the run empty distance
+	        IF NOT #ix_SafetyOk
+	        THEN
+	            #sdi_RunningEmpty := #iUDT_InductConfig.RunEmptyDistance;
+	        END_IF;
+	        
+	        // Hold inducting functions while mergeconveyor runs empty
+	        #sx_Hold := (#sdi_RunningEmpty <> 0);
+	        
+	        // Check every change of the merge conveyor's displacement
+	        #sR_TRIG_Displacement(CLK := #iqUDT_MergeInterface.Displacement = 0);             // The merge conveyor has had displacement
+	    END_REGION
+	END_REGION
+	
+	REGION 2 - Request
+	    REGION 2.1 - FIFO request
+	        // request gap/window for induct
+	        IF #sx_Parcel
+	            AND NOT #sx_Hold                                                            // Holding all actions
+	            AND NOT #sx_GapRequested                                                    // Gap is NOT requested 
+	            AND NOT #iqUDT_Merge.RequestInFIFO[#iUDT_InductConfig.Induct_Number]      // Requeset is in FIFO
+	            AND NOT #iqUDT_Merge.GenerationInactive                                    // Generation is active
+	            AND NOT #iUDT_InductConfig.SearchOnly                                      // Only searching for a gap
+	            AND NOT (#iqUDT_Merge.LastUsed = #iqUDT_Merge.MaxNumberofEntries)         // The FIFO is full
+	        THEN
+	            #iqUDT_Merge.LastUsed += 1;                                                // Increase 
+	            #iqUDT_Merge.RequestInFIFO[#iUDT_InductConfig.Induct_Number] := TRUE;     // Memorise 
+	            #iqUDT_Merge.FIFO[#iqUDT_Merge.LastUsed].InductNumber := #iUDT_InductConfig.Induct_Number;   // Write the induct number
+	            #iqUDT_Merge.FIFO[#iqUDT_Merge.LastUsed].GapSize := DINT_TO_INT(#si_RequestLength);           // Write the requested length
+	            #iqUDT_Merge.FIFO[#iqUDT_Merge.LastUsed].RemoveEntry := FALSE;                                // Reset remove bit
+	            #sx_GapRequested := TRUE;                                                   // Gap is requested
+	        END_IF;
+	    END_REGION
+	    
+	    REGION 2.2 - Reactivation of merge generator block
+	        // If not in searchmode, every time a parcel enters, the waiting distance is set 
+	        IF NOT #iUDT_InductConfig.SearchOnly
+	        THEN
+	            #sR_TRIG_SetDelay(CLK := #sx_Parcel);
+	        ELSE
+	            #sR_TRIG_SetDelay.Q := FALSE;
+	        END_IF;
+	        
+	        IF #sR_TRIG_SetDelay.Q
+	        THEN
+	            #sdi_DelayReactivateReq := #iUDT_InductConfig.ReactivationRequestDelay / 10;
+	        END_IF;
+	        
+	        // Reactivation request merge generator block 
+	        // In gapmode 3 the generator is not allowed to deactivate
+	        #iqUDT_Merge.ReactivateReq :=
+	        ((#sdi_DelayReactivateReq = 0)
+	        AND #sx_Parcel
+	        AND #iqUDT_Merge.GenerationInactive
+	        AND NOT #iUDT_InductConfig.SearchOnly)
+	        OR (#iUDT_InductConfig.GapMode = 3)
+	        OR #iqUDT_Merge.ReactivateReq;
+	        
+	    END_REGION
+	END_REGION
+	
+	REGION 3 - Displacement
+	    
+	    REGION 3.1 - Track induct point
+	        IF #iqUDT_Merge.TrackingPointerForInduct[#iUDT_InductConfig.Induct_Number] > 0
+	        THEN
+	            #iqUDT_Merge.TrackingPointerForInduct[#iUDT_InductConfig.Induct_Number] -= #iqUDT_MergeInterface.Displacement;
+	            IF #iqUDT_Merge.TrackingPointerForInduct[#iUDT_InductConfig.Induct_Number] < 0                                              // check if the value does not go negative
+	            THEN
+	                #iqUDT_Merge.TrackingPointerForInduct[#iUDT_InductConfig.Induct_Number] := 0;
+	            END_IF;
+	        END_IF;
+	    END_REGION
+	    
+	    REGION 3.2 - Wait distance
+	        // If a value is found during the search for an empty position, the position of the tracking is saved. 
+	        // This value is decreased by displacement to wait for the next time the tracking should be searched again.
+	        IF #si_PosDataInSearchArea > 0
+	        THEN
+	            #si_PosDataInSearchArea -= #iqUDT_MergeInterface.Displacement;
+	            IF #si_PosDataInSearchArea < 0                                              // check if the value does not go negative
+	            THEN
+	                #si_PosDataInSearchArea := 0;
+	            END_IF;
+	        END_IF;
+	        
+	        // The parcel is waiting to be inducted
+	        IF #sdi_DelayReactivateReq > 0 AND NOT #sx_Hold
+	        THEN
+	            #sdi_DelayReactivateReq -= #iqUDT_MergeInterface.Displacement;
+	            IF #sdi_DelayReactivateReq < 0                                              // check if the value does not go negative
+	            THEN
+	                #sdi_DelayReactivateReq := 0;
+	            END_IF;
+	        END_IF;
+	        
+	        // the distance to the end of the induct conveyor, the parcel travelling on the induct conveyor
+	        IF #si_DistanceToEnd > 0 // AND #iq_UDT_InductInterface.RunFwd
+	        THEN
+	            #si_DistanceToEnd -= #iqUDT_InductInterface.Displacement;
+	            IF #si_DistanceToEnd < 0                                                    // check if the value does not go negative
+	            THEN
+	                #si_DistanceToEnd := 0;
+	            END_IF;
+	        END_IF;
+	        
+	        // the distance to run empty      
+	        IF #sdi_RunningEmpty > 0
+	        THEN
+	            #sdi_RunningEmpty -= #iqUDT_MergeInterface.Displacement;
+	            IF #sdi_RunningEmpty < 0                                                    // check if the value does not go negative
+	            THEN
+	                #sdi_RunningEmpty := 0;
+	            END_IF;
+	        END_IF;
+	    END_REGION
+	END_REGION
+	
+	REGION 4 - Search position
+	    REGION 4.1 - General
+	        // When the generator is not active and there is no active request
+	        // search for gap which is completely empty only when generator is switched off or the mode is search only
+	        #sx_SearchGapInTracking := #iqUDT_Merge.GenerationInactive
+	        OR #iUDT_InductConfig.SearchOnly;
+	        
+	        // set the Induct position to cm and a moving box while searching is a moving inductpoint
+	        #si_InductPoint := (#iUDT_InductConfig.Induct_Position / 10);//- ((DINT_TO_INT(#idi_PEC_EoSDistance) / 10) - #si_DistanceToEnd);
+	        // #si_InductPoint := (#i_UDT_InductConfig.Induct_Position / 10) - ((DINT_TO_INT(#idi_PEC_EoSDistance) / 10));
+	        // In mode 3 the gap in front of the parcel is determined by the size of the parcel, this means the gap is leading. This is needed for some devices such as weighing scales.
+	        // To get the gap in front of the parcel, the point of detecting the requested code is delayed by the gapsize.
+	        // When the parcel starts now, it should be the length of the gap after the detected code. When writing in tracking the GIN is written aligned with the parcel, in the back of the window. 
+	        // So, it moves the inductionpoint forwards in the tracking (downstream) with the parcels Flexgap.
+	        
+	        CASE #iUDT_InductConfig.GapMode OF
+	            3:
+	                #si_InductPoint -= #si_Flexgap;
+	        END_CASE;
+	        
+	    END_REGION
+	    
+	    REGION 4.2 - Search 1: Gap '0'  
+	        // 1: Search for a gap (tracking is filled with '0')
+	        // When a value is found in the tracking, we do not have to search again until that value has passed.
+	        // 
+	        // search from  :  Induct position forward (gaptailtohead) because the last parcel can just have passed the position
+	        // to           :  induct position + length of the parcel and its gap tail to next head
+	        // 
+	        IF #sx_Parcel                                                                   // A parcel is present
+	            //    AND #s_R_TRIG_Displacement.Q                                                // There was a displacement
+	            AND #si_PosDataInSearchArea = 0                                             // No wait length
+	            AND #sx_SearchGapInTracking                                                 // Search for empty gap is activated
+	            AND NOT #sx_Hold                                                            // merge conveyor is available 
+	        THEN
+	            #si_StartSearch := (#si_InductPoint - #iUDT_InductConfig.GapTailToHead);
+	            #si_EndSearch := (#si_InductPoint + DINT_TO_INT(#si_RequestLength));
+	            FOR #si_LoopCountGapSearch := #si_StartSearch TO #si_EndSearch BY 1 DO
+	                
+	                IF (#iqs_TrackingData[#si_LoopCountGapSearch] <> 0)                       // There is a value in the tracking area
+	                THEN
+	                    IF #iqs_TrackingData[#si_LoopCountGapSearch] < 0                      // the value was a negative value so wait for that to pass
+	                    THEN
+	                        #si_PosDataInSearchArea := #si_LoopCountGapSearch - #si_StartSearch + 1; // Save the distance added by 1 to wait to search again on the next position  
+	                        EXIT;
+	                    END_IF;
+	                    
+	                    IF #iqs_TrackingData[#si_LoopCountGapSearch] > 0                      // The value is positive: GIN
+	                    THEN
+	                        #si_PosDataInSearchArea := #si_LoopCountGapSearch - #si_StartSearch + 1;  // As long as the GIN is found the wait distance is increased 
+	                    END_IF;
+	                END_IF;
+	            END_FOR;
+	            
+	            IF #si_PosDataInSearchArea = 0                                          // memory is empty after search
+	            THEN
+	                #sx_FreeGapAvailable := True;                                       // There is a gap, large enough to put the parcel in
+	                #si_WritePosition := #si_InductPoint;
+	            END_IF;
+	        END_IF;
+	    END_REGION
+	    
+	    
+	    
+	    REGION 4.3 - Search 2: code -100, -10(x) or -200-
+	        IF #sx_Parcel                                                               // A parcel is present
+	            //       AND #s_R_TRIG_Displacement.Q                                            // There was a displacement          
+	            AND NOT #sx_SearchGapInTracking                                         // Search for empty gap is not activated
+	            AND NOT #sx_Hold                                                        // merge conveyor is available 
+	        THEN
+	            // 2: search for the code -100 around the induct position within search area, displacement can be more than 1
+	            //    search for the code -200- , code (-)200 + size of the gap . This was a gap requested but not used, the value over 200 indicates the size 
+	            
+	            #sx_ValidWindowCodeFound := FALSE;                                      // reset the memory
+	            FOR #si_LoopCountCodeSearch := #si_InductPoint TO (#si_InductPoint + #ci_SearchArea) BY 1 DO
+	                
+	                IF (#iqs_TrackingData[#si_LoopCountCodeSearch] = -100)                    // If the value is -100  
+	                    OR (#iqs_TrackingData[#si_LoopCountCodeSearch] = (-100 - (#iUDT_InductConfig.Induct_Number)))
+	                THEN
+	                    #sx_ValidWindowCodeFound := TRUE;                               // Set the memory 
+	                    #si_WritePosition := #si_LoopCountCodeSearch;                         // save the position to write to
+	                    EXIT;                                                           // Stop searchloop
+	                    
+	                ELSIF (#iqs_TrackingData[#si_LoopCountCodeSearch] <= -200)               // If the value is less than -200 (a not used gap)
+	                    AND ((#iqs_TrackingData[#si_LoopCountCodeSearch] + 200) * -1) > #si_RequestLength // The length of this gap is bigger than the one which is needed
+	                THEN
+	                    #sx_ValidWindowCodeFound := TRUE;                               // Set the memory 
+	                    #si_WritePosition := #si_LoopCountCodeSearch;                         // save the position to write to
+	                    EXIT;                                                           // Stop searchloop
+	                END_IF;
+	            END_FOR;
+	        END_IF;
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 5 - Do induct
+	    
+	    // enable induct
+	    #sx_InductEnable :=
+	    #sx_FreeGapAvailable                                                            // There is a gap, large enough to put the parcel in
+	    OR #sx_ValidWindowCodeFound;                                                    // A valid induct code is found
+	    
+	    IF #sx_Parcel AND #sx_InductEnable
+	    THEN
+	        
+	        // check if position can be written in tracking array
+	        #si_ArrayLengthTracking := "FC_GetNrOfArrayEl"(#iqs_TrackingData);          // Determine size of search area 
+	        #sx_ConfigError := (#si_WritePosition + #si_RequestLength) > #si_ArrayLengthTracking;
+	        #si_DistanceToEnd := 0;                                                     // Release conveyors nominal speed
+	        
+	        REGION 5.1 - Update FIFO      
+	            // If the RequestIsInFIFO is still true, it  means the merge generator did not handle this request yet.
+	            // Now the FIFO is searched for the induct number.
+	            // On this entry the bit remove is set and also the Remove hanshake is set to indicate to the merge generator an entry has to be removed
+	            
+	            IF #iqUDT_Merge.RequestInFIFO[#iUDT_InductConfig.Induct_Number]
+	            THEN
+	                #si_ArrayLengthFIFO := "FC_GetNrOfArrayEl"(#iqUDT_Merge.FIFO);     // Determine size of search area 
+	                FOR #si_LoopCountFIFOSearch := 0 TO (#si_ArrayLengthFIFO - 1) BY 1 DO
+	                    IF #iqUDT_Merge.FIFO[#si_LoopCountFIFOSearch].InductNumber = #iUDT_InductConfig.Induct_Number
+	                    THEN
+	                        #iqUDT_Merge.FIFO[#si_LoopCountFIFOSearch].RemoveEntry := TRUE;
+	                        #iqUDT_Merge.Remove := TRUE;
+	                        EXIT;
+	                    END_IF;
+	                END_FOR;
+	                #iqUDT_Merge.RequestInFIFO[#iUDT_InductConfig.Induct_Number] := False;
+	            END_IF;
+	        END_REGION
+	        
+	        REGION 5.2 - Copy GIN to tracking
+	            // write GIN to merge conveyor tracking for the length of the parcel
+	            FOR #si_LoopCountWriteGIN := #si_WritePosition TO (#si_WritePosition + #si_RequestLength - 1) BY 1 DO
+	                #iqs_TrackingData[#si_LoopCountWriteGIN] := 0;
+	            END_FOR;
+	            CASE #iUDT_InductConfig.GapMode OF
+	                1, 2: // write data leading
+	                    FOR #si_LoopCountWriteGIN := #si_WritePosition TO (#si_WritePosition + #si_GINlength) BY 1 DO
+	                        #iqs_TrackingData[#si_LoopCountWriteGIN] := #si_LastGIN;
+	                    END_FOR;
+	                3: // write gap leading    
+	                    FOR #si_LoopCountWriteGIN := #si_WritePosition + #si_Gaplength TO (#si_WritePosition + #si_RequestLength) BY 1 DO
+	                        #iqs_TrackingData[#si_LoopCountWriteGIN] := #si_LastGIN;
+	                    END_FOR;
+	            END_CASE;
+	        END_REGION
+	        
+	        REGION 5.3 - Update request in tracking
+	            // reset the request in the tracking if the request is there 
+	            IF #iqs_TrackingData[#iqUDT_Merge.TrackingPointerForInduct[#iUDT_InductConfig.Induct_Number]] = (-100 - (#iUDT_InductConfig.Induct_Number))
+	            THEN
+	                CASE #iUDT_InductConfig.GapMode OF
+	                    1:  // All gaps are head to headsize: reserved window code to be overwritted with fixed window code -100
+	                        #iqs_TrackingData[#iqUDT_Merge.TrackingPointerForInduct[#iUDT_InductConfig.Induct_Number]] := -100;
+	                    2, 3:  // Mark as NOT used (-200) AND give the gapsize as was requested
+	                        #iqs_TrackingData[#iqUDT_Merge.TrackingPointerForInduct[#iUDT_InductConfig.Induct_Number]] := (-200 - #si_RequestLength);
+	                END_CASE;
+	            END_IF;
+	        END_REGION
+	        
+	        REGION 5.4 - Reset data (end of cycle)
+	            // reset the inducting data
+	            #iqUDT_Merge.TrackingPointerForInduct[#iUDT_InductConfig.Induct_Number] := 0;     // reset the pointer, the parcel is handled
+	            #sx_FreeGapAvailable := FALSE;                                              // There is a gap, large enough to put the parcel in
+	            #sx_ValidWindowCodeFound := FALSE;                                          // A free induct code is found
+	            #sx_DiebackInductConveyor := FALSE;                                            // Release the parcel
+	            #sx_GapRequested := FALSE;                                                  // To initiate length calculation for gap and request the gap to FIFO
+	            #sx_Parcel := FALSE;                                                        // The parcel is handled
+	        END_REGION
+	    END_IF;
+	    
+	    REGION 5.5 - Missed request, do again
+	        IF #sx_GapRequested = TRUE                                                      // Gap is requested
+	            AND NOT #iqUDT_Merge.RequestInFIFO[#iUDT_InductConfig.Induct_Number]      // No request in FIFO
+	            AND #iqUDT_Merge.TrackingPointerForInduct[#iUDT_InductConfig.Induct_Number] = 0   // pointer elapsed
+	        THEN
+	            #sx_GapRequested := FALSE;                                                  // Reset the gap was requested and do request again
+	        END_IF;
+	    END_REGION
+	END_REGION
+	
+	REGION 6 - Conveyor
+	    
+	    // Stop the induct conveyor 
+	    #qx_ExternalRequestDieBack := #sx_DiebackInductConveyor;
+	END_REGION
+	
+	//#iq_UDT_Merge.ReactivateReq := true;
+END_FUNCTION_BLOCK
+

@@ -1,0 +1,1324 @@
+﻿FUNCTION_BLOCK "FB_VSUDivert"
+TITLE = FB_VerticalSwitch
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : Equipment
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 41
+// END_ATTRIBUTES
+//Function block to control vertical switch unit.
+   VAR_INPUT 
+      iUDT_VSUConfig { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_VSUConfiguration";   //   VSU Configuration structure
+      iUDT_ConveyorConfiguration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ConveyorConfiguration";   //  VSB Conveyor cofiguration structure
+      idi_ConveyorLength { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //   Length of VSU conveyor [mm]
+      ix_SafetyOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   TRUE when Safety Circuit of the Conveyor is healthy
+      ix_PosUp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   TRUE when position sensor is covered
+      ix_PosDown { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   TRUE when position sensor is covered
+      ix_PECEos { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   TRUE when PEC EOS is not blocked
+      ix_PECUpperOut { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   TRUE when PEC Upper outfeed is not blocked
+      ix_PECLowerOut { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   TRUE when PEC Lower outfeed is not blocked
+      ix_PECJamUp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   TRUE when PEC Jamdetection going up is not blocked
+      ix_PECJamDown { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   TRUE when PEC Jamdetection going down is not blocked
+      ix_LCPAutoMode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   TRUE when LocalControlPanel switch Automatic is on
+      ix_LCPManualMode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   TRUE when LocalControlPanel switch Manual is on
+      ix_LCPDown { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   TRUE when LocalControlPanel switch Down is on
+      ix_LCPUp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   TRUE when LocalControlPanel switch Up is on
+      ix_LCPRef { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   TRUE when LocalControlPanel switch Refference is on
+      ix_HardwareOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE when  hardware is Ok
+   END_VAR
+
+   VAR_OUTPUT 
+      qUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_VSUStatus";   //   HMI status structure
+      qUDT_Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_CommonStatus";   //   Common status structure
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_EquipmentControl : "UDT_EquipmentControl";   //   Equipment control structure
+      iqUDT_VSUCommand : "UDT_VSUCommand";   //   VSU HMI Command structure
+      iqUDT_VSUInterface : "UDT_VSUInterface";   //   Interface between VSU and VFD
+      iqUDT_ConveyorInterface : "UDT_ConveyorInterface";   //   Interface between VSU and VSU conveyor
+      iqUDT_HandShakeVSUConveyor : "UDT_ConveyorHandshake";   //   VSU handshaking interface to VSU conveyor
+      iqUDT_HandShakeUpperPosition : "UDT_ConveyorHandshake";   //   VSU handshaking interface to upper outfeed conveyor
+      iqUDT_HandShakeLowerPosition : "UDT_ConveyorHandshake";   //   VSU handshaking interface to lower outfeed conveyor
+      iqUDT_Statistics : "UDT_VSUStatistics";   //   Statistics structure
+   END_VAR
+
+   VAR 
+      sUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_VSUStatus";   //   HMI status structure
+      sUDT_StatusOld { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   //   Common status structure
+      sUDT_Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   //   Common status structure
+      sFB_PECEoSFiltered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   //   Filtering end of section photo eye signal
+      sFB_PECUpOutFiltered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   //   Filtering upper outfeed photo eye signal
+      sFB_PECLowOutFiltered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   //   Filtering lower outfeed photo eye signal
+      sFB_PEC_UpJamFiltered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   //   Filtering upper jam photo eye signal
+      sFB_PEC_LowJamFiltered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   //   Filtering lower jam photo eye signal
+      sFB_JogEnable { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   //   Filtering lower jam photo eye signal
+      sFB_MaxStopTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   //   Timer for maximum stopping time
+      sR_TRIG_ManualMode {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Rising edge trigger manual mode
+      sR_TRIG_ManualJogUp {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Rising edge trigger manual jog mode command
+      sR_TRIG_ManualJogDown {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Rising edge trigger manual jog mode command
+      sR_TRIG_DownTime {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Rising edge trigger VSU is stopped
+      sR_TRIG_Error {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Rising edge trigger for Error
+      sR_TRIG_UPSwA_Error {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Rising edge trigger for Upper switch area error
+      sR_TRIG_LowSwA_Error {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Rising edge trigger for Lower switch area error
+      sR_TRIG_UPEntr_Jam {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Rising edge trigger for Upper Entrance Jam
+      sR_TRIG_LowEntr_Jam {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Rising edge trigger for Lower Entrance Jam
+      sR_TRIG_Direction_Error {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Rising edge trigger for Direction error
+      sR_TRIG_UpTime {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Rising edge trigger VSU is running automatic
+      sR_TRIG_GOReference {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Rising edge trigger for VFD to do reference run
+      sR_TRIG_Referenced {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Rising edge trigger VFD refferenced
+      sR_TRIG_TIPLeavingVSU {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Rising edge trigger TIP VSU Conveyor
+      sF_TRIG_TIPLeavingVSU {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   //   Falling edge trigger TIP VSU Conveyor
+      sR_TRIG_RestartFromError {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Rising edge trigger Restart from error
+   END_VAR
+   VAR RETAIN
+      sdi_RunEmpty { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //   Calculation run empty distance
+   END_VAR
+   VAR 
+      si_Position { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Position from Decisionpoint
+      si_RequiredGap { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Required gap in front of VSU
+   END_VAR
+   VAR RETAIN
+      si_UpperHeadToHead { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Gap calculation Head To Head upper conveyor
+      si_UpperGap { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Gap calculation upper outfeed conveyor
+      si_LowerHeadToHead { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Gap calculation Head To Head lower conveyor
+      si_LowerGap { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Gap calculation lower outfeed conveyor
+      si_UpJamDisplacement { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Auxiliary variable to calculate displacement when PEC is blocked
+      si_LowJamDisplacement { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Auxiliary variable to calculate displacement when PEC is blocked
+   END_VAR
+   VAR 
+      si_DefaultPosition { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Auxiliary variable to set default position
+      sx_StartReceived { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Start command received from system
+      sx_PEC_EoSFiltered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   End of section photo eye filtered
+      sx_PEC_UpOutFiltered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Upper outfeed photo eye filtered
+      sx_PEC_LowOutFiltered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Lower outfeed photo eye filtered
+      sx_PEC_UpJamFiltered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Upper jam photo eye filtered
+      sx_PEC_LowJamFiltered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Lower jam photo eye filtered
+      sx_Ready { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Conveyor Ready to operate in Automatic mode
+      sx_AutomaticActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Running in automatic
+      sx_SemiAutomatic { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Running in semi automatic
+      sx_PositionAfterRef { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   After reffer
+      sx_PreStartManual { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Pre conditions to run conveyor in manual mode
+      sx_ManualModeActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Manual mode active
+      sx_Stopping { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Stopping is active, first reach position
+      sx_SwitchEnable { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Switching conditions
+      sx_UpRequest { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Request upper outfeed position for actual parcel
+      sx_DownRequest { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Request lower outfeed position for actual parcel
+      sx_ActualPositionUP { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Actual position is up
+      sx_ActualPositionDown { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Actual position is down
+      sx_GappingUpper { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Gapping upper outfeed is active
+      sx_GappingLower { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Gapping lower outfeed is active
+      sx_CombinedJogUp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Combined signal of jogging buttons
+      sx_CombinedJogDown { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Combined signal of jogging buttons
+      sx_RestartFromError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   After an error has occurred the action to be done before resuming normal operation
+      sx_StopInfeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Stop infeed conveyor
+      sx_Jog { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Off delayed signal Jogging was activated
+      sx_ConfigurationError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Commissioning: configuration of parameters is wrong
+   END_VAR
+
+   VAR_TEMP 
+      tr_req : Real;
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                      
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	03-07-2019  | 2.1       | F.Baten       | first release TIA 15
+	11-10-2019  | 2.2       | S. Deulkar    | Updated status structure
+	30/10/2019  | 2.3       | F.Baten       | Pec timer on/off delaytimes interchanged
+	04/11/2019  | 2.4       | L.Klar        | First scan bit changed from memory bit to DB variable
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	04/11/2019  | 3.1       | F.Baten       | Updated interface to VSU_RIO
+	07/01/2020  | 3.2       | F.Baten       | Improved upstream gapping and decisionposition calculation, removed additional position reset
+	13/01/2020  | 3.3       | F.Baten       | Changed length related tags from Int to Dint  
+	12/02/2020  | 3.4       | C.Leite       | Correction of manual mode jogging
+	26/08/2020  | 3.5       | L.Klar        | Switch enable changed to use out sensors, depending on movement direction
+	                                        | Reduced required gap by additional (safety) distance -  5 cm
+	18/10/2020  | 3.6       | L.Klar        | Requested position reset if equal to the actual one or default
+	11/01/2021  | 3.7       | L.Klar        | Sinput safety ok added to stop conveyor condition
+	17/01/2021  | 3.8       | L.Klar        | Switch enable changed - brackets added
+	23/03/2021  | 3.9       | L.Klar        | Jam displacement calculated, when both conveyors moving. Upper switch area error can be reset if VSU is in defined position
+	14/04/2021  | 3.10      | L.Klar        | VSB configuration structure input added, switch enable changed
+	15/07/2021  | 3.11      | H. Rutkowski  | Upper and lower position added to the HMIStatus
+	14/08/2021  | 3.12      | M. Kurpiers   | Enabling switch enable in semi automatic mode even if TIP is active
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 - Initial
+	    
+	    REGION 1.1 - First PLC cycle
+	        
+	        IF "DB_Memory".FirstScan
+	        THEN
+	            #sx_AutomaticActive := FALSE;                                               // switch of automatic activ
+	            #iqUDT_HandShakeVSUConveyor.RTR := FALSE;                                  // Reset RTR signal
+	            #iqUDT_HandShakeVSUConveyor.CascadeStartUp := FALSE;                       // Reset cascade start signal
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 1.3 - Triggers
+	        
+	        // Detecting rising edge on manual mode Or from Equipment Control
+	        #sR_TRIG_ManualMode(CLK := #sUDT_Status.Manual);
+	        
+	        // Rising edge trigger running        
+	        #sR_TRIG_UpTime(CLK := #sx_AutomaticActive AND #sx_Ready);
+	        
+	        // Detecting rising edge VSU stopped        
+	        #sR_TRIG_DownTime(CLK := #sx_AutomaticActive AND NOT #sx_Ready);
+	        
+	        // Detecting rising edge on VSU error
+	        #sR_TRIG_Error(CLK := #sUDT_Status.Error);
+	        
+	        // Detecting rising edge on VSU conveyor TIP signal         
+	        #sR_TRIG_TIPLeavingVSU(CLK := #iqUDT_HandShakeVSUConveyor.TIP);
+	        
+	        // Detecting rising edge on VSU conveyor TIP signal         
+	        #sF_TRIG_TIPLeavingVSU(CLK := #iqUDT_HandShakeVSUConveyor.TIP);
+	        
+	        // Detecting rising edge on start of the restart from error sequence
+	        #sR_TRIG_RestartFromError(CLK := #sx_RestartFromError);
+	        
+	    END_REGION
+	    
+	    REGION 1.4 - Filters
+	        
+	        //End of section photo eye signal filtering
+	        #sFB_PECEoSFiltered(iudi_OnDelayTime := #iUDT_VSUConfig.PEC_EoSTimeOnDelay,
+	                            iudi_OffDelayTime := #iUDT_VSUConfig.PEC_EoSTimeOffDelay,
+	                            ix_SignalToDelay := #ix_PECEos,
+	                            ix_Enable := TRUE,
+	                            qx_DelayedSignal => #sx_PEC_EoSFiltered);
+	        
+	        //Upper outfeed photo eye signal filtering
+	        #sFB_PECUpOutFiltered(iudi_OnDelayTime := #iUDT_VSUConfig.PEC_OutTimeOnDelay,
+	                              iudi_OffDelayTime := #iUDT_VSUConfig.PEC_OutTimeOffDelay,
+	                              ix_SignalToDelay := #ix_PECUpperOut,
+	                              ix_Enable := TRUE,
+	                              qx_DelayedSignal => #sx_PEC_UpOutFiltered);
+	        
+	        //Lower outfeed photo eye signal filtering
+	        #sFB_PECLowOutFiltered(iudi_OnDelayTime := #iUDT_VSUConfig.PEC_OutTimeOnDelay,
+	                               iudi_OffDelayTime := #iUDT_VSUConfig.PEC_OutTimeOffDelay,
+	                               ix_SignalToDelay := #ix_PECLowerOut,
+	                               ix_Enable := TRUE,
+	                               qx_DelayedSignal => #sx_PEC_LowOutFiltered);
+	        
+	        //Upper jam detection photo eye signal filtering
+	        #sFB_PEC_UpJamFiltered(iudi_OnDelayTime := #iUDT_VSUConfig.PEC_JamTimeOnDelay,
+	                               iudi_OffDelayTime := #iUDT_VSUConfig.PEC_JamTimeOffDelay,
+	                               ix_SignalToDelay := #ix_PECJamUp,
+	                               ix_Enable := TRUE,
+	                               qx_DelayedSignal => #sx_PEC_UpJamFiltered);
+	        
+	        //Lower jam detection photo eye signal filtering
+	        #sFB_PEC_LowJamFiltered(iudi_OnDelayTime := #iUDT_VSUConfig.PEC_JamTimeOnDelay,
+	                                iudi_OffDelayTime := #iUDT_VSUConfig.PEC_JamTimeOffDelay,
+	                                ix_SignalToDelay := #ix_PECJamDown,
+	                                ix_Enable := TRUE,
+	                                qx_DelayedSignal => #sx_PEC_LowJamFiltered);
+	        
+	        // Time to start without start warning while jogging
+	        #sFB_JogEnable(iudi_OffDelayTime := #iUDT_VSUConfig.JogNoHornTime,
+	                       ix_SignalToDelay := #sx_Jog);
+	        
+	        // Maximum stopping time
+	        #sFB_MaxStopTime(iudi_OnDelayTime := (#iUDT_VSUConfig.SwitchingTime + #iUDT_VSUConfig.SwitchingTime),
+	                         ix_SignalToDelay := #sx_Stopping);
+	    END_REGION
+	    
+	    REGION 1.5 - Switching conditions             
+	        
+	        #sx_SwitchEnable := (#iqUDT_VSUCommand.SemiAutomaticMode                                                            // Switching of the VSU is enabled when
+	        OR NOT #iqUDT_HandShakeVSUConveyor.TIP)                                            // No transfer in progress
+	        AND #sx_PEC_LowJamFiltered                                                      // Lower jam sensor free
+	        AND #sx_PEC_UpJamFiltered                                                        // Upper jam sensor free
+	        AND ((#sx_UpRequest
+	        AND #sx_PEC_UpOutFiltered)
+	        OR (#sx_DownRequest
+	        AND #sx_PEC_LowOutFiltered));                                                      // Upper outfeed PEC is free
+	        
+	    END_REGION
+	    
+	    REGION 1.6 - Position
+	        
+	        #sx_ActualPositionUP :=                                                         // Set status bit lifter in upper position 
+	        (#iqUDT_VSUInterface.PositionActual = 1)                                       // If actual position is equal to 1 
+	        AND NOT #iqUDT_VSUInterface.Positioning                                        // And the positioning is not active 
+	        AND #ix_PosUp;                                                                  // And the position sensor signals
+	        
+	        #sx_ActualPositionDown :=                                                       // Set bit lifter in lower position 
+	        (#iqUDT_VSUInterface.PositionActual = 2)                                       // If actual position is equal to 2 
+	        AND NOT #iqUDT_VSUInterface.Positioning                                        // And the positioning is not active 
+	        AND #ix_PosDown;                                                                // And the position sensor signals
+	    END_REGION
+	    
+	    REGION 1.7 - Check configuration 
+	        #si_DefaultPosition := #iUDT_VSUConfig.DefaultPosition;
+	        
+	        IF #si_DefaultPosition <= 0
+	        THEN
+	            #si_DefaultPosition := 1;
+	            
+	        END_IF;
+	    END_REGION
+	END_REGION
+	
+	REGION 2 - Errors
+	    
+	    REGION 2.1 - Reset errors
+	        
+	        IF #iqUDT_EquipmentControl.Command.Reset                                       // Reset
+	        THEN
+	            // Switch area
+	            IF #sUDT_HMIStatus.Specific.UpperSwitchArea_Err                            // Upper jam error is active 
+	                AND (#ix_PECJamUp OR #iqUDT_VSUInterface.PositionActual = #iqUDT_VSUInterface.PositionSetpoint)                                                      // Upper jam sensor is free
+	            THEN
+	                
+	                #sUDT_HMIStatus.Specific.UpperSwitchArea_Err := FALSE;                 // reset error
+	                
+	            END_IF;
+	            
+	            IF #sUDT_HMIStatus.Specific.LowerSwitchArea_Err                            // lower jam error is active 
+	                AND #ix_PECJamDown                                                      // Lower jam sensor is free
+	            THEN
+	                
+	                #sUDT_HMIStatus.Specific.LowerSwitchArea_Err := FALSE;                 // reset error
+	                
+	            END_IF;
+	            
+	            // Outfeed entrance
+	            IF #sUDT_HMIStatus.Specific.UpperEntranceJam_Err                           // Upper outfeed conveyor entrance PEC was blocked too long
+	                // AND #sx_PEC_UpOutFiltered                                               // Upper outfeed conveyor entrance PEC is free
+	            THEN
+	                
+	                #sUDT_HMIStatus.Specific.UpperEntranceJam_Err := FALSE;                // reset error
+	                
+	            END_IF;
+	            
+	            IF #sUDT_HMIStatus.Specific.LowerEntranceJam_Err                           // Lower outfeed conveyor entrance PEC was blocked too long
+	                //  AND #sx_PEC_LowOutFiltered                                              // Lower outfeed conveyor entrance PEC is free
+	            THEN
+	                
+	                #sUDT_HMIStatus.Specific.LowerEntranceJam_Err := FALSE;                // reset error
+	                
+	            END_IF;
+	            
+	            // Direction error
+	            IF #sUDT_HMIStatus.Specific.Direction_Err                                  // Direction verification found the direction fault, stop VSU action and move in opposite direction
+	                AND NOT #iqUDT_VSUInterface.MotorRunning                               // The VFD is stopped
+	                AND #sx_PEC_EoSFiltered                                                 // The photoeye on the VSU conveyor is empty
+	            THEN
+	                
+	                #sUDT_HMIStatus.Specific.Direction_Err := FALSE;                       // Direction verification found the direction fault, stop VSU action and move in opposite direction
+	                
+	            END_IF;
+	            
+	        END_IF;
+	    END_REGION
+	    
+	    REGION 2.2 - Set errors
+	        
+	        // Upper Jam sensor blocked in movement
+	        IF NOT #sx_PEC_UpJamFiltered                                                             // Upper jam sensor occupied
+	            AND #iqUDT_VSUInterface.Positioning                                        // The positioning motor is running
+	            AND #sx_UpRequest                                                           // an uprequest is active (going up)
+	        THEN
+	            
+	            #sUDT_HMIStatus.Specific.UpperSwitchArea_Err := TRUE;                      // Set error upper jam sensor
+	        END_IF;
+	        
+	        // Lower Jam sensor blocked in movement
+	        IF NOT #sx_PEC_LowJamFiltered                                                           // Lower jam sensor occupied               
+	            AND #iqUDT_VSUInterface.Positioning                                        // The positioning motor is running
+	            AND #sx_DownRequest                                                         // an downrequest is active (going down)
+	        THEN
+	            
+	            #sUDT_HMIStatus.Specific.LowerSwitchArea_Err := TRUE;                      // Set error lower jam sensor
+	        END_IF;
+	        
+	        // Direction fault in semiautomatic mode
+	        IF #sx_SemiAutomatic                                                            // Running Semi-Automatic 
+	            AND #iUDT_VSUConfig.SecurityChecked                                        // the VSU is configured in an security area 
+	            AND (((#si_Position = 1                                                     // the requested position is "up"
+	            AND #si_DefaultPosition = 1)                                                // and the configured "default" is equal to "up"                                     
+	            OR (#si_Position = 99                                                       // or the request is "default"
+	            AND #si_DefaultPosition = 1)                                                // and the configured "default" is equal to "up"      
+	            AND #sx_DownRequest)                                                        // but the position is "down"
+	            
+	            OR ((#si_Position = 2                                                       // or the requested position is "down"
+	            AND #si_DefaultPosition = 2)                                                // and the configured "default" is equal to "down"
+	            OR (#si_Position = 99                                                       // or the request is "default"
+	            AND #si_DefaultPosition = 2)                                                // and the configured "default" is equal to "down"
+	            AND #sx_UpRequest))                                                         // but the position is "up"
+	        THEN
+	            
+	            #sUDT_HMIStatus.Specific.Direction_Err := TRUE;                               // Direction verification found the Direction fault, stop the parcel
+	        END_IF;
+	        
+	        // Activating restart after error 
+	        IF #iqUDT_ConveyorInterface.InternalErrorTracking // An error on traking occured on the VSU conveyor
+	        THEN
+	            
+	            #sx_RestartFromError := TRUE;                                               // Activate the sequence to run the VSU conveyor empty
+	        END_IF;
+	        
+	        #sx_ConfigurationError := (#iUDT_VSUConfig.DefaultPosition <= 0);             // Set the configuration error bit (No status!!)
+	        
+	    END_REGION
+	    
+	    REGION 2.3 - Common Error
+	        
+	        #sUDT_Status.Error :=
+	        #iqUDT_ConveyorInterface.InternalErrorTracking                              // or the VSU conveyor detected an error in tracking 
+	        OR #iqUDT_VSUInterface.InternalErrorVFD                                        // or there are errors in the VFD
+	        OR #iqUDT_VSUInterface.InternalErrorRIOPanel                                   // or an internal error in the RIO panel occured
+	        OR #sUDT_HMIStatus.Specific.Direction_Err                                      // Direction verification found the Direction fault, stop the parcel
+	        OR #sUDT_HMIStatus.Specific.UpperSwitchArea_Err                                // Upper jam PEC detected WHILE going Up
+	        OR #sUDT_HMIStatus.Specific.LowerSwitchArea_Err                                // Lower jam PEC detected while going Down
+	        OR #sUDT_HMIStatus.Specific.UpperEntranceJam_Err                               // Upper outfeed conveyor entrance PEC was blocked too long
+	        OR #sUDT_HMIStatus.Specific.LowerEntranceJam_Err;                              // Lower outfeed conveyor entrance PEC was blocked too long
+	        
+	    END_REGION
+	    
+	    REGION 2.4 - Common Warning
+	        
+	        // Keyswitch NOT in a position
+	        #sUDT_HMIStatus.Specific.Keyswitch_WRN := NOT #ix_LCPAutoMode AND NOT #ix_LCPManualMode;
+	        #sUDT_Status.Warning := #sUDT_HMIStatus.Specific.Keyswitch_WRN;
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 3 - Check conditions to set Equipment ready
+	    
+	    //Conditions to set bit sx_Ready to operate 
+	    
+	    #sx_Ready := NOT #sUDT_Status.Error                                                // Error present
+	    AND #ix_SafetyOk                                                                    // Safety signalling NOT OK
+	    AND #iqUDT_VSUInterface.VSUMainPowerOk;                                            // 400v signalling not OK
+	END_REGION
+	
+	REGION 4 - Stop Equipment
+	    
+	    IF #sx_ManualModeActive                                                             // Manual mode is active
+	        AND #sx_AutomaticActive
+	        
+	        OR (NOT #iqUDT_EquipmentControl.Command.AutomaticOn                            // VSU stops if the bit AutomaticOn from control block is false
+	        AND NOT #sx_ManualModeActive)                                                   // Manual mode active bit
+	        
+	        OR (NOT #sx_Ready                                                               // Bit VSU ready to run in automatic mode
+	        AND NOT #sx_ManualModeActive)                                                   // Manual mode active
+	        
+	        OR NOT #ix_LCPAutoMode                                                          // LCP is not set to automatic
+	        OR NOT #ix_SafetyOk                                                             // 
+	        
+	    THEN                                                                                // Order to stop 
+	        #sx_Stopping := TRUE;                                                           // stopping is activated
+	        #sx_AutomaticActive := FALSE;                                                   // switch of automatic activ
+	        #sx_StartReceived := FALSE;                                                     // Start command received from system 
+	        
+	    END_IF;
+	    
+	    IF (#sx_Stopping                                                                     // stopping is activated
+	        AND NOT #iqUDT_VSUInterface.Positioning)                                        // The positioning device is not active positioning 
+	        OR #sFB_MaxStopTime.qx_DelayedSignal
+	        OR NOT #sx_Ready
+	        
+	    THEN
+	        #sx_Stopping := FALSE;                                                          // stopping is activated
+	        #iqUDT_VSUCommand.CommandUp := FALSE;
+	        #iqUDT_VSUCommand.CommandDown := FALSE;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 5 - Start Automatic mode
+	    
+	    REGION 5.1 - Start 
+	        // if start (OS) is received from system, this is memorised until started in cascade 
+	        IF #iqUDT_EquipmentControl.Command.Start                                       // Start from system
+	            AND #sx_Ready                                                               // Equipment has no errors
+	        THEN
+	            
+	            #sx_StartReceived := TRUE;                                                  // Start command received from system 
+	            
+	        END_IF;
+	        
+	        IF #sx_StartReceived                                                            // Start command received from system
+	            AND #iqUDT_VSUInterface.Referenced                                         // and VSU is referenced
+	            AND #ix_LCPAutoMode                                                         // and the LCP is set to auto
+	        THEN
+	            
+	            #sx_AutomaticActive := TRUE;                                                // Automatic activated
+	            #sx_StartReceived := FALSE;                                                 // Start command received from system
+	        END_IF;
+	    END_REGION
+	    
+	    REGION 5.2 - Semi automatic mode
+	        
+	        #sx_SemiAutomatic := #sx_AutomaticActive                                        // Automatic activated
+	        AND #iqUDT_VSUCommand.SemiAutomaticMode;                                       // and Semi-automatic is selected
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 6 - Manual mode
+	    
+	    REGION 6.1 - Manual mode: activation 
+	        
+	        // Manual mode is active if it is active from hmi or by control block  
+	        #sx_ManualModeActive := #iqUDT_VSUCommand.ManualMode
+	        OR #iqUDT_EquipmentControl.Command.ManualMode
+	        OR #ix_LCPManualMode;
+	        
+	    END_REGION
+	    
+	    REGION 6.2 - Jog signals
+	        
+	        #sx_CombinedJogUp :=
+	        (((#iqUDT_VSUCommand.ManualMode                                                // HMI in manual
+	        OR #iqUDT_EquipmentControl.Command.ManualMode)                                 // Or a system control command to go to manual
+	        AND #iqUDT_VSUCommand.JogUp)                                                   // If selected jog in positive direction 
+	        OR (#ix_LCPManualMode                                                           // box in manual
+	        AND #ix_LCPUp));                                                                // If selected jog in positive direction 
+	        
+	        #sx_CombinedJogDown :=
+	        (((#iqUDT_VSUCommand.ManualMode                                                 // HMI in manual
+	        OR #iqUDT_EquipmentControl.Command.ManualMode)                                  // Or a system control command to go to manual
+	        AND #iqUDT_VSUCommand.JogDown)                                                 // If selected jog in negative direction 
+	        OR (#ix_LCPManualMode                                                           // box in manual
+	        AND #ix_LCPDown));                                                              // If selected jog in negative direction 
+	        
+	        // Detecting rising edge on manual jog Up           
+	        #sR_TRIG_ManualJogUp(CLK := #sx_CombinedJogUp);
+	        
+	        // Detecting rising edge on manual jog Down          
+	        #sR_TRIG_ManualJogDown(CLK := #sx_CombinedJogDown);
+	        
+	    END_REGION
+	    
+	    REGION 6.3 - Manual mode: disabled
+	        
+	        // Manual mode bits inputs can be reset in case of malfunction
+	        IF #iqUDT_EquipmentControl.Command.DisableManualMode
+	        THEN
+	            
+	            #iqUDT_VSUCommand.ManualMode := FALSE;                                     // reset manual mode 
+	            #iqUDT_EquipmentControl.Command.ManualMode := FALSE;                       // reset manual mode command 
+	            #iqUDT_VSUCommand.JogUp := FALSE;                                          // reset manual command Jog Up
+	            #iqUDT_VSUCommand.JogDown := FALSE;                                        // reset manual command Jog Down
+	            #sx_Jog := FALSE;
+	        END_IF;
+	    END_REGION
+	    
+	    REGION 6.4 - Manual PreStart up or down
+	        
+	        // Pre start conditions to run in manual mode
+	        #sx_PreStartManual := #sx_ManualModeActive                                      // Manual mode active bit
+	        AND #ix_SafetyOk                                                                // Safety healthy bit
+	        //AND #iq_UDT_VSUInterface.PNDeviceOk                                                              // Profinet comunication 
+	        AND NOT #iqUDT_VSUInterface.InternalErrorVFD;                                  // Internal error from VFD
+	        
+	        IF #sx_PreStartManual                                                           // Pre start conditions to run in manual mode
+	            AND (#sR_TRIG_ManualJogUp.Q                                                  // Trigger to start VSU run in manual jog mode UP
+	            OR #sR_TRIG_ManualJogDown.Q)                                                 // Trigger to start VSU run in manual jog mode Down
+	            AND NOT #sFB_JogEnable.qx_DelayedSignal
+	        THEN
+	            
+	            #iqUDT_EquipmentControl.Request.SignalingRequest := TRUE;                  // Request signaling TO control block before VSU runs in manual mode
+	            
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 6.5 - Jog mode Up / Down
+	        
+	        IF #sx_PreStartManual                                                           // IF in manual jog mode 
+	            AND (NOT #iqUDT_EquipmentControl.Request.SignalingRequest                  // Signaling request done
+	            OR #sFB_JogEnable.qx_DelayedSignal)
+	            AND #sx_CombinedJogUp                                                       // If selected jog in positive direction 
+	            AND NOT #sx_CombinedJogDown                                                 // And not selected jog in negative direction
+	        THEN
+	            
+	            #iqUDT_VSUInterface.JogUp := TRUE;                                         // set jog positive 
+	            #iqUDT_VSUInterface.JogDown := FALSE;                                      // reset jog negative 
+	            #sx_Jog := true;
+	            
+	        ELSIF
+	            #sx_PreStartManual                                                          // IF in manual jog mode 
+	            AND (NOT #iqUDT_EquipmentControl.Request.SignalingRequest                  // Signaling request done
+	            OR #sFB_JogEnable.qx_DelayedSignal)
+	            AND NOT #sx_CombinedJogUp                                                   // If selected jog in positive direction 
+	            AND #sx_CombinedJogDown                                                     // and there is command to jog in negative direction 
+	        THEN
+	            
+	            #iqUDT_VSUInterface.JogUp := FALSE;                                        // reset jog positive 
+	            #iqUDT_VSUInterface.JogDown := TRUE;                                       // set jog negative 
+	            #sx_Jog := true;
+	            
+	        ELSIF
+	            NOT #sx_PreStartManual                                                      // If not in manual mode 
+	            OR (#sx_PreStartManual                                                      // or in manual mode
+	            AND (#sx_CombinedJogUp                                                      // and jog positive is off 
+	            AND #sx_CombinedJogDown)                                                    // AND jog negative is off 
+	            OR (NOT #sx_CombinedJogUp                                                   // or jog positive is on 
+	            AND NOT #sx_CombinedJogDown))                                               // and jog negative is on 
+	        THEN
+	            
+	            #iqUDT_VSUInterface.JogUp := FALSE;                                        // reset jog positive 
+	            #iqUDT_VSUInterface.JogDown := FALSE;                                      // reset jog negative 
+	            #sx_Jog := False;
+	        END_IF;
+	    END_REGION
+	END_REGION
+	
+	REGION 7 - Automatic mode
+	    
+	    REGION 7.1 - Direction from decision point
+	        IF #iqUDT_VSUInterface.RequestedPosition <> 0                                  // Position is received from decision block
+	        THEN
+	            #si_Position := #iqUDT_VSUInterface.RequestedPosition;                     // Copy the input to the memory
+	            
+	        END_IF;
+	        
+	        // Requested position reset
+	        IF (#iqUDT_VSUInterface.RequestedPosition = #iqUDT_VSUInterface.PositionActual OR
+	            (#iqUDT_VSUInterface.RequestedPosition = 99 AND #iqUDT_VSUInterface.PositionActual = #si_DefaultPosition))
+	        THEN
+	            
+	            #iqUDT_VSUInterface.RequestedPosition := 0;
+	            
+	        END_IF;
+	        
+	        
+	    END_REGION
+	    
+	    REGION 7.2 - Position Up / Down             
+	        // 1 = Up, 2 = Down and 99 = Default 
+	        // 
+	        IF (#si_Position = 1                                                            // If the position "up" is equal to the request 
+	            OR (#si_Position = 99                                                       // Or the request is "default"
+	            AND #si_DefaultPosition = 1))                                               // and the configured "default" is equal to "up"
+	            AND #sx_Ready                                                               // Ready to operate, No errors active
+	            AND #sx_AutomaticActive                                                     // Automaticly started
+	            AND NOT #sx_SemiAutomatic                                                   // Not running Semi-Automatic
+	        THEN
+	            
+	            #sx_DownRequest := FALSE;                                                   // Reset down command
+	            #sx_UpRequest := TRUE;                                                      // Set up command
+	            #si_Position := 0;                                                          // Reset the memory
+	        END_IF;
+	        
+	        IF (#si_Position = 2                                                            // If the position "down" is equal to the request 
+	            OR (#si_Position = 99                                                       // Or the request is "default"
+	            AND #si_DefaultPosition = 2))                                               // and the configured "default" is equal to "down"
+	            AND #sx_Ready                                                               // Ready to operate, No errors active
+	            AND #sx_AutomaticActive                                                     // Automaticly started
+	            AND NOT #sx_SemiAutomatic                                                   // Not running Semi-Automatic
+	        THEN
+	            
+	            #sx_DownRequest := TRUE;                                                    // Set down command
+	            #sx_UpRequest := FALSE;                                                     // Reset up command
+	            #si_Position := 0;                                                          // Reset the memory
+	        END_IF;
+	        
+	        // if the VSU is not referenced set the default position, this ensures the VSU to go to the default
+	        // after refferecing.
+	        
+	        IF NOT #iqUDT_VSUInterface.Referenced
+	        THEN
+	            IF #si_DefaultPosition = 1
+	            THEN
+	                #sx_DownRequest := FALSE;                                               // Reset down command
+	                #sx_UpRequest := TRUE;                                                  // Set up command
+	                #iqUDT_VSUInterface.PositionSetpoint := 1;                             // Set position to be 1 = Up    
+	            END_IF;
+	            
+	            IF #si_DefaultPosition = 2
+	            THEN
+	                #sx_DownRequest := TRUE;                                                // Reset down command
+	                #sx_UpRequest := FALSE;                                                 // Set up command
+	                #iqUDT_VSUInterface.PositionSetpoint := 2;                             // Set position to be 1 = Down    
+	            END_IF;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 7.3 - Semi automatic
+	        
+	        IF #sx_SemiAutomatic                                                            // Not running Semi-Automatic
+	            AND #iqUDT_VSUCommand.CommandUp
+	            
+	        THEN
+	            #sx_DownRequest := FALSE;                                                   // Reset down command
+	            #sx_UpRequest := TRUE;                                                      // Set up command
+	            #iqUDT_VSUCommand.CommandUp := FALSE;
+	        END_IF;
+	        
+	        IF #sx_SemiAutomatic                                                            // Not running Semi-Automatic
+	            AND #iqUDT_VSUCommand.CommandDown
+	            
+	        THEN
+	            #sx_DownRequest := TRUE;                                                    // Reset down command
+	            #sx_UpRequest := FALSE;                                                     // Set up command
+	            #iqUDT_VSUCommand.CommandDown := FALSE;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 7.4 - Restart from error / external dieback
+	        // There was an error active requiring the VSU conveyor to be emptied to the default direction
+	        // 
+	        
+	        IF #sR_TRIG_RestartFromError.Q                                                   // The sequence has started
+	        THEN
+	            #sdi_RunEmpty := (#idi_ConveyorLength / 10);                                  // Set the distance to run empty
+	        END_IF;
+	        
+	        IF #sdi_RunEmpty > 0                                                             // As long as the distance is bigger than '0'
+	            OR #sx_StopInfeed
+	            
+	        THEN
+	            #sdi_RunEmpty -= #iqUDT_ConveyorInterface.Displacement;                     // decrease the run empty distance by the actual displacement
+	            IF #sdi_RunEmpty < 0                                                         // the distance is ok
+	            THEN
+	                #sdi_RunEmpty := 0;                                                      // Set distance to '0'
+	                #sx_RestartFromError := FALSE;                                          // Reset the running empty sequence
+	                #sx_StopInfeed := FALSE;                                                // Reset the dieback signal 
+	            END_IF;
+	        END_IF;
+	        
+	        IF #sx_RestartFromError                                                         // There was an error active requiring the VSU conveyor to be emptied to the default direction
+	            
+	        THEN
+	            IF #si_DefaultPosition = 1
+	            THEN
+	                #sx_DownRequest := FALSE;                                               // Reset down command
+	                #sx_UpRequest := TRUE;                                                  // Set up command
+	            END_IF;
+	            
+	            IF #si_DefaultPosition = 2
+	            THEN
+	                #sx_DownRequest := TRUE;                                                // Reset down command
+	                #sx_UpRequest := FALSE;                                                 // Set up command
+	            END_IF;
+	            #sx_StopInfeed := TRUE;                                                     // Set dieback signal stopping parcels from entering the VSU conveyor
+	            
+	        END_IF;
+	        
+	        #iqUDT_VSUInterface.RequestDieBackUpstream := #sx_StopInfeed                   // Stop infeed after error
+	        OR #iqUDT_VSUInterface.StartLowSpeed;                                          // Command from VFD
+	        
+	    END_REGION
+	    
+	    REGION 7.5 - Controls to to go UP or Down
+	        IF #sx_AutomaticActive                                                          // The VSU is automaticly started
+	            AND #sx_Ready                                                               // Ready to run / no errors
+	        THEN
+	            
+	            IF #sx_UpRequest                                                            // If there is request to move to the upper position 
+	                AND #sx_SwitchEnable                                                    // The VSU is enabled to move 
+	                AND NOT #iqUDT_VSUInterface.Positioning                                // Positioning device is positioning, moving to next position
+	                AND #iqUDT_VSUInterface.Ready                                          // the positioning device is errorfree
+	                AND NOT #sx_ActualPositionUP                                            // And not in upper position
+	                
+	            THEN
+	                
+	                #iqUDT_VSUInterface.PositionSetpoint := 1;                             // Set position to be 1 = Up
+	                
+	            END_IF;
+	            
+	            IF #sx_DownRequest                                                          // If there is request to move to the lower position 
+	                AND #sx_SwitchEnable                                                    // The VSU is enabled to move 
+	                AND NOT #iqUDT_VSUInterface.Positioning                                // Positioning device is positioning, moving to next position
+	                AND #iqUDT_VSUInterface.Ready                                          // the positioning device is errorfree
+	                AND NOT #sx_ActualPositionDown                                          // And not in lower position
+	                
+	            THEN
+	                
+	                #iqUDT_VSUInterface.PositionSetpoint := 2;                             // Set position to be 2 = Down
+	                
+	            END_IF;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 7.6 - Jam detection
+	        
+	        (* Jam detection functionality is used to stop conveyor when photo eye is blocked
+	         for more than a displacement configured to prevent disaster event.
+	           While the photo eye is detecting a parcel, the functionality counts the displacement. *)
+	        
+	        IF NOT #sx_PEC_UpOutFiltered AND #iqUDT_ConveyorInterface.VFDRunning// Photo eye blocked
+	        THEN
+	            
+	            #si_UpJamDisplacement += #iqUDT_HandShakeUpperPosition.DownstreamDisplacement;    // Increases displacement values in auxiliary variable
+	        ELSE
+	            
+	            #si_UpJamDisplacement := 0;                                                 // Reset jam auxiliary counter variable
+	        END_IF;
+	        
+	        IF #si_UpJamDisplacement > #iUDT_VSUConfig.JamDisplacementLimit                // Compare jam auxiliary counter with displacement jam configured
+	        THEN
+	            
+	            #sUDT_HMIStatus.Specific.UpperEntranceJam_Err := TRUE;                        // PEC jam status set true
+	        END_IF;
+	        
+	        IF NOT #sx_PEC_LowOutFiltered AND #iqUDT_ConveyorInterface.VFDRunning                                                   // Photo eye blocked
+	        THEN
+	            
+	            #si_LowJamDisplacement += #iqUDT_HandShakeLowerPosition.DownstreamDisplacement;   // Increases displacement values in auxiliary variable
+	        ELSE
+	            
+	            #si_LowJamDisplacement := 0;                                                // Reset jam auxiliary counter variable
+	        END_IF;
+	        
+	        IF #si_LowJamDisplacement > #iUDT_VSUConfig.JamDisplacementLimit               // Compare jam auxiliary counter with displacement jam configured
+	        THEN
+	            
+	            #sUDT_HMIStatus.Specific.LowerEntranceJam_Err := TRUE;                        // PEC jam status set true
+	        END_IF;
+	    END_REGION
+	    
+	    REGION 7.7 - Head to head and gap upper conveyor
+	        IF #si_UpperHeadToHead > 0                                                      // as long as value is bigger than '0'
+	        THEN
+	            
+	            #si_UpperHeadToHead -= #iqUDT_HandShakeUpperPosition.DownstreamDisplacement;  // Downstream displacement head to head counter 
+	            IF #si_UpperHeadToHead < 0                                                  // Value is smaller than '0'
+	            THEN
+	                #si_UpperHeadToHead := 0;                                               // Set value to '0'
+	            END_IF;
+	        END_IF;
+	        
+	        IF #si_UpperGap > 0                                                             // as long as value is bigger than '0'
+	        THEN
+	            
+	            #si_UpperGap -= #iqUDT_HandShakeUpperPosition.DownstreamDisplacement;     // Downstream displacement gap counter 
+	            IF #si_UpperGap < 0                                                         // Value is smaller than '0'
+	            THEN
+	                #si_UpperGap := 0;                                                      // Set value to '0'
+	            END_IF;
+	        END_IF;
+	        
+	        #sx_GappingUpper :=                                                             // Gapping is active 
+	        (#si_UpperHeadToHead > 0                                                        // If Head to head counter is bigger than '0'
+	        OR #si_UpperGap > 0);                                                          // If the gap counter is bigger than '0'
+	    END_REGION
+	    
+	    REGION 7.8 - Head to head and gap lower conveyor
+	        IF #si_LowerHeadToHead > 0                                                      // as long as value is bigger than '0'
+	        THEN
+	            
+	            #si_LowerHeadToHead -= #iqUDT_HandShakeLowerPosition.DownstreamDisplacement;  // Downstream displacement head to head counter 
+	            IF #si_LowerHeadToHead < 0                                                  // Value is smaller than '0'
+	            THEN
+	                #si_LowerHeadToHead := 0;                                               // Set value to '0'
+	            END_IF;
+	        END_IF;
+	        
+	        IF #si_LowerGap > 0                                                             // as long as value is bigger than '0'
+	        THEN
+	            
+	            #si_LowerGap -= #iqUDT_HandShakeLowerPosition.DownstreamDisplacement;     // Downstream displacement gap counter 
+	            IF #si_LowerGap < 0                                                         // Value is smaller than '0'
+	            THEN
+	                #si_LowerGap := 0;                                                      // Set value to '0'
+	            END_IF;
+	        END_IF;
+	        
+	        #sx_GappingLower :=                                                             // Gapping is active 
+	        (#si_LowerHeadToHead > 0                                                        // If Head to head counter is bigger than '0'
+	        OR #si_LowerGap > 0);                                                          // If the gap counter is bigger than '0'
+	    END_REGION
+	    
+	    REGION 7.9 - Upper position handshake
+	        
+	        IF #sx_ActualPositionUP                                                         // IF VSU is in upper position 
+	            
+	        THEN
+	            // Copy handshakes
+	            // Upstream to downstream
+	            #iqUDT_HandShakeUpperPosition.GIN := #iqUDT_HandShakeVSUConveyor.GIN;    // GIN number which is transported from up to downstream
+	            #iqUDT_HandShakeUpperPosition.NrOfPosToShift := #iqUDT_HandShakeVSUConveyor.NrOfPosToShift;                  // Number of positions to shift the tracking
+	            
+	            #iqUDT_HandShakeUpperPosition.RTS := #iqUDT_HandShakeVSUConveyor.RTS;                                        // Conveyor is Ready To Send  
+	            #iqUDT_HandShakeUpperPosition.TIP := #iqUDT_HandShakeVSUConveyor.TIP;                                        // Transfer is in progress
+	            #iqUDT_HandShakeUpperPosition.ResetEnergySave := #iqUDT_HandShakeVSUConveyor.ResetEnergySave;                // Wake-up from energy save
+	            // Downstream to upstream
+	            #iqUDT_HandShakeVSUConveyor.DownstreamDisplacement := #iqUDT_HandShakeUpperPosition.DownstreamDisplacement;  // Actual displacement
+	            #iqUDT_HandShakeVSUConveyor.RTR := (#iqUDT_HandShakeUpperPosition.RTR                                        // Ready to receive from upper position
+	            AND NOT #sx_GappingUpper);                                                                                       // Gapping is not active
+	            
+	            #iqUDT_HandShakeVSUConveyor.CascadeStartUp := #iqUDT_HandShakeUpperPosition.CascadeStartUp;                  // Cascade start-up
+	            
+	            IF #sR_TRIG_TIPLeavingVSU.Q                                                                                      // Transfering aux bit rising trigger
+	            THEN
+	                #si_UpperHeadToHead := #iUDT_VSUConfig.HeadToHead;                                                         // Set gapsize head to head
+	            END_IF;
+	            
+	            IF #sF_TRIG_TIPLeavingVSU.Q                                                                                      // Transfering aux bit rising trigger
+	            THEN
+	                #si_UpperGap := #iUDT_VSUConfig.Gap;                                                                       // Set gapsize trail to head
+	            END_IF;
+	            
+	            // Clear GIN iff there is no RTR 
+	            IF NOT #iqUDT_HandShakeUpperPosition.RTR THEN
+	                #iqUDT_HandShakeUpperPosition.GIN := 0;    // GIN number which is transported from up to downstream
+	                #iqUDT_HandShakeUpperPosition.NrOfPosToShift := 0;                  // Number of positions to shift the tracking
+	            END_IF;
+	            
+	        END_IF;
+	    END_REGION
+	    
+	    REGION 7.10 - Lower position handshake
+	        
+	        IF #sx_ActualPositionDown                                                                                           // If VSU is in lower position 
+	            
+	        THEN
+	            // Copy handshakes
+	            // Upstream to downstream
+	            #iqUDT_HandShakeLowerPosition.GIN := #iqUDT_HandShakeVSUConveyor.GIN;                                        // GIN number which is transported from up to downstream
+	            #iqUDT_HandShakeLowerPosition.NrOfPosToShift := #iqUDT_HandShakeVSUConveyor.NrOfPosToShift;                  // Number of positions to shift the tracking
+	            
+	            #iqUDT_HandShakeLowerPosition.RTS := #iqUDT_HandShakeVSUConveyor.RTS;                                        // Conveyor is Ready To Send 
+	            #iqUDT_HandShakeLowerPosition.TIP := #iqUDT_HandShakeVSUConveyor.TIP;                                        // Transfer is in progress
+	            #iqUDT_HandShakeLowerPosition.ResetEnergySave := #iqUDT_HandShakeVSUConveyor.ResetEnergySave;                // Wake-up from energy save
+	            // Downstream to upstream
+	            #iqUDT_HandShakeVSUConveyor.DownstreamDisplacement := #iqUDT_HandShakeLowerPosition.DownstreamDisplacement;  // Actual displacement
+	            #iqUDT_HandShakeVSUConveyor.RTR := (#iqUDT_HandShakeLowerPosition.RTR                                        // Ready to receive from lower position
+	            AND NOT #sx_GappingLower);                                                                                        // Gapping is active
+	            
+	            #iqUDT_HandShakeVSUConveyor.CascadeStartUp := #iqUDT_HandShakeLowerPosition.CascadeStartUp;                  // Cascade start-up
+	            
+	            IF #sR_TRIG_TIPLeavingVSU.Q                                                                                      // Transfering aux bit rising trigger
+	            THEN
+	                #si_LowerHeadToHead := #iUDT_VSUConfig.HeadToHead;                                                         // Set gapsize head to head
+	            END_IF;
+	            
+	            IF #sF_TRIG_TIPLeavingVSU.Q                                                                                      // Transfering aux bit rising trigger
+	            THEN
+	                #si_LowerGap := #iUDT_VSUConfig.Gap;                                                                       // Set gapsize trail to head
+	            END_IF;
+	            
+	            IF NOT #iqUDT_HandShakeLowerPosition.RTR THEN
+	                #iqUDT_HandShakeLowerPosition.GIN := 0;    // GIN number which is transported from up to downstream
+	                #iqUDT_HandShakeLowerPosition.NrOfPosToShift := 0;                  // Number of positions to shift the tracking
+	            END_IF;
+	            
+	        END_IF;
+	    END_REGION
+	    
+	    REGION 7.11 - No position, Clear Handshake
+	        IF NOT #sx_ActualPositionUP AND                                                 // IF VSU is not in upper position 
+	            NOT #sx_ActualPositionDown                                                  // AND VSU is not in lower position 
+	        THEN
+	            
+	            // Reset Handshake upstream
+	            #iqUDT_HandShakeVSUConveyor.RTR := FALSE;                                  // Reset Ready to Receive
+	            #iqUDT_HandShakeVSUConveyor.CascadeStartUp := FALSE;                       // Reset Cascade Startup
+	            
+	            // Reset Handshake Upper position downstream
+	            #iqUDT_HandShakeUpperPosition.GIN := 0;                                   // Reset GIN
+	            #iqUDT_HandShakeUpperPosition.NrOfPosToShift := 0;                        // Reset Numbers of positions to shift data
+	            #iqUDT_HandShakeUpperPosition.RTS := FALSE;                               // Reset Ready TO Send
+	            #iqUDT_HandShakeUpperPosition.TIP := FALSE;                               // Reset Transfer in Progress
+	            #iqUDT_HandShakeUpperPosition.DownstreamDisplacement := 0;                // Reset Actual downstream displacement
+	            #iqUDT_HandShakeUpperPosition.ResetEnergySave := FALSE;
+	            
+	            // Reset Handshake lower position downstream
+	            #iqUDT_HandShakeLowerPosition.GIN := 0;                                   // Reset GIN
+	            #iqUDT_HandShakeLowerPosition.NrOfPosToShift := 0;                        // Reset Numbers of positions to shift data
+	            #iqUDT_HandShakeLowerPosition.RTS := FALSE;                               // Reset Ready to Send
+	            #iqUDT_HandShakeLowerPosition.TIP := FALSE;                               // Reset Transfer in Progress
+	            #iqUDT_HandShakeLowerPosition.DownstreamDisplacement := 0;                // Reset Actual downstream displacement
+	            #iqUDT_HandShakeLowerPosition.ResetEnergySave := FALSE;
+	            
+	        END_IF;
+	    END_REGION
+	    
+	    REGION 7.12 - Secure gaps between entering parcels  
+	        // Calculate the minimum gap out of the speed of the conveyor and the time it takes to move between positions 
+	        //
+	        
+	        #si_RequiredGap := LREAL_TO_INT((INT_TO_LREAL(#iUDT_ConveyorConfiguration.SpeedSetpointNominal) / 10.0) * (UINT_TO_LREAL(#iUDT_VSUConfig.SwitchingTime) / 1000.0) * 1.15);
+	        #iqUDT_VSUInterface.Decisionpoint := #si_RequiredGap;                      // Required gap + 5cm for outfeed fotocells is decision point (the new direction is already there while handling the parcel)
+	        
+	    END_REGION
+	    
+	    REGION 7.13 - Start/Stop VSU conveyor directly
+	        // Start
+	        IF #iqUDT_EquipmentControl.Command.Start                                       // Start from system
+	            AND #sx_Ready                                                               // Equipment has no errors
+	        THEN
+	            #iqUDT_VSUInterface.ExternalHold := FALSE;                                 // External stop signal
+	        END_IF;
+	        
+	        // Stop 
+	        IF #sUDT_HMIStatus.Specific.UpperSwitchArea_Err                                   // Blockage of switching area
+	            OR #sUDT_HMIStatus.Specific.LowerSwitchArea_Err
+	            OR #sUDT_HMIStatus.Specific.UpperEntranceJam_Err                              // Jam of entrance of outfeed conveyors
+	            OR #sUDT_HMIStatus.Specific.LowerEntranceJam_Err
+	            OR #sUDT_HMIStatus.Specific.Direction_Err                                     // in semi-automatic mode and configured as security area: a parcel should go to reject area but direction is not. 
+	            OR NOT #sx_AutomaticActive                                                  // The VSU is not (semi-)automatic active
+	        THEN
+	            #iqUDT_VSUInterface.ExternalHold := TRUE;                                  // External stop signal
+	        END_IF;
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 8 - Write interface DB signals
+	    
+	    REGION 8.1 - Signal interface
+	        
+	        #iqUDT_VSUInterface.InternalErrorReset := #iqUDT_EquipmentControl.Command.Reset;      // Write Reset signal to the VFD interface
+	        #iqUDT_VSUInterface.ResetStatistics := #iqUDT_EquipmentControl.Command.ResetData;     // Write Reset data signal to the VFD interface
+	        #iqUDT_VSUInterface.SwitchingTime := #iUDT_VSUConfig.SwitchingTime;           // Write switching time from configuration to VFD interface
+	        
+	    END_REGION
+	    
+	    REGION 8.1 - Mode selection 
+	        
+	        #iqUDT_VSUInterface.Automatic :=
+	        (#sx_AutomaticActive                                                            // Automatic started
+	        OR #sx_Stopping                                                                 // stopping is activated
+	        OR #sx_PositionAfterRef)                                                        // Go to default position
+	        AND #iqUDT_VSUInterface.Referenced;                                            // and the drive is referenced
+	        
+	        #iqUDT_VSUInterface.Manual :=
+	        #sx_ManualModeActive                                                            // Manual mode is started
+	        AND (#sx_CombinedJogUp                                                          // IF selected jog in positive direction 
+	        OR #sx_CombinedJogDown)
+	        AND #iqUDT_VSUInterface.Referenced;                                            // and the drive is referenced
+	    END_REGION
+	    
+	    REGION 8.2 - Run enable
+	        
+	        #iqUDT_VSUInterface.RunEnabled :=                                              // Enable the positioning device to run
+	        NOT #iqUDT_ConveyorInterface.InternalErrorTracking                            // or the VSU conveyor detected an error in tracking 
+	        AND NOT #iqUDT_VSUInterface.InternalErrorVFD                                  // or there are errors in the VFD
+	        AND NOT #iqUDT_VSUInterface.InternalErrorRIOPanel                              // or an internal error in the RIO panel occured                             
+	        AND (#iqUDT_VSUInterface.Automatic
+	        OR (#iqUDT_VSUInterface.Manual
+	        AND (#sx_CombinedJogUp                                                          // If selected jog in positive direction 
+	        OR #sx_CombinedJogDown))
+	        OR #iqUDT_VSUInterface.GoReference);
+	    END_REGION
+	    
+	    REGION 8.3 - Referencing VFD
+	        
+	        #sR_TRIG_GOReference(CLK := (#sx_AutomaticActive                                 // Refferencing in auto when 
+	                             AND #sx_StartReceived)                                      // Start command received from system
+	                             OR (#sx_ManualModeActive                                    // Manual Refferencing not in auto
+	                             AND #iqUDT_VSUCommand.ReferenceRun)                        // Command form HMI to start referecing
+	                             OR (#sx_ManualModeActive                                    // Manual Refferencing not in auto
+	                             AND #ix_LCPRef));                                           // Command form LCP to start referecing
+	        
+	        #sR_TRIG_Referenced(CLK := #iqUDT_VSUInterface.Referenced);
+	        
+	        // Select reference travel and set signalling request prior to VSU movement 
+	        IF #sR_TRIG_GOReference.Q                                                        // there is rising edge on referencing request bit 
+	            
+	        THEN
+	            #iqUDT_VSUInterface.GoReference := TRUE;                                   // Activate the reference travel memory 
+	            #iqUDT_EquipmentControl.Request.SignalingRequest := TRUE;                  // Request signaling TO control block before running to reference
+	        END_IF;
+	        
+	        // Reference travel mode is active
+	        // If signalling request is off set the reference command
+	        // if the drive signals to be referenced, reset the command and HMI interface
+	        
+	        IF #iqUDT_VSUInterface.GoReference = TRUE                                      // The reference travel is activated  
+	        THEN
+	            // 1: Wait for end of signal request to start drive to do its refference run
+	            IF NOT #iqUDT_EquipmentControl.Request.SignalingRequest                    // Request signaling TO control block before running to reference
+	                AND NOT #sx_PositionAfterRef                                            // last step is active, prohibit starting again.
+	            THEN
+	                #iqUDT_VSUInterface.Reference_command := TRUE;                         // Reference command, VSU request to do reference run to positioning device
+	                
+	            END_IF;
+	            
+	            // 2: Drive did its refference run and is now at refference position
+	            IF #sR_TRIG_Referenced.Q                                                     // If the drive is referenced 
+	            THEN
+	                #iqUDT_VSUInterface.Reference_command := FALSE;                        // Reset Reference command, VSU request to do reference run to positioning device 
+	                #sx_PositionAfterRef := TRUE;                                           // Go to the default position 
+	                #iqUDT_VSUInterface.PositionActual := 0;
+	            END_IF;
+	            
+	            // 3: go to requested position after which the system can continue
+	            IF #iqUDT_VSUInterface.PositionSetpoint = #iqUDT_VSUInterface.PositionActual   // The position is as requested
+	                AND #sx_PositionAfterRef
+	                
+	            THEN
+	                #sx_PositionAfterRef := FALSE;                                          // reset to go to the default position
+	                #iqUDT_VSUInterface.GoReference := FALSE;                              // Reset the reference travel memory
+	                
+	            END_IF;
+	        END_IF;
+	    END_REGION
+	END_REGION
+	
+	REGION 9 - Statistics
+	    
+	    // Down Time
+	    
+	    IF #sx_AutomaticActive                                                              // Automatic active
+	        AND NOT #sx_Ready                                                                // Conveyor not ready
+	        OR #iqUDT_EquipmentControl.Command.ResetData                                    // Reset statistics
+	    THEN
+	        
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,              // Or reset statistics from control
+	                        ix_Activate := #sx_AutomaticActive AND NOT #sx_Ready,                // VSU is stopped 
+	                        ix_RTrigActivate := #sR_TRIG_DownTime.Q,                              // VSU is stopped triger 
+	                        iqUDT_Statistics := #iqUDT_Statistics.DownTime);                // VSU is stopped statistics 
+	    END_IF;
+	    
+	    // Up time
+	    
+	    IF #sx_AutomaticActive                              // Automatic active
+	        AND #sx_Ready                                   // Ready active
+	        OR #iqUDT_EquipmentControl.Command.ResetData    // Reset statistics
+	    THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,        // OR reset statistics from control
+	                        ix_Activate := #sx_AutomaticActive AND #sx_Ready,                        // VSU is running 
+	                        ix_RTrigActivate := #sR_TRIG_UpTime.Q,                              // VSU running trigger 
+	                        iqUDT_Statistics := #iqUDT_Statistics.UpTime);                        // VSU running statistics
+	        
+	    END_IF;
+	    
+	    // Upper switch area error
+	    
+	    #sR_TRIG_UPSwA_Error(CLK := #sUDT_HMIStatus.Specific.UpperSwitchArea_Err);               // Oneshot trigger error occurred
+	    
+	    IF #iqUDT_VSUInterface.ResetStatistics OR                                              // IF there is signal TO reset statistics from VSU interface 
+	        #iqUDT_EquipmentControl.Command.ResetData OR                                       // Or there is signal to reset statistics from equipment control structure 
+	        #sUDT_HMIStatus.Specific.UpperSwitchArea_Err                                        // Or an upper switch area error occurred 
+	    THEN
+	        
+	        "FC_Statistics"(ix_Reset := #iqUDT_VSUInterface.ResetStatistics OR                 // Reset statistics from HMI
+	                        #iqUDT_EquipmentControl.Command.ResetData,                         // Or reset statistics from control
+	                        ix_Activate := #sUDT_HMIStatus.Specific.UpperSwitchArea_Err,        // Upper switch area error occurred
+	                        ix_RTrigActivate := #sR_TRIG_UPSwA_Error.Q,                          // Error trigger 
+	                        iqUDT_Statistics := #iqUDT_Statistics.UpperSwitchArea_Error);          // Statistics of VSU errors 
+	        
+	    END_IF;
+	    
+	    // Lower switch area error
+	    
+	    #sR_TRIG_LowSwA_Error(CLK := #sUDT_HMIStatus.Specific.LowerSwitchArea_Err);              // Oneshot trigger error occurred
+	    
+	    IF #iqUDT_VSUInterface.ResetStatistics OR                                              // IF there is signal TO reset statistics from VSU interface 
+	        #iqUDT_EquipmentControl.Command.ResetData OR                                       // Or there is signal to reset statistics from equipment control structure 
+	        #sUDT_HMIStatus.Specific.LowerSwitchArea_Err                                        // Or an upper switch area error occurred 
+	    THEN
+	        
+	        "FC_Statistics"(ix_Reset := #iqUDT_VSUInterface.ResetStatistics OR                 // Reset statistics from HMI
+	                        #iqUDT_EquipmentControl.Command.ResetData,                         // Or reset statistics from control
+	                        ix_Activate := #sUDT_HMIStatus.Specific.LowerSwitchArea_Err,        // Upper switch area error occurred
+	                        ix_RTrigActivate := #sR_TRIG_LowSwA_Error.Q,                         // Error trigger 
+	                        iqUDT_Statistics := #iqUDT_Statistics.LowerSwitchArea_Error);          // Statistics of VSU errors 
+	        
+	    END_IF;
+	    
+	    // Upper entrance Jam
+	    
+	    #sR_TRIG_UPEntr_Jam(CLK := #sUDT_HMIStatus.Specific.UpperEntranceJam_Err);               // Oneshot trigger error occurred
+	    
+	    IF #iqUDT_VSUInterface.ResetStatistics OR                                              // IF there is signal TO reset statistics from VSU interface 
+	        #iqUDT_EquipmentControl.Command.ResetData OR                                       // Or there is signal to reset statistics from equipment control structure 
+	        #sUDT_HMIStatus.Specific.UpperEntranceJam_Err                                       // Or an upper switch area error occurred 
+	    THEN
+	        
+	        "FC_Statistics"(ix_Reset := #iqUDT_VSUInterface.ResetStatistics OR                 // Reset statistics from HMI
+	                        #iqUDT_EquipmentControl.Command.ResetData,                         // Or reset statistics from control
+	                        ix_Activate := #sUDT_HMIStatus.Specific.UpperEntranceJam_Err,       // Upper switch area error occurred
+	                        ix_RTrigActivate := #sR_TRIG_UPEntr_Jam.Q,                           // Error trigger 
+	                        iqUDT_Statistics := #iqUDT_Statistics.UpperEntranceJam_Error);         // Statistics of VSU errors 
+	        
+	    END_IF;
+	    
+	    //- Lower entrance Jam
+	    
+	    #sR_TRIG_LowEntr_Jam(CLK := #sUDT_HMIStatus.Specific.LowerEntranceJam_Err);              // Oneshot trigger error occurred
+	    
+	    IF #iqUDT_VSUInterface.ResetStatistics OR                                              // IF there is signal TO reset statistics from VSU interface 
+	        #iqUDT_EquipmentControl.Command.ResetData OR                                       // Or there is signal to reset statistics from equipment control structure 
+	        #sUDT_HMIStatus.Specific.LowerEntranceJam_Err                                       // Or an upper switch area error occurred 
+	    THEN
+	        
+	        "FC_Statistics"(ix_Reset := #iqUDT_VSUInterface.ResetStatistics OR                 // Reset statistics from HMI
+	                        #iqUDT_EquipmentControl.Command.ResetData,                         // Or reset statistics from control
+	                        ix_Activate := #sUDT_HMIStatus.Specific.LowerEntranceJam_Err,       // Upper switch area error occurred
+	                        ix_RTrigActivate := #sR_TRIG_LowEntr_Jam.Q,                          // Error trigger 
+	                        iqUDT_Statistics := #iqUDT_Statistics.LowerEntranceJam_Error);         // Statistics of VSU errors 
+	        
+	    END_IF;
+	    
+	    // Direction error
+	    
+	    #sR_TRIG_Direction_Error(CLK := #sUDT_HMIStatus.Specific.Direction_Err);                 // Oneshot trigger error occurred
+	    
+	    IF #iqUDT_VSUInterface.ResetStatistics OR                                              // IF there is signal TO reset statistics from VSU interface 
+	        #iqUDT_EquipmentControl.Command.ResetData OR                                       // Or there is signal to reset statistics from equipment control structure 
+	        #sUDT_HMIStatus.Specific.Direction_Err                                              // Or an upper switch area error occurred 
+	    THEN
+	        
+	        "FC_Statistics"(ix_Reset := #iqUDT_VSUInterface.ResetStatistics OR                 // Reset statistics from HMI
+	                        #iqUDT_EquipmentControl.Command.ResetData,                         // Or reset statistics from control
+	                        ix_Activate := #sUDT_HMIStatus.Specific.Direction_Err,              // Upper switch area error occurred
+	                        ix_RTrigActivate := #sR_TRIG_Direction_Error.Q,                      // Error trigger 
+	                        iqUDT_Statistics := #iqUDT_Statistics.Direction_Error);                // Statistics of VSU errors 
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 10 - Status
+	    
+	    #sUDT_Status.Stopped := #sx_Ready AND NOT #sx_AutomaticActive AND NOT #sx_Stopping;    // stopped
+	    #sUDT_Status.AutoON := #sx_AutomaticActive OR #sx_Stopping;                            // Auto On
+	    #sUDT_Status.Halted := FALSE;                                                          // Halted
+	    #sUDT_Status.Dieback := FALSE;                                                         // Die back
+	    #sUDT_Status.Running := (#sx_UpRequest OR #sx_DownRequest) AND #sx_AutomaticActive;                              // Running
+	    #sUDT_Status.ManualRun := #sx_ManualModeActive AND #sUDT_Status.Running;             // Manual run
+	    #sUDT_Status.Manual := #sx_ManualModeActive;                                           // Manual
+	    #sUDT_Status.EnergySave := FALSE;                                                      // Energy save active
+	    #sUDT_Status.SafetyStop := NOT #ix_SafetyOk;                                           // Safety not ok
+	    
+	    //   Specific status
+	    #sUDT_HMIStatus.Specific.ReferencedError := NOT #iqUDT_VSUInterface.Referenced;
+	    
+	    IF #sUDT_StatusOld <> #sUDT_Status                                            // update on change
+	    THEN
+	        
+	        // Set status to status number
+	        #sUDT_HMIStatus.Status := 0;                                               // Initialise status number              
+	        
+	        IF #sUDT_Status.Running                                                    // Running
+	        THEN
+	            
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Running;
+	            
+	        END_IF;
+	        
+	        IF #sUDT_Status.Stopped                                                    // Stopped
+	        THEN
+	            
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Stopped;
+	            
+	        END_IF;
+	        
+	        IF #sUDT_Status.Dieback                                                    // Dieback
+	        THEN
+	            
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Dieback;
+	            
+	        END_IF;
+	        
+	        IF #sUDT_Status.ManualRun                                                  // Manual run
+	        THEN
+	            
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".ManualRun;
+	            
+	        END_IF;
+	        
+	        IF #sUDT_Status.Manual                                                     // Manual
+	        THEN
+	            
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Manual;
+	            
+	        END_IF;
+	        
+	        IF #iqUDT_VSUInterface.InternalWarningVFD                                  // The VFD has an internal warning
+	            OR #iqUDT_VSUInterface.InternalWarningRIOPanel                         // The RIO panel has an internal warning    
+	            
+	        THEN
+	            
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Warning;
+	            
+	        END_IF;
+	        
+	        IF #sUDT_HMIStatus.Specific.UpperEntranceJam_Err                           // Upper entrance PEC Jam error
+	            OR #sUDT_HMIStatus.Specific.LowerEntranceJam_Err                       // Lower entrance PEC Jam error
+	        THEN
+	            
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".PECJam;
+	            
+	        END_IF;
+	        
+	        IF #sUDT_HMIStatus.Specific.ReferencedError                                // Refference error
+	            OR #sUDT_HMIStatus.Specific.UpperSwitchArea_Err                        // Upper limit switch error
+	            OR #sUDT_HMIStatus.Specific.LowerSwitchArea_Err                        // Lower limit switch error
+	        THEN
+	            
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".VFDError;
+	            
+	        END_IF;
+	        
+	        IF #sUDT_HMIStatus.Specific.Direction_Err                                   // Direction error
+	        THEN
+	            
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".OperationalError;
+	            
+	        END_IF;
+	        
+	        
+	        IF #sUDT_HMIStatus.Specific.Keyswitch_WRN                                  // Key switch error
+	            OR #iqUDT_VSUInterface.InternalErrorVFD                                // The VFD has an internal error
+	            OR #iqUDT_VSUInterface.InternalErrorRIOPanel                           // The RIO panel has an internal error
+	        THEN
+	            
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Error;
+	            
+	        END_IF;
+	        
+	        
+	        IF #sUDT_Status.SafetyStop                                                 // Safety stop
+	        THEN
+	            
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".SafetyStop;
+	            
+	        END_IF;
+	        
+	        #qUDT_HMIStatus := #sUDT_HMIStatus;                                       // Copy status to output
+	        #sUDT_StatusOld := #sUDT_Status;                                          // Copy status TO memory
+	        #qUDT_Status := #sUDT_Status;                                             // Copy status to output
+	    END_IF;
+	    
+	    #qUDT_HMIStatus.Specific.UpperPosition := #sx_ActualPositionUP;
+	    #qUDT_HMIStatus.Specific.LowerPosition := #sx_ActualPositionDown;
+	    
+	END_REGION
+	
+	REGION 11 - Report to control block
+	    
+	    "FC_EquipmentReport"(iUDT_Status := #sUDT_Status,
+	                         iqUDT_Control := #iqUDT_EquipmentControl);
+	    
+	END_REGION
+	
+	REGION 12 - Internal errors and warnings reset
+	    
+	    #iqUDT_ConveyorInterface.InternalErrorPEC := FALSE;
+	    #iqUDT_ConveyorInterface.InternalWarningTracking := FALSE;
+	    #iqUDT_ConveyorInterface.InternalErrorTracking := FALSE;
+	    #iqUDT_ConveyorInterface.InternalWarningVFD := FALSE;
+	    #iqUDT_ConveyorInterface.InternalErrorVFD := FALSE;
+	    #iqUDT_ConveyorInterface.Disconnected := FALSE;
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

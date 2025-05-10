@@ -1,0 +1,74 @@
+﻿FUNCTION "FC_Panels" : Void
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 7
+// END_ATTRIBUTES
+   VAR_TEMP 
+      ts_UDT_EquipmentControl : "UDT_EquipmentControl";
+      tx_replace : Bool;
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	 
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	08/10/2019  | 2.0       | S.Theocharis  | first release MHS TIA 15.1
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	21/04/2020  | 3.1       | S.Theocharis  | Added call of FC_PNNode
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	
+	REGION 1 – MCP diagnostics 
+	    // Main Control Panel
+	    
+	    
+	    
+	    "DI_MainControlPanel"(is_PNPNCouplerDeviceName := 'PNPN Coupler -403A1',
+	                          ix_UPSOk := false,
+	                          ix_NoFireAlarmActive := false,
+	                          ix_SimulationModeActive := "DB_Memory".Simulation,
+	                          qUDT_HMIStatus => "DB_Status".System.MCP,
+	                          qUDT_Status => "DB_CommonStatus".System.MCP,
+	                          iqUDT_Statistics := "DB_Statistics".System.MCP,
+	                          iqUDT_EquipmentControl := "DB_Control".System1);
+	    
+	END_REGION
+	
+	REGION 2 – RIO diagnostics
+	    // Remote I/O Panels
+	    
+	    "FC_RIO"();
+	    
+	END_REGION
+	
+	REGION 3 – PN Node Diagnostics
+	    
+	    "FC_PNNode"();
+	    
+	END_REGION
+	
+	
+	REGION 4 – PDP diagnostics
+	    // Power Distribution Panel
+	    
+	    "FC_PowerDistributionPanel"();
+	    
+	    
+	END_REGION
+	
+	REGION 5 – CPG diagnostics 
+	    
+	    "FC_ControlPowerGroup"();
+	    
+	    
+	END_REGION
+	
+END_FUNCTION
+

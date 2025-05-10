@@ -1,0 +1,23 @@
+﻿FUNCTION "FC_PowerDistributionPanel" : Void
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 10
+// END_ATTRIBUTES
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	
+	*)
+	
+	
+	
+	
+END_FUNCTION
+

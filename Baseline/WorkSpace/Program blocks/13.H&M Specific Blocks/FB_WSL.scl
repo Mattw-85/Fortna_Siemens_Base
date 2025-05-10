@@ -1,0 +1,1804 @@
+﻿FUNCTION_BLOCK "FB_WSL"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      iUDT_Configuration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_WSLConfiguration";   // Workstation configuration structure
+      iUDT_HardwareOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_WSLHardwareOk";   // Hardware is healthy
+      iv_MotorInput120 : Variant;   // 120 ConveyLinxAix inputs structure
+      iv_MotorInput210 : Variant;   // 210 ConveyLinxAix inputs structure
+      iv_MotorInput220 : Variant;   // 220 ConveyLinxAix inputs structure
+      iv_MotorInput290 : Variant;   // 290 ConveyLinxAix inputs structure
+      iv_MotorInput300 : Variant;   // 300 ConveyLinxAix inputs structure
+      iv_MotorInput410 : Variant;   // 410 ConveyLinxAix inputs structure
+      iv_MotorInput420 : Variant;   // 420 ConveyLinxAix inputs structure
+      iv_MotorInput490 : Variant;   // 490 ConveyLinxAix inputs structure
+      iv_MotorInput500 : Variant;   // 500 ConveyLinxAix inputs structure
+      iv_MotorInput610 : Variant;   // 610 ConveyLinxAix inputs structure
+      iv_MotorInput620 : Variant;   // 620 ConveyLinxAix inputs structure
+      iv_MotorInput630 : Variant;   // 630 ConveyLinxAix inputs structure
+      iv_MotorInput640 : Variant;   // 640 ConveyLinxAix inputs structure
+      iUDT_ScannerInput301 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_DataLogicIN";   // DataLogic input structure
+      iUDT_ScannerInput501 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_DataLogicIN";   // DataLogic input structure
+      ix_24vOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when 24VDC is healthy
+      ix_400vOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when 400VAC is healthy
+      ix_SafetyOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when safety is ok
+      ix_AirPressureOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when air pressure is ok
+      iUDT_InputsModule010 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_AixZpaFullIN";   // ZPA inputs module
+      iUDT_InputsModule100 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_AixZpaFullIN";   // ZPA inputs module
+      iUDT_InputsModule230 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_AixZpaFullIN";   // ZPA inputs module
+      iUDT_InputsModule270 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_AixZpaFullIN";   // ZPA inputs module
+      iUDT_InputsModule430 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_AixZpaFullIN";   // ZPA inputs module
+      iUDT_InputsModule470 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_AixZpaFullIN";   // ZPA inputs module
+   END_VAR
+
+   VAR_OUTPUT 
+      qUDT_ScannerOutput301 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_DataLogicOUT";   // DataLogic output structure
+      qUDT_ScannerOutput501 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_DataLogicOUT";   // DataLogic output structure
+      qx_PopupControl121 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Command up for section 121
+      qx_PopupControl221 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Command up for section 221
+      qx_PopupControl291 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Command up for section 291
+      qx_PopupControl421 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Command up for section 421
+      qx_PopupControl491 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Command up for section 491
+      qx_PopupControl611 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Command up for section 611
+      qUDT_OutputsModule010 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_AixZpaFullOut";   // ZPA outputs module
+      qUDT_OutputsModule100 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_AixZpaFullOut";   // ZPA outputs module
+      qUDT_OutputsModule230 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_AixZpaFullOut";   // ZPA outputs module
+      qUDT_OutputsModule270 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_AixZpaFullOut";   // ZPA outputs module
+      qUDT_OutputsModule430 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_AixZpaFullOut";   // ZPA outputs module
+      qUDT_OutputsModule470 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_AixZpaFullOut";   // ZPA outputs module
+   END_VAR
+
+   VAR_IN_OUT 
+      iqv_MotorOutput120 : Variant;   // 120 ConveyLinxAix outputs structure
+      iqv_MotorOutput210 : Variant;   // 210 ConveyLinxAix outputs structure
+      iqv_MotorOutput220 : Variant;   // 220 ConveyLinxAix outputs structure
+      iqv_MotorOutput290 : Variant;   // 290 ConveyLinxAix outputs structure
+      iqv_MotorOutput300 : Variant;   // 300 ConveyLinxAix outputs structure
+      iqv_MotorOutput410 : Variant;   // 410 ConveyLinxAix outputs structure
+      iqv_MotorOutput420 : Variant;   // 420 ConveyLinxAix outputs structure
+      iqv_MotorOutput490 : Variant;   // 490 ConveyLinxAix outputs structure
+      iqv_MotorOutput500 : Variant;   // 500 ConveyLinxAix outputs structure
+      iqv_MotorOutput610 : Variant;   // 610 ConveyLinxAix outputs structure
+      iqv_MotorOutput620 : Variant;   // 620 ConveyLinxAix outputs structure
+      iqv_MotorOutput630 : Variant;   // 630 ConveyLinxAix outputs structure
+      iqv_MotorOutput640 : Variant;   // 640 ConveyLinxAix outputs structure
+      iqUDT_EquipmentControlFirstStation : "UDT_EquipmentControl";   // Equipment control structure for station #1
+      iqUDT_EquipmentControlSecondStation : "UDT_EquipmentControl";   // Equipment control structure for station #2
+      iqUDT_EquipmentControlInfeed : "UDT_EquipmentControl";   // Equipment control structure for infeed area
+      iqUDT_FirstWESInterface : "UDT_WES_OnlinePackingStation";   // First workstation from main line flow perspecive communication interface with WES
+      iqUDT_SecondWESInterface : "UDT_WES_OnlinePackingStation";   // Second workstation from main line flow perspecive communication interface with WES
+      iqUDT_WorkstationCommands : "UDT_WSLHmiCommands";   // Workstation command structure
+      iqUDT_WorkstationStatistics : "UDT_WSLStatistics";   // Statistics structure
+      iqUDT_WorkstationStatus : "UDT_WSLStatus";   // HMI Status structure
+      iqUDT_WorkstationCommonStatus : "UDT_WSLCommonStatus";   // Common status structure
+      iqUDT_UnknownGINRange : "UDT_UnknownGIN";   // Unknown GIN
+      iqUDT_RATPositioning120 : "UDT_RATPositioning";   // Structure including data for servo control RAT 121
+      iqUDT_RATPositioning220 : "UDT_RATPositioning";   // Structure including data for servo control RAT 221
+      iqUDT_RATPositioning290 : "UDT_RATPositioning";   // Structure including data for servo control RAT 291
+      iqUDT_RATPositioning420 : "UDT_RATPositioning";   // Structure including data for servo control RAT 421
+      iqUDT_RATPositioning490 : "UDT_RATPositioning";   // Structure including data for servo control RAT 491
+      iqUDT_RATPositioning610 : "UDT_RATPositioning";   // Structure including data for servo control RAT 611
+      iqUDT_HandshakeDownstream640 : "UDT_ConveyorHandshake";   // Downstream handshake structure for 640 conveyor
+      iqUDT_HandshakeUpstream010 : "UDT_ConveyorHandshake";   // Handshake structure
+   END_VAR
+
+   VAR 
+      sFB_Displacement120 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_Displacement";   // Displacement calculation for 120 conveyor
+      sFB_Displacement121 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_Displacement";   // Displacement calculation for 121 conveyor
+      sFB_Displacement210 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_Displacement";   // Displacement calculation for 210 conveyor
+      sFB_Displacement220 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_Displacement";   // Displacement calculation for 220 conveyor
+      sFB_Displacement221 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_Displacement";   // Displacement calculation for 221 conveyor
+      sFB_Displacement290 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_Displacement";   // Displacement calculation for 290 conveyor
+      sFB_Displacement291 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_Displacement";   // Displacement calculation for 291 conveyor
+      sFB_Displacement300 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_Displacement";   // Displacement calculation for 300 conveyor
+      sFB_Displacement410 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_Displacement";   // Displacement calculation for 410 conveyor
+      sFB_Displacement420 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_Displacement";   // Displacement calculation for 420 conveyor
+      sFB_Displacement421 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_Displacement";   // Displacement calculation for 421 conveyor
+      sFB_Displacement490 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_Displacement";   // Displacement calculation for 490 conveyor
+      sFB_Displacement491 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_Displacement";   // Displacement calculation for 491 conveyor
+      sFB_Displacement500 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_Displacement";   // Displacement calculation for 500 conveyor
+      sFB_Displacement610 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_Displacement";   // Displacement calculation for 610 conveyor
+      sFB_Displacement611 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_Displacement";   // Displacement calculation for 611 conveyor
+      sFB_Displacement620 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_Displacement";   // Displacement calculation for 620 conveyor
+      sFB_Displacement630 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_Displacement";   // Displacement calculation for 630 conveyor
+      sFB_Displacement640 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_Displacement";   // Displacement calculation for 640 conveyor
+      sUDT_Interface120 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorInterface";   // Interface structure for 120 conveyor
+      sUDT_Interface121 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorInterface";   // Interface structure for 121 conveyor
+      sUDT_Interface210 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorInterface";   // Interface structure for 210 conveyor
+      sUDT_Interface220 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorInterface";   // Interface structure for 220 conveyor
+      sUDT_Interface221 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorInterface";   // Interface structure for 221 conveyor
+      sUDT_Interface290 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorInterface";   // Interface structure for 290 conveyor
+      sUDT_Interface291 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorInterface";   // Interface structure for 291 conveyor
+      sUDT_Interface300 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorInterface";   // Interface structure for 300 conveyor
+      sUDT_Interface410 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorInterface";   // Interface structure for 410 conveyor
+      sUDT_Interface420 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorInterface";   // Interface structure for 420 conveyor
+      sUDT_Interface421 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorInterface";   // Interface structure for 421 conveyor
+      sUDT_Interface490 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorInterface";   // Interface structure for 490 conveyor
+      sUDT_Interface491 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorInterface";   // Interface structure for 491 conveyor
+      sUDT_Interface500 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorInterface";   // Interface structure for 500 conveyor
+      sUDT_Interface610 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorInterface";   // Interface structure for 610 conveyor
+      sUDT_Interface611 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorInterface";   // Interface structure for 611 conveyor
+      sUDT_Interface620 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorInterface";   // Interface structure for 620 conveyor
+      sUDT_Interface630 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorInterface";   // Interface structure for 630 conveyor
+      sUDT_Interface640 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorInterface";   // Interface structure for 640 conveyor
+      sUDT_ZPAinterface010 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ZPAinterface";   // ZPA interface
+      sUDT_ZPAinterface230 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ZPAinterface";   // ZPA interface
+      sUDT_ZPAinterface430 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ZPAinterface";   // ZPA interface
+      sUDT_Handshake110 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorHandshake";   // Handshake structure for 110 conveyor
+      sUDT_Handshake120 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorHandshake";   // Handshake structure for 120 conveyor
+      sUDT_Handshake121 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorHandshake";   // Handshake structure for 121 conveyor
+      sUDT_HandshakeUp121 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorHandshake";   // HandshakeUp structure for 121 conveyor
+      sUDT_Handshake210 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorHandshake";   // Handshake structure for 210 conveyor
+      sUDT_Handshake220 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorHandshake";   // Handshake structure for 220 conveyor
+      sUDT_Handshake221 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorHandshake";   // Handshake structure for 221 conveyor
+      sUDT_Handshake230 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorHandshake";   // Handshake structure for 230 conveyor
+      sUDT_Handshake240 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorHandshake";   // Handshake structure for 240 conveyor
+      sUDT_Handshake250 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorHandshake";   // Handshake structure for 250 conveyor
+      sUDT_Handshake260 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorHandshake";   // Handshake structure for 260 conveyor
+      sUDT_Handshake270 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorHandshake";   // Handshake structure for 270 conveyor
+      sUDT_Handshake280 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorHandshake";   // Handshake structure for 280 conveyor
+      sUDT_Handshake290 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorHandshake";   // Handshake structure for 290 conveyor
+      sUDT_Handshake291 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorHandshake";   // Handshake structure for 291 conveyor
+      sUDT_HandshakeUp291 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorHandshake";   // HandshakeUp structure for 291 conveyor
+      sUDT_Handshake300 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorHandshake";   // Handshake structure for 300 conveyor
+      sUDT_Handshake410 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorHandshake";   // Handshake structure for 410 conveyor
+      sUDT_Handshake420 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorHandshake";   // Handshake structure for 420 conveyor
+      sUDT_Handshake421 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorHandshake";   // Handshake structure for 421 conveyor
+      sUDT_Handshake430 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorHandshake";   // Handshake structure for 430 conveyor
+      sUDT_Handshake440 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorHandshake";   // Handshake structure for 440 conveyor
+      sUDT_Handshake450 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorHandshake";   // Handshake structure for 450 conveyor
+      sUDT_Handshake460 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorHandshake";   // Handshake structure for 460 conveyor
+      sUDT_Handshake470 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorHandshake";   // Handshake structure for 470 conveyor
+      sUDT_Handshake480 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorHandshake";   // Handshake structure for 480 conveyor
+      sUDT_Handshake490 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorHandshake";   // Handshake structure for 490 conveyor
+      sUDT_Handshake491 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorHandshake";   // Handshake structure for 491 conveyor
+      sUDT_Handshake500 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorHandshake";   // Handshake structure for 500 conveyor
+      sUDT_Handshake610 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorHandshake";   // Handshake structure for 610 conveyor
+      sUDT_Handshake611 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorHandshake";   // Handshake structure for 611 conveyor
+      sUDT_Handshake620 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorHandshake";   // Handshake structure for 620 conveyor
+      sUDT_Handshake630 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorHandshake";   // Handshake structure for 630 conveyor
+      sUDT_Handshake640 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorHandshake";   // Handshake structure for 640 conveyor
+      sFB_PEC120 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_PEC";   // Photoeye handling for 120 conveyor
+      sFB_PEC210 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_PEC";   // Photoeye handling for 210 conveyor
+      sFB_PEC220 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_PEC";   // Photoeye handling for 220 conveyor
+      sFB_PEC290 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_PEC";   // Photoeye handling for 290 conveyor
+      sFB_PEC300 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_PEC";   // Photoeye handling for 300 conveyor
+      sFB_PEC410 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_PEC";   // Photoeye handling for 410 conveyor
+      sFB_PEC420 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_PEC";   // Photoeye handling for 420 conveyor
+      sFB_PEC490 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_PEC";   // Photoeye handling for 490 conveyor
+      sFB_PEC500 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_PEC";   // Photoeye handling for 500 conveyor
+      sFB_PEC610 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_PEC";   // Photoeye handling for 610 conveyor
+      sFB_PEC620 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_PEC";   // Photoeye handling for 620 conveyor
+      sFB_PEC630 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_PEC";   // Photoeye handling for 630 conveyor
+      sFB_PEC640 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_PEC";   // Photoeye handling for 640 conveyor
+      sFB_ZpaFirstConveyor010 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "FB_ZpaConveyLinxAixFirst";
+      sFB_ZpaStatus010 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "FB_ZpaConveyLinxAixZoneStatus";
+      sFB_ZpaStatus020 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "FB_ZpaConveyLinxAixZoneStatus";
+      sFB_ZpaStatus030 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "FB_ZpaConveyLinxAixZoneStatus";
+      sFB_ZpaStatus040 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "FB_ZpaConveyLinxAixZoneStatus";
+      sFB_ZpaStatus050 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "FB_ZpaConveyLinxAixZoneStatus";
+      sFB_ZpaStatus060 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "FB_ZpaConveyLinxAixZoneStatus";
+      sFB_ZpaStatus070 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "FB_ZpaConveyLinxAixZoneStatus";
+      sFB_ZpaStatus080 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "FB_ZpaConveyLinxAixZoneStatus";
+      sFB_ZpaStatus090 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "FB_ZpaConveyLinxAixZoneStatus";
+      sFB_ZpaStatus100 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "FB_ZpaConveyLinxAixZoneStatus";
+      sFB_ZpaLastConveyor110 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "FB_ZpaConveyLinxAixLast";
+      sFB_ZpaStatus110 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "FB_ZpaConveyLinxAixZoneStatus";
+      sFB_Conveyor210 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_Conveyor";   // Function block to control the 210 conveyor
+      sFB_ZpaFirstConveyor230 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "FB_ZpaConveyLinxAixFirst";
+      sFB_ZpaStatus230 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "FB_ZpaConveyLinxAixZoneStatus";
+      sFB_ZpaStatus240 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "FB_ZpaConveyLinxAixZoneStatus";
+      sFB_ZpaStatus250 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "FB_ZpaConveyLinxAixZoneStatus";
+      sFB_ZpaStatus260 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "FB_ZpaConveyLinxAixZoneStatus";
+      sFB_ZpaStatus270 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "FB_ZpaConveyLinxAixZoneStatus";
+      sFB_ZpaLastConveyor280 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "FB_ZpaConveyLinxAixLast";
+      sFB_ZpaStatus280 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "FB_ZpaConveyLinxAixZoneStatus";
+      sFB_Conveyor300 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_Conveyor";   // Function block to control the 300 conveyor
+      sFB_Conveyor410 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_Conveyor";   // Function block to control the 410 conveyor
+      sFB_ZpaFirstConveyor430 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "FB_ZpaConveyLinxAixFirst";
+      sFB_ZpaStatus430 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "FB_ZpaConveyLinxAixZoneStatus";
+      sFB_ZpaStatus440 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "FB_ZpaConveyLinxAixZoneStatus";
+      sFB_ZpaStatus450 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "FB_ZpaConveyLinxAixZoneStatus";
+      sFB_ZpaStatus460 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "FB_ZpaConveyLinxAixZoneStatus";
+      sFB_ZpaStatus470 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "FB_ZpaConveyLinxAixZoneStatus";
+      sFB_ZpaLastConveyor480 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "FB_ZpaConveyLinxAixLast";
+      sFB_ZpaStatus480 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "FB_ZpaConveyLinxAixZoneStatus";
+      sFB_Conveyor500 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_Conveyor";   // Function block to control the 500 conveyor
+      sFB_Conveyor620 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_Conveyor";   // Function block to control the 620 conveyor
+      sFB_Conveyor630 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_Conveyor";   // Function block to control the 630 conveyor
+      sFB_Conveyor640 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_Conveyor";   // Function block to control the 640 conveyor
+      sFB_MCOConveyLinxAixController120 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_MCOConveyLinxAixController";   // Function to interface with ConveyLinx Aix Controller for 120
+      sFB_MCOConveyLinxAixController121 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_MCOConveyLinxAixController";   // Function to interface with ConveyLinx Aix Controller for 121
+      sFB_MCOConveyLinxAixController210 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_MCOConveyLinxAixController";   // Function to interface with ConveyLinx Aix Controller for 210
+      sFB_MCOConveyLinxAixController220 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_MCOConveyLinxAixController";   // Function to interface with ConveyLinx Aix Controller for 220
+      sFB_MCOConveyLinxAixController221 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_MCOConveyLinxAixController";   // Function to interface with ConveyLinx Aix Controller for 221
+      sFB_MCOConveyLinxAixController290 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_MCOConveyLinxAixController";   // Function to interface with ConveyLinx Aix Controller for 290
+      sFB_MCOConveyLinxAixController291 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_MCOConveyLinxAixController";   // Function to interface with ConveyLinx Aix Controller for 291
+      sFB_MCOConveyLinxAixController300 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_MCOConveyLinxAixController";   // Function to interface with ConveyLinx Aix Controller for 300
+      sFB_MCOConveyLinxAixController410 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_MCOConveyLinxAixController";   // Function to interface with ConveyLinx Aix Controller for 410
+      sFB_MCOConveyLinxAixController420 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_MCOConveyLinxAixController";   // Function to interface with ConveyLinx Aix Controller for 420
+      sFB_MCOConveyLinxAixController421 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_MCOConveyLinxAixController";   // Function to interface with ConveyLinx Aix Controller for 421
+      sFB_MCOConveyLinxAixController490 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_MCOConveyLinxAixController";   // Function to interface with ConveyLinx Aix Controller for 490
+      sFB_MCOConveyLinxAixController491 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_MCOConveyLinxAixController";   // Function to interface with ConveyLinx Aix Controller for 491
+      sFB_MCOConveyLinxAixController500 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_MCOConveyLinxAixController";   // Function to interface with ConveyLinx Aix Controller for 500
+      sFB_MCOConveyLinxAixController610 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_MCOConveyLinxAixController";   // Function to interface with ConveyLinx Aix Controller for 610
+      sFB_MCOConveyLinxAixController611 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_MCOConveyLinxAixController";   // Function to interface with ConveyLinx Aix Controller for 611
+      sFB_MCOConveyLinxAixController620 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_MCOConveyLinxAixController";   // Function to interface with ConveyLinx Aix Controller for 620
+      sFB_MCOConveyLinxAixController630 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_MCOConveyLinxAixController";   // Function to interface with ConveyLinx Aix Controller for 630
+      sFB_MCOConveyLinxAixController640 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_MCOConveyLinxAixController";   // Function to interface with ConveyLinx Aix Controller for 630
+      sFB_RightAngledTransfer121 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_RightAngledTransfer";   // Funtion to control 121 RAT
+      sFB_RightAngledTransfer221 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_RightAngledTransfer";   // Funtion to control 221 RAT
+      sFB_RightAngledTransfer291 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_RightAngledTransfer";   // Funtion to control 291 RAT
+      sFB_RightAngledTransfer421 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_RightAngledTransfer";   // Funtion to control 421 RAT
+      sFB_RightAngledTransfer491 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_RightAngledTransfer";   // Funtion to control 491 RAT
+      sFB_RightAngledTransfer611 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_RightAngledTransfer";   // Funtion to control 611 RAT
+      sFB_CountActiveInputs_Left { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_CountActiveInputs";   // Count free positions on left station
+      sFB_CountActiveInputs_Right { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_CountActiveInputs";   // Count free positions on right station
+      ss_Barcode280 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;   // Barcode read from the scanner
+      ss_Barcode480 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;   // Barcode read from the scanner
+      si_DestinationA121 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Destination for 121 RAT
+      si_DestinationA291 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Destination for 291 RAT
+      si_DestinationA491 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Destination for 491 RAT
+      sx_LastFrom120Right { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Bit indicating that last divert on RAT 121 was to the right
+      sFB_Scanner_281 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_DataLogicBlade";   // DataLogic scanner
+      sFB_Scanner_481 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_DataLogicBlade";   // DataLogic scanner
+      sUDT_Interface280 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorInterface";
+      sUDT_Interface480 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ConveyorInterface";
+   END_VAR
+
+   VAR_TEMP 
+      tUDT_dummyHandshake : "UDT_ConveyorHandshake";   // Dummy Handshake structure
+      tw_dummy : Word;   // Dummy word
+      tx_dummy : Bool;   // Dummy bool
+      tudt_Bladeinterfacedummy : "UDT_ValveInterface";
+      ti_externalSpeed_300 : Int;
+      ti_externalSpeed_500 : Int;
+      ts_Barcode281 : String;
+      ts_Barcode481 : String;
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:s
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	22/01/2024  | 0.1       | J.Majer       | Block interface and structure created
+	23/02/2024  | 0.2       | R. Pieczonka  | Initial version
+	26/02/2024  | 0.3       | S. Nieswiec   | Updated to new library blocks, added HardwareOk input
+	18/03/2024  | 0.4       | S. Nieswiec   | Adjusting comments and variable names
+	29/03/2024  | 0.5       | S.Nieswiec R. Pieczonka | Added MCOs, PEC changes etc.
+	08/05/2024  | 0.6       | S.Nieswiec    | New MCO block
+	08/05/2024  | 0.7       | K. Pokorski   | Added displacement
+	15/05/2024  | 0.8       | S. Nieswiec   | Clean up, adjusting comments etc.
+	08/06/2024  | 0.9       | S. Nieswiec   | New MCO, Displacement and RAT blocks, interface update
+	14/06/2024  | 0.10      | S. Nieswiec   | Changed direct sensor inputs to statuses
+	07/04/2025  | 0.20      | P. Knopkiewicz| Added WES communication and hardware UDT
+	14/04/2025  | 0.40      | P. Knopkiewicz| Added ZPA, missing PECs, clearing code
+	*)
+	
+	REGION 1 - Initial
+	    
+	    REGION 1.1 - Counters
+	        
+	        REGION 1.1.1 - Free slots at left station
+	            IF #iUDT_Configuration.GlobalConfig.LeftStationExists THEN
+	                #sFB_CountActiveInputs_Left(ix_Input1 := FALSE,//#iUDT_MotorInput440.AllSensorPortInputs.LeftSensor,
+	                                            ix_Input2 := #iqUDT_WorkstationStatus."450".PEC_EoS.PEC,
+	                                            ix_Input3 := #iqUDT_WorkstationStatus."460".PEC_EoS.PEC,
+	                                            ix_Input4 := #iqUDT_WorkstationStatus."480".PEC_EoS.PEC,
+	                                            ix_Input5 := #iqUDT_WorkstationStatus."421".PEC_EoS.PEC,
+	                                            ix_Input6 := #iqUDT_WorkstationStatus."410".PEC_EoS.PEC);
+	            END_IF;
+	            
+	        END_REGION
+	        
+	        REGION 1.1.2 - Free slots at right station
+	            IF #iUDT_Configuration.GlobalConfig.RightStationExists THEN
+	                #sFB_CountActiveInputs_Right(ix_Input1 := FALSE, //#iUDT_MotorInput240.AllSensorPortInputs.LeftSensor,
+	                                             ix_Input2 := #iqUDT_WorkstationStatus."250".PEC_EoS.PEC,
+	                                             ix_Input3 := #iqUDT_WorkstationStatus."260".PEC_EoS.PEC,
+	                                             ix_Input4 := #iqUDT_WorkstationStatus."280".PEC_EoS.PEC,
+	                                             ix_Input5 := #iqUDT_WorkstationStatus."221".PEC_EoS.PEC,
+	                                             ix_Input6 := #iqUDT_WorkstationStatus."210".PEC_EoS.PEC);
+	            END_IF;
+	            
+	        END_REGION
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 2 - Destinations
+	    // Destination FOR 121 RAT depending on existing stations, free spots on each side AND last divert destination
+	    IF #iUDT_Configuration.GlobalConfig.LeftStationExists AND NOT #iUDT_Configuration.GlobalConfig.RightStationExists THEN
+	        
+	        #si_DestinationA121 := 2;
+	        
+	    ELSIF NOT #iUDT_Configuration.GlobalConfig.LeftStationExists AND #iUDT_Configuration.GlobalConfig.RightStationExists THEN
+	        
+	        #si_DestinationA121 := 1;
+	        
+	    ELSIF #iUDT_Configuration.GlobalConfig.LeftStationExists AND #iUDT_Configuration.GlobalConfig.RightStationExists THEN
+	        
+	        IF #sFB_RightAngledTransfer121.qx_ExternalSendRequestC THEN  //check where was last divert
+	            #sx_LastFrom120Right := 1;
+	        END_IF;
+	        IF #sFB_RightAngledTransfer121.qx_ExternalSendRequestD THEN
+	            #sx_LastFrom120Right := 0;
+	        END_IF;
+	        
+	        IF #sFB_CountActiveInputs_Left.qi_ActiveInputsCount > #sFB_CountActiveInputs_Right.qi_ActiveInputsCount AND #iqUDT_WorkstationStatus."410".PEC_EoS.PEC
+	            OR (#sFB_CountActiveInputs_Left.qi_ActiveInputsCount = #sFB_CountActiveInputs_Right.qi_ActiveInputsCount
+	            AND #sx_LastFrom120Right
+	            AND #sFB_CountActiveInputs_Left.qi_ActiveInputsCount <> 0
+	            AND #iqUDT_WorkstationStatus."410".PEC_EoS.PEC)
+	        THEN
+	            #si_DestinationA121 := 2;
+	            
+	        ELSIF #sFB_CountActiveInputs_Right.qi_ActiveInputsCount <> 0
+	            AND #iqUDT_WorkstationStatus."210".PEC_EoS.PEC THEN
+	            #si_DestinationA121 := 1;
+	        ELSE
+	            #si_DestinationA121 := 0;
+	        END_IF;
+	    END_IF;
+	    
+	    //Destination for 291 RAT divert out of station after Done request
+	    IF #iqUDT_FirstWESInterface.Field[1].WES2PLC.RemoveContainer AND NOT #iqUDT_WorkstationStatus."291".PEC_EoS.PEC THEN
+	        #si_DestinationA291 := 1;
+	    ELSE
+	        #si_DestinationA291 := 0;
+	    END_IF;
+	    
+	    //Destination for 491 RAT RAT divert out of station after Done request
+	    IF #iqUDT_SecondWESInterface.Field[1].WES2PLC.RemoveContainer AND NOT #iqUDT_WorkstationStatus."491".PEC_EoS.PEC THEN
+	        #si_DestinationA491 := 1;
+	    ELSE
+	        #si_DestinationA491 := 0;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 3 - Middle line
+	    
+	    REGION 010
+	        REGION ZPA First conveyor 
+	            
+	            #sFB_ZpaFirstConveyor010(iUDT_AixInputsModule := #iUDT_InputsModule010,
+	                                     iUDT_AixZpaConfig := #iUDT_Configuration."010".Conveyor,
+	                                     ix_24vOk := NOT #ix_24vOk,
+	                                   ix_HardwareOk := #iUDT_HardwareOk."010",
+	                                   ix_SimulationModeActive := "DB_Memory".Simulation,
+	                                   qUDT_AixOutputsModule => #qUDT_OutputsModule010,
+	                                   iqUDT_ZPAinterface := #sUDT_ZPAinterface010,
+	                                   iqUDT_PecStatus := #iqUDT_WorkstationStatus."010".PEC_EoS,
+	                                   iqUDT_ZpaControllerStatus := #iqUDT_WorkstationStatus."010".MCO_ZPA,
+	                                   iqUDT_HandShakeUp := #iqUDT_HandshakeUpstream010);
+	        END_REGION
+	        
+	        REGION ZPA Zone status
+	            
+	             #sFB_ZpaStatus010(ii_ModuleID := 1,
+	                                    iqUDT_PecStatus := #iqUDT_WorkstationStatus."010".PEC_EoS,
+	                                    iqUDT_ZpaControllerStatus := #iqUDT_WorkstationStatus."010".MCO_ZPA,
+	                                    iqUDT_ZPAInterface := #sUDT_ZPAinterface010,
+	                                    qUDT_ConveyorStatus => #iqUDT_WorkstationStatus."010".Conveyor);
+	            
+	        END_REGION
+	    END_REGION
+	    
+	    REGION 020
+	        REGION ZPA Zone status
+	            
+	            #sFB_ZpaStatus020(ii_ModuleID := 1,
+	                                    iqUDT_PecStatus := #iqUDT_WorkstationStatus."020".PEC_EoS,
+	                                    iqUDT_ZpaControllerStatus := #iqUDT_WorkstationStatus."020".MCO_ZPA,
+	                                    iqUDT_ZPAInterface := #sUDT_ZPAinterface010,
+	                                    qUDT_ConveyorStatus => #iqUDT_WorkstationStatus."020".Conveyor);
+	            
+	        END_REGION
+	    END_REGION
+	    
+	    REGION 030
+	        REGION ZPA Zone status
+	            
+	            #sFB_ZpaStatus030(ii_ModuleID := 2,
+	                                    iqUDT_PecStatus := #iqUDT_WorkstationStatus."030".PEC_EoS,
+	                                    iqUDT_ZpaControllerStatus := #iqUDT_WorkstationStatus."030".MCO_ZPA,
+	                                    iqUDT_ZPAInterface := #sUDT_ZPAinterface010,
+	                                    qUDT_ConveyorStatus => #iqUDT_WorkstationStatus."030".Conveyor);
+	            
+	        END_REGION
+	    END_REGION
+	    
+	    REGION 040
+	        REGION ZPA Zone status
+	            
+	            #sFB_ZpaStatus040(ii_ModuleID := 2,
+	                                    iqUDT_PecStatus := #iqUDT_WorkstationStatus."040".PEC_EoS,
+	                                    iqUDT_ZpaControllerStatus := #iqUDT_WorkstationStatus."040".MCO_ZPA,
+	                                    iqUDT_ZPAInterface := #sUDT_ZPAinterface010,
+	                                    qUDT_ConveyorStatus => #iqUDT_WorkstationStatus."040".Conveyor);
+	            
+	        END_REGION
+	    END_REGION
+	    
+	    REGION 050
+	        REGION ZPA Zone status
+	            
+	            #sFB_ZpaStatus050(ii_ModuleID := 3,
+	                                    iqUDT_PecStatus := #iqUDT_WorkstationStatus."050".PEC_EoS,
+	                                    iqUDT_ZpaControllerStatus := #iqUDT_WorkstationStatus."050".MCO_ZPA,
+	                                    iqUDT_ZPAInterface := #sUDT_ZPAinterface010,
+	                                    qUDT_ConveyorStatus => #iqUDT_WorkstationStatus."050".Conveyor);
+	            
+	        END_REGION
+	    END_REGION
+	    REGION 060
+	        
+	        REGION ZPA Zone status
+	            
+	            #sFB_ZpaStatus060(ii_ModuleID := 3,
+	                                    iqUDT_PecStatus := #iqUDT_WorkstationStatus."060".PEC_EoS,
+	                                    iqUDT_ZpaControllerStatus := #iqUDT_WorkstationStatus."060".MCO_ZPA,
+	                                    iqUDT_ZPAInterface := #sUDT_ZPAinterface010,
+	                                    qUDT_ConveyorStatus => #iqUDT_WorkstationStatus."060".Conveyor);
+	            
+	        END_REGION
+	        
+	    END_REGION
+	    
+	    REGION 070
+	        REGION ZPA Zone status
+	            
+	            #sFB_ZpaStatus070(ii_ModuleID := 4,
+	                                    iqUDT_PecStatus := #iqUDT_WorkstationStatus."070".PEC_EoS,
+	                                    iqUDT_ZpaControllerStatus := #iqUDT_WorkstationStatus."070".MCO_ZPA,
+	                                    iqUDT_ZPAInterface := #sUDT_ZPAinterface010,
+	                                    qUDT_ConveyorStatus => #iqUDT_WorkstationStatus."070".Conveyor);
+	            
+	        END_REGION
+	    END_REGION
+	    
+	    REGION 080
+	        REGION ZPA Zone status
+	            
+	            #sFB_ZpaStatus080(ii_ModuleID := 4,
+	                                    iqUDT_PecStatus := #iqUDT_WorkstationStatus."080".PEC_EoS,
+	                                    iqUDT_ZpaControllerStatus := #iqUDT_WorkstationStatus."080".MCO_ZPA,
+	                                    iqUDT_ZPAInterface := #sUDT_ZPAinterface010,
+	                                    qUDT_ConveyorStatus => #iqUDT_WorkstationStatus."080".Conveyor);
+	            
+	        END_REGION
+	    END_REGION
+	    
+	    REGION 090
+	        REGION ZPA Zone status
+	            
+	            #sFB_ZpaStatus090(ii_ModuleID := 5,
+	                                    iqUDT_PecStatus := #iqUDT_WorkstationStatus."090".PEC_EoS,
+	                                    iqUDT_ZpaControllerStatus := #iqUDT_WorkstationStatus."090".MCO_ZPA,
+	                                    iqUDT_ZPAInterface := #sUDT_ZPAinterface010,
+	                                    qUDT_ConveyorStatus => #iqUDT_WorkstationStatus."090".Conveyor);
+	            
+	        END_REGION
+	    END_REGION
+	    
+	    REGION 100
+	        REGION ZPA Zone status
+	            
+	            #sFB_ZpaStatus100(ii_ModuleID := 5,
+	                                    iqUDT_PecStatus := #iqUDT_WorkstationStatus."100".PEC_EoS,
+	                                    iqUDT_ZpaControllerStatus := #iqUDT_WorkstationStatus."100".MCO_ZPA,
+	                                    iqUDT_ZPAInterface := #sUDT_ZPAinterface010,
+	                                    qUDT_ConveyorStatus => #iqUDT_WorkstationStatus."100".Conveyor);
+	            
+	        END_REGION
+	    END_REGION
+	    
+	    REGION 110   
+	        REGION ZPA Last conveyor
+	            
+	            #sFB_ZpaLastConveyor110(iUDT_AixInputsModule := #iUDT_InputsModule100,
+	                                    iUDT_AixZpaConfig := #iUDT_Configuration."110".Conveyor,
+	                                  ix_SafetyOk := #ix_SafetyOk,
+	                                  ix_24vOk := #ix_24vOk,
+	                                  ix_HardwareOk := #iUDT_HardwareOk."110",
+	                                  ix_SimulationModeActive := "DB_Memory".Simulation,
+	                                  qUDT_AixOutputsModule => #qUDT_OutputsModule100,
+	                                  qUDT_CommonStatus => #iqUDT_WorkstationCommonStatus."110",
+	                                  iqUDT_EquipmentControl := #iqUDT_EquipmentControlInfeed,
+	                                  iqUDT_ZPACommand := #iqUDT_WorkstationCommands."110".SegmentZPA,
+	                                  iqUDT_ZPAinterface := #sUDT_ZPAinterface010,
+	                                  iqUDT_PecStatus := #iqUDT_WorkstationStatus."110".PEC_EoS,
+	                                  iqUDT_ZpaControllerStatus := #iqUDT_WorkstationStatus."110".MCO_ZPA,
+	                                  iqUDT_Handshake := #sUDT_Handshake110);
+	            
+	            REGION ZPA Zone status
+	                
+	                #sFB_ZpaStatus110(ii_ModuleID := 6,
+	                                        iqUDT_PecStatus := #iqUDT_WorkstationStatus."110".PEC_EoS,
+	                                        iqUDT_ZpaControllerStatus := #iqUDT_WorkstationStatus."110".MCO_ZPA,
+	                                        iqUDT_ZPAInterface := #sUDT_ZPAinterface010,
+	                                        qUDT_ConveyorStatus => #iqUDT_WorkstationStatus."110".Conveyor);
+	                
+	            END_REGION
+	        END_REGION
+	    END_REGION
+	    
+	    REGION 120
+	        
+	        REGION Displacement
+	            #sFB_Displacement120(#sUDT_Interface120);
+	        END_REGION
+	        
+	        REGION MCO
+	            
+	            #sFB_MCOConveyLinxAixController120(iUDT_AixConfig := #iUDT_Configuration."120".MCO_M01,
+	                                               iv_AixInputsModule := #iv_MotorInput120,
+	                                               ii_PositionSetpoint := #iqUDT_RATPositioning120.Lower.EndPosition,
+	                                               ix_24vOk := #ix_24vOk,
+	                                               ix_SimulationModeActive := "DB_Memory".Simulation,
+	                                               ii_MotorPositionId := 1,
+	                                               ix_StartPositioning := #iqUDT_RATPositioning120.Lower.Start,
+	                                               ix_ResetPosition := #iqUDT_RATPositioning120.Lower.ResetPosition,
+	                                               qUDT_HMIStatus => #iqUDT_WorkstationStatus."120".MCO_M01,
+	                                               qx_Positioned => #iqUDT_RATPositioning120.Lower.Done,
+	                                               iqv_AixOutputsModule := #iqv_MotorOutput120,
+	                                               iqUDT_ConveyorInterface := #sUDT_Interface120,
+	                                               iqUDT_MCOStatistics := #iqUDT_WorkstationStatistics."120".MCO_M01);
+	        END_REGION
+	    END_REGION
+	    
+	    REGION 121
+	        
+	        REGION Displacement
+	            #sFB_Displacement121(#sUDT_Interface121);
+	        END_REGION
+	        
+	        REGION RAT
+	            
+	            #sFB_RightAngledTransfer121(iUDT_Configuration := #iUDT_Configuration."121".RightAngledTransfer,
+	                                        iUDT_LowerConveyorConfiguration := #iUDT_Configuration."120".Conveyor,
+	                                        iUDT_UpperConveyorConfiguration := #iUDT_Configuration."121".Conveyor,
+	                                        iUDT_PECConfiguration := #iUDT_Configuration."120".PEC_EoS,
+	                                        ii_DestinationA := #si_DestinationA121,
+	                                        ii_DestinationB := 0,
+	                                        ii_DestinationC := 0,
+	                                        ii_DestinationD := 0,
+	                                        ix_HardwareOk := #iUDT_HardwareOk."120",
+	                                        ix_400vOk := #ix_400vOk,
+	                                        ix_24vOk := #ix_24vOk,
+	                                        ix_SafetyOk := #ix_SafetyOk,
+	                                        ix_AirPressureOk := #ix_AirPressureOk,
+	                                        ix_SectionIsDown := #sFB_MCOConveyLinxAixController120.sUDT_AixInputsFullModule.AllSensorPortInputs.RightPin2,
+	                                        ix_SectionIsUp := #sFB_MCOConveyLinxAixController120.sUDT_AixInputsFullModule.AllSensorPortInputs.RightSensor,
+	                                        ix_ConveyorAAuto := #iqUDT_WorkstationCommonStatus."110".AutoON,
+	                                        ix_ConveyorBAuto := false,
+	                                        ix_ConveyorCAuto := #iqUDT_WorkstationCommonStatus."210".AutoON,
+	                                        ix_ConveyorDAuto := #iqUDT_WorkstationCommonStatus."410".AutoON,
+	                                        ix_PEC := #sFB_MCOConveyLinxAixController120.sUDT_AixInputsFullModule.AllSensorPortInputs.LeftSensor,
+	                                        ix_ExternalReceiveRequestA := NOT #iqUDT_WorkstationStatus."110".PEC_EoS.PEC,
+	                                        ix_ExternalReceiveRequestB := FALSE,
+	                                        ix_ExternalReceiveRequestC := FALSE,
+	                                        ix_ExternalReceiveRequestD := FALSE,
+	                                        ix_PECInfeedA := #iqUDT_WorkstationStatus."110".PEC_EoS.PEC,
+	                                        ix_PECInfeedB := false,
+	                                        ix_PECInfeedC := false,
+	                                        ix_PECInfeedD := false,
+	                                        qUDT_HMIRATStatus => #iqUDT_WorkstationStatus."121".RightAngledTransfer,
+	                                        qUDT_HMIConveyorStatus => #iqUDT_WorkstationStatus."120".Conveyor,
+	                                        qUDT_HMIPECStatus => #iqUDT_WorkstationStatus."121".PEC_EoS,
+	                                        qUDT_RATStatus => #iqUDT_WorkstationCommonStatus."121",
+	                                        qUDT_ConveyorStatus => #iqUDT_WorkstationCommonStatus."120",
+	                                        qx_PopupControl => #qx_PopupControl121,
+	                                        qx_ExternalSendRequestA => #tx_dummy,
+	                                        qx_ExternalSendRequestB => #tx_dummy,
+	                                        qx_ExternalSendRequestC => #tx_dummy,
+	                                        qx_ExternalSendRequestD => #tx_dummy,
+	                                        iqUDT_EquipmentControl := #iqUDT_EquipmentControlFirstStation,
+	                                        iqUDT_RATCommand := #iqUDT_WorkstationCommands."121".RightAngledTransfer,
+	                                        iqUDT_ConveyorCommand := #iqUDT_WorkstationCommands."120".Conveyor,
+	                                        iqUDT_RATStatistics := #iqUDT_WorkstationStatistics."121".RightAngledTransfer,
+	                                        iqUDT_ConveyorStatistics := #iqUDT_WorkstationStatistics."120".Conveyor,
+	                                        iqUDT_PECStatistics := #iqUDT_WorkstationStatistics."121".PEC_EoS,
+	                                        iqUDT_HandShakeConveyorA := #sUDT_Handshake110,
+	                                        iqUDT_HandShakeConveyorB := #tUDT_dummyHandshake,
+	                                        iqUDT_HandShakeConveyorC := #sUDT_HandshakeUp121,
+	                                        iqUDT_HandShakeConveyorD := #sUDT_Handshake121,
+	                                        iqUDT_LowerConveyorInterface := #sUDT_Interface120,
+	                                        iqUDT_UpperConveyorInterface := #sUDT_Interface121,
+	                                        iqUDT_RATPositioning := #iqUDT_RATPositioning120,
+	                                        iqUDT_BladeStopEoSInterface := #tudt_Bladeinterfacedummy,
+	                                        iqUDT_BladeStopBoSInterface := #tudt_Bladeinterfacedummy);
+	            
+	        END_REGION
+	        
+	        REGION MCO
+	            
+	            #sFB_MCOConveyLinxAixController121(iUDT_AixConfig := #iUDT_Configuration."121".MCO_M01,
+	                                               iv_AixInputsModule := #iv_MotorInput120,
+	                                               ix_24vOk := #ix_24vOk,
+	                                               ix_SimulationModeActive := "DB_Memory".Simulation,
+	                                               ii_MotorPositionId := 2,
+	                                               qUDT_HMIStatus => #iqUDT_WorkstationStatus."121".MCO_M01,
+	                                               iqv_AixOutputsModule := #iqv_MotorOutput120,
+	                                               iqUDT_ConveyorInterface := #sUDT_Interface121,
+	                                               iqUDT_MCOStatistics := #iqUDT_WorkstationStatistics."121".MCO_M01);
+	        END_REGION
+	        
+	    END_REGION
+	END_REGION
+	
+	REGION 4 - Right Station
+	    
+	    IF #iUDT_Configuration.GlobalConfig.RightStationExists THEN
+	        REGION 210
+	            
+	            REGION Displacement
+	                #sFB_Displacement210(#sUDT_Interface210);
+	            END_REGION
+	            
+	            REGION EoS               
+	                
+	                #sFB_PEC210(ix_PEC := #sFB_MCOConveyLinxAixController210.sUDT_AixInputsFullModule.AllSensorPortInputs.LeftSensor,
+	                            iUDT_PECConfiguration := #iUDT_Configuration."210".PEC_EoS,
+	                            qUDT_HMIStatus => #iqUDT_WorkstationStatus."210".PEC_EoS,
+	                            iqUDT_ConveyorInterface := #sUDT_Interface210,
+	                            iqUDT_PECStatistics := #iqUDT_WorkstationStatistics."210".PEC_EoS);
+	                
+	            END_REGION
+	            REGION Conveyor
+	                
+	                #sUDT_Handshake210.RTR := #sUDT_Handshake210.RTR OR #iqUDT_WorkstationStatus."210".PEC_EoS.PEC;
+	                
+	                #sFB_Conveyor210(iUDT_ConveyorConfiguration := #iUDT_Configuration."210".Conveyor,
+	                                 idi_PECEoSDistance := #iUDT_Configuration."210".PEC_EoS.Distance,
+	                                 idi_PECBoSDistance := 0,
+	                                 ii_ExternalSpeed := 0,
+	                                 ix_SafetyOk := #ix_SafetyOk,
+	                                 ix_24vOk := #ix_24vOk,
+	                                 ix_400vOk := #ix_400vOk,
+	                                 ix_HardwareOk := #iUDT_HardwareOk."210",
+	                                 ix_PECEoS := #iqUDT_WorkstationStatus."210".PEC_EoS.PEC,
+	                                 ix_PECBoS := TRUE,
+	                                 ix_ReverseDirection := FALSE,
+	                                 ix_ExternalRequestDieBack := FALSE,
+	                                 ix_ExternalRequestHold := FALSE,
+	                                 ix_ResetEnergySave := FALSE,
+	                                 qUDT_HMIStatus => #iqUDT_WorkstationStatus."210".Conveyor,
+	                                 qUDT_Status => #iqUDT_WorkstationCommonStatus."210",
+	                                 iqUDT_EquipmentControl := #iqUDT_EquipmentControlFirstStation,
+	                                 iqUDT_ConveyorCommand := #iqUDT_WorkstationCommands."210".Conveyor,
+	                                 iqUDT_ConveyorInterface := #sUDT_Interface210,
+	                                 iqUDT_HandShakeUp := #sUDT_HandshakeUp121,
+	                                 iqUDT_HandShake := #sUDT_Handshake210,
+	                                 iqUDT_Statistics := #iqUDT_WorkstationStatistics."210".Conveyor);
+	                
+	            END_REGION
+	            REGION MCO
+	                
+	                #sFB_MCOConveyLinxAixController210(iUDT_AixConfig := #iUDT_Configuration."210".MCO_M01,
+	                                                   iv_AixInputsModule := #iv_MotorInput210,
+	                                                   ix_24vOk := #ix_24vOk,
+	                                                   ix_SimulationModeActive := "DB_Memory".Simulation,
+	                                                   ii_MotorPositionId := 1,
+	                                                   qUDT_HMIStatus => #iqUDT_WorkstationStatus."210".MCO_M01,
+	                                                   iqv_AixOutputsModule := #iqv_MotorOutput210,
+	                                                   iqUDT_ConveyorInterface := #sUDT_Interface210,
+	                                                   iqUDT_MCOStatistics := #iqUDT_WorkstationStatistics."210".MCO_M01);
+	            END_REGION
+	        END_REGION
+	        
+	        REGION 220
+	            
+	            REGION Displacement
+	                #sFB_Displacement220(#sUDT_Interface220);
+	            END_REGION
+	            
+	            REGION MCO
+	                
+	                #sFB_MCOConveyLinxAixController220(iUDT_AixConfig := #iUDT_Configuration."220".MCO_M01,
+	                                                   iv_AixInputsModule := #iv_MotorInput220,
+	                                                   ix_24vOk := #ix_24vOk,
+	                                                   ix_SimulationModeActive := "DB_Memory".Simulation,
+	                                                   ii_MotorPositionId := 1,
+	                                                   qUDT_HMIStatus => #iqUDT_WorkstationStatus."220".MCO_M01,
+	                                                   iqv_AixOutputsModule := #iqv_MotorOutput220,
+	                                                   iqUDT_ConveyorInterface := #sUDT_Interface220,
+	                                                   iqUDT_MCOStatistics := #iqUDT_WorkstationStatistics."220".MCO_M01);
+	            END_REGION
+	        END_REGION
+	        
+	        REGION 221
+	            
+	            REGION Displacement
+	                #sFB_Displacement221(#sUDT_Interface221);
+	            END_REGION
+	            
+	            REGION RAT
+	                
+	                
+	                #sFB_RightAngledTransfer221(iUDT_Configuration := #iUDT_Configuration."221".RightAngledTransfer,
+	                                            iUDT_LowerConveyorConfiguration := #iUDT_Configuration."220".Conveyor,
+	                                            iUDT_UpperConveyorConfiguration := #iUDT_Configuration."221".Conveyor,
+	                                            iUDT_PECConfiguration := #iUDT_Configuration."220".PEC_EoS,
+	                                            ii_DestinationA := 0,
+	                                            ii_DestinationB := 0,
+	                                            ii_DestinationC := 1,
+	                                            ii_DestinationD := 0,
+	                                            ix_HardwareOk := #iUDT_HardwareOk."220",
+	                                            ix_400vOk := #ix_400vOk,
+	                                            ix_24vOk := #ix_24vOk,
+	                                            ix_SafetyOk := #ix_SafetyOk,
+	                                            ix_AirPressureOk := #ix_AirPressureOk,
+	                                            ix_SectionIsDown := #sFB_MCOConveyLinxAixController220.sUDT_AixInputsFullModule.AllSensorPortInputs.RightPin2,
+	                                            ix_SectionIsUp := #sFB_MCOConveyLinxAixController220.sUDT_AixInputsFullModule.AllSensorPortInputs.RightSensor,
+	                                            ix_ConveyorAAuto := FALSE,
+	                                            ix_ConveyorBAuto := #iqUDT_WorkstationCommonStatus."230".AutoON,
+	                                            ix_ConveyorCAuto := #iqUDT_WorkstationCommonStatus."210".AutoON,
+	                                            ix_ConveyorDAuto := false,
+	                                            ix_PEC := #sFB_MCOConveyLinxAixController220.sUDT_AixInputsFullModule.AllSensorPortInputs.LeftSensor,
+	                                            ix_ExternalReceiveRequestA := FALSE,
+	                                            ix_ExternalReceiveRequestB := FALSE,
+	                                            ix_ExternalReceiveRequestC := NOT #iqUDT_WorkstationStatus."210".PEC_EoS.PEC,
+	                                            ix_ExternalReceiveRequestD := FALSE,
+	                                            ix_PECInfeedC := #iqUDT_WorkstationStatus."210".PEC_EoS.PEC,
+	                                            qUDT_HMIRATStatus => #iqUDT_WorkstationStatus."221".RightAngledTransfer,
+	                                            qUDT_HMIConveyorStatus => #iqUDT_WorkstationStatus."220".Conveyor,
+	                                            qUDT_HMIPECStatus => #iqUDT_WorkstationStatus."221".PEC_EoS,
+	                                            qUDT_RATStatus => #iqUDT_WorkstationCommonStatus."221",
+	                                            qUDT_ConveyorStatus => #iqUDT_WorkstationCommonStatus."220",
+	                                            qx_PopupControl => #qx_PopupControl221,
+	                                            qx_ExternalSendRequestA => #tx_dummy,
+	                                            qx_ExternalSendRequestB => #tx_dummy,
+	                                            qx_ExternalSendRequestC => #tx_dummy,
+	                                            qx_ExternalSendRequestD => #tx_dummy,
+	                                            iqUDT_EquipmentControl := #iqUDT_EquipmentControlFirstStation,
+	                                            iqUDT_RATCommand := #iqUDT_WorkstationCommands."221".RightAngledTransfer,
+	                                            iqUDT_ConveyorCommand := #iqUDT_WorkstationCommands."220".Conveyor,
+	                                            iqUDT_RATStatistics := #iqUDT_WorkstationStatistics."221".RightAngledTransfer,
+	                                            iqUDT_ConveyorStatistics := #iqUDT_WorkstationStatistics."220".Conveyor,
+	                                            iqUDT_PECStatistics := #iqUDT_WorkstationStatistics."221".PEC_EoS,
+	                                            iqUDT_HandShakeConveyorA := #tUDT_dummyHandshake,
+	                                            iqUDT_HandShakeConveyorB := #sUDT_Handshake220,
+	                                            iqUDT_HandShakeConveyorC := #sUDT_Handshake210,
+	                                            iqUDT_HandShakeConveyorD := #tUDT_dummyHandshake,
+	                                            iqUDT_LowerConveyorInterface := #sUDT_Interface220,
+	                                            iqUDT_UpperConveyorInterface := #sUDT_Interface221,
+	                                            iqUDT_RATPositioning := #iqUDT_RATPositioning220,
+	                                            iqUDT_BladeStopEoSInterface := #tudt_Bladeinterfacedummy,
+	                                            iqUDT_BladeStopBoSInterface := #tudt_Bladeinterfacedummy);
+	                
+	                
+	            END_REGION
+	            
+	            REGION MCO
+	                
+	                #sFB_MCOConveyLinxAixController221(iUDT_AixConfig := #iUDT_Configuration."221".MCO_M01,
+	                                                   iv_AixInputsModule := #iv_MotorInput220,
+	                                                   ii_PositionSetpoint := #iqUDT_RATPositioning220.Upper.EndPosition,
+	                                                   ix_24vOk := #ix_24vOk,
+	                                                   ix_SimulationModeActive := "DB_Memory".Simulation,
+	                                                   ii_MotorPositionId := 2,
+	                                                   ix_StartPositioning := #iqUDT_RATPositioning220.Upper.Start,
+	                                                   ix_ResetPosition := #iqUDT_RATPositioning220.Upper.ResetPosition,
+	                                                   qUDT_HMIStatus => #iqUDT_WorkstationStatus."221".MCO_M01,
+	                                                   qx_Positioned => #iqUDT_RATPositioning220.Upper.Done,
+	                                                   iqv_AixOutputsModule := #iqv_MotorOutput220,
+	                                                   iqUDT_ConveyorInterface := #sUDT_Interface221,
+	                                                   iqUDT_MCOStatistics := #iqUDT_WorkstationStatistics."221".MCO_M01);
+	            END_REGION
+	        END_REGION
+	        
+	        REGION 230
+	            REGION ZPA First conveyor 
+	                
+	                #sFB_ZpaFirstConveyor230(iUDT_AixInputsModule := #iUDT_InputsModule230,
+	                                         iUDT_AixZpaConfig := #iUDT_Configuration."230".Conveyor,
+	                                       ix_24vOk := NOT #ix_24vOk,
+	                                       ix_HardwareOk := #iUDT_HardwareOk."230",
+	                                       ix_SimulationModeActive := "DB_Memory".Simulation,
+	                                       qUDT_AixOutputsModule => #qUDT_OutputsModule230,
+	                                       iqUDT_ZPAinterface := #sUDT_ZPAinterface230,
+	                                       iqUDT_PecStatus := #iqUDT_WorkstationStatus."230".PEC_EoS,
+	                                       iqUDT_ZpaControllerStatus := #iqUDT_WorkstationStatus."230".MCO_ZPA,
+	                                       iqUDT_HandShakeUp := #sUDT_Handshake230);
+	            END_REGION
+	            
+	            REGION ZPA Zone status
+	                
+	                #sFB_ZpaStatus230(ii_ModuleID := 1,
+	                                  iqUDT_PecStatus := #iqUDT_WorkstationStatus."230".PEC_EoS,
+	                                        iqUDT_ZpaControllerStatus := #iqUDT_WorkstationStatus."230".MCO_ZPA,
+	                                        iqUDT_ZPAInterface := #sUDT_ZPAinterface230,
+	                                        qUDT_ConveyorStatus => #iqUDT_WorkstationStatus."230".Conveyor);
+	                
+	            END_REGION
+	        END_REGION
+	        
+	        REGION 240
+	            REGION ZPA Zone status
+	                
+	                #sFB_ZpaStatus240(ii_ModuleID := 1,
+	                                        iqUDT_PecStatus := #iqUDT_WorkstationStatus."240".PEC_EoS,
+	                                        iqUDT_ZpaControllerStatus := #iqUDT_WorkstationStatus."240".MCO_ZPA,
+	                                        iqUDT_ZPAInterface := #sUDT_ZPAinterface230,
+	                                        qUDT_ConveyorStatus => #iqUDT_WorkstationStatus."240".Conveyor);
+	                
+	            END_REGION
+	        END_REGION
+	        
+	        REGION 250
+	            REGION ZPA Zone status
+	                
+	                #sFB_ZpaStatus250(ii_ModuleID := 2,
+	                                        iqUDT_PecStatus := #iqUDT_WorkstationStatus."250".PEC_EoS,
+	                                        iqUDT_ZpaControllerStatus := #iqUDT_WorkstationStatus."250".MCO_ZPA,
+	                                        iqUDT_ZPAInterface := #sUDT_ZPAinterface230,
+	                                        qUDT_ConveyorStatus => #iqUDT_WorkstationStatus."250".Conveyor);
+	                
+	            END_REGION
+	        END_REGION
+	        
+	        REGION 260            
+	            REGION ZPA Zone status
+	                
+	                #sFB_ZpaStatus260(ii_ModuleID := 2,
+	                                        iqUDT_PecStatus := #iqUDT_WorkstationStatus."260".PEC_EoS,
+	                                        iqUDT_ZpaControllerStatus := #iqUDT_WorkstationStatus."260".MCO_ZPA,
+	                                        iqUDT_ZPAInterface := #sUDT_ZPAinterface230,
+	                                        qUDT_ConveyorStatus => #iqUDT_WorkstationStatus."260".Conveyor);
+	                
+	            END_REGION
+	        END_REGION
+	        
+	        REGION 270
+	            REGION ZPA Zone status
+	                
+	                #sFB_ZpaStatus270(ii_ModuleID := 3,
+	                                        iqUDT_PecStatus := #iqUDT_WorkstationStatus."270".PEC_EoS,
+	                                        iqUDT_ZpaControllerStatus := #iqUDT_WorkstationStatus."270".MCO_ZPA,
+	                                        iqUDT_ZPAInterface := #sUDT_ZPAinterface230,
+	                                        qUDT_ConveyorStatus => #iqUDT_WorkstationStatus."270".Conveyor);
+	                
+	            END_REGION
+	        END_REGION
+	        
+	        REGION 280   
+	            REGION ZPA Last conveyor
+	                
+	                #sFB_ZpaLastConveyor280(iUDT_AixInputsModule := #iUDT_InputsModule270,
+	                                        iUDT_AixZpaConfig := #iUDT_Configuration."280".Conveyor,
+	                                      ix_SafetyOk := #ix_SafetyOk,
+	                                      ix_24vOk := #ix_24vOk,
+	                                      ix_HardwareOk := #iUDT_HardwareOk."280",
+	                                      ix_SimulationModeActive := "DB_Memory".Simulation,
+	                                      qUDT_AixOutputsModule => #qUDT_OutputsModule270,
+	                                      qUDT_CommonStatus => #iqUDT_WorkstationCommonStatus."280",
+	                                      iqUDT_EquipmentControl := #iqUDT_EquipmentControlFirstStation,
+	                                      iqUDT_ZPACommand := #iqUDT_WorkstationCommands."280".SegmentZPA,
+	                                      iqUDT_ZPAinterface := #sUDT_ZPAinterface230,
+	                                      iqUDT_PecStatus := #iqUDT_WorkstationStatus."280".PEC_EoS,
+	                                      iqUDT_ZpaControllerStatus := #iqUDT_WorkstationStatus."280".MCO_ZPA,
+	                                      iqUDT_Handshake := #sUDT_Handshake280);
+	            END_REGION
+	            
+	            REGION ZPA Zone status
+	                
+	                #sFB_ZpaStatus280(ii_ModuleID := 3,
+	                                        iqUDT_PecStatus := #iqUDT_WorkstationStatus."280".PEC_EoS,
+	                                        iqUDT_ZpaControllerStatus := #iqUDT_WorkstationStatus."280".MCO_ZPA,
+	                                        iqUDT_ZPAInterface := #sUDT_ZPAinterface230,
+	                                        qUDT_ConveyorStatus => #iqUDT_WorkstationStatus."280".Conveyor);
+	                
+	            END_REGION
+	            
+	            
+	            REGION Barcode Scanner
+	                #sFB_Scanner_281(iUDT_ScannerInput := #iUDT_ScannerInput301,
+	                                 iUDT_ScannerConfiguration := #iUDT_Configuration."281",
+	                                 iUDT_ConveyorInterface := #sUDT_Interface280,
+	                                 ix_24vOk := TRUE,
+	                                 ix_HardwareOk := TRUE,
+	                                 ix_SimulationModeActive := FALSE,
+	                                 ix_CloseWindow := #iqUDT_WorkstationStatus."280".PEC_EoS.PEC,
+	                                 ix_Trigger := NOT #iqUDT_WorkstationStatus."280".PEC_EoS.PEC,
+	                                 qUDT_ScannerOutput => #qUDT_ScannerOutput301,
+	                                 qUDT_HMIStatus => #iqUDT_WorkstationStatus."281",
+	                                 qUDT_CommonStatus => #iqUDT_WorkstationCommonStatus."281",
+	                                 qs_Barcode => #ts_Barcode281,
+	                                 iqUDT_Statistics := #iqUDT_WorkstationStatistics."281",
+	                                 iqUDT_EquipmentControl := #iqUDT_EquipmentControlFirstStation);
+	            END_REGION
+	        END_REGION
+	        
+	        REGION 290
+	            
+	            REGION Displacement
+	                #sFB_Displacement290(#sUDT_Interface290);
+	            END_REGION
+	            
+	            REGION MCO
+	                
+	                #sFB_MCOConveyLinxAixController290(iUDT_AixConfig := #iUDT_Configuration."290".MCO_M01,
+	                                                   iv_AixInputsModule := #iv_MotorInput290,
+	                                                   ii_PositionSetpoint := #iqUDT_RATPositioning290.Lower.EndPosition,
+	                                                   ix_24vOk := #ix_24vOk,
+	                                                   ix_SimulationModeActive := "DB_Memory".Simulation,
+	                                                   ii_MotorPositionId := 1,
+	                                                   ix_StartPositioning := #iqUDT_RATPositioning290.Lower.Start,
+	                                                   ix_ResetPosition := #iqUDT_RATPositioning290.Lower.ResetPosition,
+	                                                   qUDT_HMIStatus => #iqUDT_WorkstationStatus."290".MCO_M01,
+	                                                   qx_Positioned => #iqUDT_RATPositioning290.Lower.Done,
+	                                                   iqv_AixOutputsModule := #iqv_MotorOutput290,
+	                                                   iqUDT_ConveyorInterface := #sUDT_Interface290,
+	                                                   iqUDT_MCOStatistics := #iqUDT_WorkstationStatistics."290".MCO_M01);
+	            END_REGION
+	        END_REGION
+	        
+	        REGION 291
+	            
+	            REGION Displacement
+	                #sFB_Displacement291(#sUDT_Interface291);
+	            END_REGION
+	            
+	            REGION RAT
+	                
+	                #sFB_RightAngledTransfer291(iUDT_Configuration := #iUDT_Configuration."291".RightAngledTransfer,
+	                                            iUDT_LowerConveyorConfiguration := #iUDT_Configuration."290".Conveyor,
+	                                            iUDT_UpperConveyorConfiguration := #iUDT_Configuration."291".Conveyor,
+	                                            iUDT_PECConfiguration := #iUDT_Configuration."290".PEC_EoS,
+	                                            ii_DestinationA := #si_DestinationA291,
+	                                            ii_DestinationB := 0,
+	                                            ii_DestinationC := 0,
+	                                            ii_DestinationD := 0,
+	                                            ix_HardwareOk := #iUDT_HardwareOk."290",
+	                                            ix_400vOk := #ix_400vOk,
+	                                            ix_24vOk := #ix_24vOk,
+	                                            ix_SafetyOk := #ix_SafetyOk,
+	                                            ix_AirPressureOk := #ix_AirPressureOk,
+	                                            ix_SectionIsDown := #sFB_MCOConveyLinxAixController290.sUDT_AixInputsFullModule.AllSensorPortInputs.RightPin2,
+	                                            ix_SectionIsUp := #sFB_MCOConveyLinxAixController290.sUDT_AixInputsFullModule.AllSensorPortInputs.RightSensor,
+	                                            ix_ConveyorAAuto := #iqUDT_WorkstationCommonStatus."280".AutoON,
+	                                            ix_ConveyorBAuto := FALSE,
+	                                            ix_ConveyorCAuto := #iqUDT_WorkstationCommonStatus."300".AutoON,
+	                                            ix_ConveyorDAuto := FALSE,
+	                                            ix_PEC := #sFB_MCOConveyLinxAixController290.sUDT_AixInputsFullModule.AllSensorPortInputs.LeftSensor,
+	                                            ix_ExternalReceiveRequestA := NOT #iqUDT_WorkstationStatus."280".PEC_EoS.PEC,
+	                                            ix_ExternalReceiveRequestB := FALSE,
+	                                            ix_ExternalReceiveRequestC := FALSE,
+	                                            ix_ExternalReceiveRequestD := FALSE,
+	                                            ix_PECInfeedA := #iqUDT_WorkstationStatus."280".PEC_EoS.PEC,
+	                                            qUDT_HMIRATStatus => #iqUDT_WorkstationStatus."291".RightAngledTransfer,
+	                                            qUDT_HMIConveyorStatus => #iqUDT_WorkstationStatus."290".Conveyor,
+	                                            qUDT_HMIPECStatus => #iqUDT_WorkstationStatus."291".PEC_EoS,
+	                                            qUDT_RATStatus => #iqUDT_WorkstationCommonStatus."291",
+	                                            qUDT_ConveyorStatus => #iqUDT_WorkstationCommonStatus."290",
+	                                            qx_PopupControl => #qx_PopupControl291,
+	                                            qx_ExternalSendRequestA => #tx_dummy,
+	                                            qx_ExternalSendRequestB => #tx_dummy,
+	                                            qx_ExternalSendRequestC => #tx_dummy,
+	                                            qx_ExternalSendRequestD => #tx_dummy,
+	                                            iqUDT_EquipmentControl := #iqUDT_EquipmentControlFirstStation,
+	                                            iqUDT_RATCommand := #iqUDT_WorkstationCommands."291".RightAngledTransfer,
+	                                            iqUDT_ConveyorCommand := #iqUDT_WorkstationCommands."290".Conveyor,
+	                                            iqUDT_RATStatistics := #iqUDT_WorkstationStatistics."291".RightAngledTransfer,
+	                                            iqUDT_ConveyorStatistics := #iqUDT_WorkstationStatistics."290".Conveyor,
+	                                            iqUDT_PECStatistics := #iqUDT_WorkstationStatistics."291".PEC_EoS,
+	                                            iqUDT_HandShakeConveyorA := #sUDT_Handshake280,
+	                                            iqUDT_HandShakeConveyorB := #tUDT_dummyHandshake,
+	                                            iqUDT_HandShakeConveyorC := #sUDT_HandshakeUp291,
+	                                            iqUDT_HandShakeConveyorD := #tUDT_dummyHandshake,
+	                                            iqUDT_LowerConveyorInterface := #sUDT_Interface290,
+	                                            iqUDT_UpperConveyorInterface := #sUDT_Interface291,
+	                                            iqUDT_RATPositioning := #iqUDT_RATPositioning290,
+	                                            iqUDT_BladeStopEoSInterface := #tudt_Bladeinterfacedummy,
+	                                            iqUDT_BladeStopBoSInterface := #tudt_Bladeinterfacedummy);
+	                
+	            END_REGION
+	            
+	            REGION MCO
+	                
+	                #sFB_MCOConveyLinxAixController291(iUDT_AixConfig := #iUDT_Configuration."291".MCO_M01,
+	                                                   iv_AixInputsModule := #iv_MotorInput290,
+	                                                   ix_24vOk := #ix_24vOk,
+	                                                   ix_SimulationModeActive := "DB_Memory".Simulation,
+	                                                   ii_MotorPositionId := 2,
+	                                                   qUDT_HMIStatus => #iqUDT_WorkstationStatus."291".MCO_M01,
+	                                                   iqv_AixOutputsModule := #iqv_MotorOutput290,
+	                                                   iqUDT_ConveyorInterface := #sUDT_Interface291,
+	                                                   iqUDT_MCOStatistics := #iqUDT_WorkstationStatistics."290".MCO_M01);
+	            END_REGION
+	            
+	        END_REGION
+	        
+	        REGION 300
+	            
+	            REGION Displacement
+	                #sFB_Displacement300(#sUDT_Interface300);
+	            END_REGION
+	            
+	            REGION EoS               
+	                
+	                #sFB_PEC300(ix_PEC := #sFB_MCOConveyLinxAixController300.sUDT_AixInputsFullModule.AllSensorPortInputs.LeftSensor,
+	                            iUDT_PECConfiguration := #iUDT_Configuration."300".PEC_EoS,
+	                            qUDT_HMIStatus => #iqUDT_WorkstationStatus."300".PEC_EoS,
+	                            iqUDT_ConveyorInterface := #sUDT_Interface300,
+	                            iqUDT_PECStatistics := #iqUDT_WorkstationStatistics."300".PEC_EoS);
+	                
+	            END_REGION
+	            REGION Conveyor
+	                
+	                #sUDT_Handshake300.RTR := #sUDT_Handshake300.RTR OR #iqUDT_WorkstationStatus."300".PEC_EoS.PEC;
+	                
+	                #sFB_Conveyor300(iUDT_ConveyorConfiguration := #iUDT_Configuration."300".Conveyor,
+	                                 idi_PECEoSDistance := #iUDT_Configuration."300".PEC_EoS.Distance,
+	                                 idi_PECBoSDistance := 0,
+	                                 ii_ExternalSpeed := #ti_externalSpeed_300,
+	                                 ix_SafetyOk := #ix_SafetyOk,
+	                                 ix_24vOk := #ix_24vOk,
+	                                 ix_400vOk := #ix_400vOk,
+	                                 ix_HardwareOk := #iUDT_HardwareOk."300",
+	                                 ix_PECEoS := #iqUDT_WorkstationStatus."300".PEC_EoS.PEC,
+	                                 ix_PECBoS := TRUE,
+	                                 ix_ReverseDirection := FALSE,
+	                                 ix_ExternalRequestDieBack := FALSE,
+	                                 ix_ExternalRequestHold := #iqUDT_WorkstationStatus."611".PEC_EoS.Jam,
+	                                 ix_ResetEnergySave := FALSE,
+	                                 qUDT_HMIStatus => #iqUDT_WorkstationStatus."300".Conveyor,
+	                                 qUDT_Status => #iqUDT_WorkstationCommonStatus."300",
+	                                 iqUDT_EquipmentControl := #iqUDT_EquipmentControlFirstStation,
+	                                 iqUDT_ConveyorCommand := #iqUDT_WorkstationCommands."300".Conveyor,
+	                                 iqUDT_ConveyorInterface := #sUDT_Interface300,
+	                                 iqUDT_HandShakeUp := #sUDT_HandshakeUp291,
+	                                 iqUDT_HandShake := #sUDT_Handshake300,
+	                                 iqUDT_Statistics := #iqUDT_WorkstationStatistics."300".Conveyor);
+	                
+	            END_REGION
+	            REGION MCO
+	                
+	                #sFB_MCOConveyLinxAixController300(iUDT_AixConfig := #iUDT_Configuration."300".MCO_M01,
+	                                                   iv_AixInputsModule := #iv_MotorInput300,
+	                                                   ix_24vOk := #ix_24vOk,
+	                                                   ix_SimulationModeActive := "DB_Memory".Simulation,
+	                                                   ii_MotorPositionId := 1,
+	                                                   qUDT_HMIStatus => #iqUDT_WorkstationStatus."300".MCO_M01,
+	                                                   iqv_AixOutputsModule := #iqv_MotorOutput300,
+	                                                   iqUDT_ConveyorInterface := #sUDT_Interface300,
+	                                                   iqUDT_MCOStatistics := #iqUDT_WorkstationStatistics."300".MCO_M01);
+	            END_REGION
+	        END_REGION
+	    END_IF;
+	END_REGION
+	
+	REGION 5 - Left Station
+	    IF #iUDT_Configuration.GlobalConfig.LeftStationExists THEN
+	        REGION 410
+	            
+	            REGION Displacement
+	                #sFB_Displacement410(#sUDT_Interface410);
+	            END_REGION
+	            
+	            REGION EoS               
+	                
+	                #sFB_PEC410(ix_PEC := #sFB_MCOConveyLinxAixController410.sUDT_AixInputsFullModule.AllSensorPortInputs.LeftSensor,
+	                            iUDT_PECConfiguration := #iUDT_Configuration."410".PEC_EoS,
+	                            qUDT_HMIStatus => #iqUDT_WorkstationStatus."410".PEC_EoS,
+	                            iqUDT_ConveyorInterface := #sUDT_Interface410,
+	                            iqUDT_PECStatistics := #iqUDT_WorkstationStatistics."410".PEC_EoS);
+	                
+	            END_REGION
+	            REGION Conveyor
+	                
+	                #sUDT_Handshake410.RTR := #sUDT_Handshake410.RTR OR #iqUDT_WorkstationStatus."410".PEC_EoS.PEC;
+	                
+	                #sFB_Conveyor410(iUDT_ConveyorConfiguration := #iUDT_Configuration."410".Conveyor,
+	                                 idi_PECEoSDistance := #iUDT_Configuration."410".PEC_EoS.Distance,
+	                                 idi_PECBoSDistance := 0,
+	                                 ii_ExternalSpeed := 0,
+	                                 ix_SafetyOk := #ix_SafetyOk,
+	                                 ix_24vOk := #ix_24vOk,
+	                                 ix_400vOk := #ix_400vOk,
+	                                 ix_HardwareOk := #iUDT_HardwareOk."410",
+	                                 ix_PECEoS := #iqUDT_WorkstationStatus."410".PEC_EoS.PEC,
+	                                 ix_PECBoS := TRUE,
+	                                 ix_ReverseDirection := FALSE,
+	                                 ix_ExternalRequestDieBack := FALSE,
+	                                 ix_ExternalRequestHold := FALSE,
+	                                 ix_ResetEnergySave := FALSE,
+	                                 qUDT_HMIStatus => #iqUDT_WorkstationStatus."410".Conveyor,
+	                                 qUDT_Status => #iqUDT_WorkstationCommonStatus."410",
+	                                 iqUDT_EquipmentControl := #iqUDT_EquipmentControlFirstStation,
+	                                 iqUDT_ConveyorCommand := #iqUDT_WorkstationCommands."410".Conveyor,
+	                                 iqUDT_ConveyorInterface := #sUDT_Interface410,
+	                                 iqUDT_HandShakeUp := #sUDT_Handshake121,
+	                                 iqUDT_HandShake := #sUDT_Handshake410,
+	                                 iqUDT_Statistics := #iqUDT_WorkstationStatistics."410".Conveyor);
+	                
+	            END_REGION
+	            REGION MCO
+	                
+	                #sFB_MCOConveyLinxAixController410(iUDT_AixConfig := #iUDT_Configuration."410".MCO_M01,
+	                                                   iv_AixInputsModule := #iv_MotorInput410,
+	                                                   ix_24vOk := #ix_24vOk,
+	                                                   ix_SimulationModeActive := "DB_Memory".Simulation,
+	                                                   ii_MotorPositionId := 1,
+	                                                   qUDT_HMIStatus => #iqUDT_WorkstationStatus."410".MCO_M01,
+	                                                   iqv_AixOutputsModule := #iqv_MotorOutput410,
+	                                                   iqUDT_ConveyorInterface := #sUDT_Interface410,
+	                                                   iqUDT_MCOStatistics := #iqUDT_WorkstationStatistics."410".MCO_M01);
+	            END_REGION
+	        END_REGION
+	        
+	        REGION 420
+	            
+	            REGION Displacement
+	                #sFB_Displacement420(#sUDT_Interface420);
+	            END_REGION
+	            
+	            REGION MCO
+	                
+	                #sFB_MCOConveyLinxAixController420(iUDT_AixConfig := #iUDT_Configuration."420".MCO_M01,
+	                                                   iv_AixInputsModule := #iv_MotorInput420,
+	                                                   ix_24vOk := #ix_24vOk,
+	                                                   ix_SimulationModeActive := "DB_Memory".Simulation,
+	                                                   ii_MotorPositionId := 1,
+	                                                   qUDT_HMIStatus => #iqUDT_WorkstationStatus."420".MCO_M01,
+	                                                   iqv_AixOutputsModule := #iqv_MotorOutput420,
+	                                                   iqUDT_ConveyorInterface := #sUDT_Interface420,
+	                                                   iqUDT_MCOStatistics := #iqUDT_WorkstationStatistics."420".MCO_M01);
+	            END_REGION
+	        END_REGION
+	        
+	        REGION 421
+	            
+	            REGION Displacement
+	                #sFB_Displacement421(#sUDT_Interface421);
+	            END_REGION
+	            
+	            REGION RAT
+	                
+	                #sFB_RightAngledTransfer421(iUDT_Configuration := #iUDT_Configuration."421".RightAngledTransfer,
+	                                            iUDT_LowerConveyorConfiguration := #iUDT_Configuration."420".Conveyor,
+	                                            iUDT_UpperConveyorConfiguration := #iUDT_Configuration."421".Conveyor,
+	                                            iUDT_PECConfiguration := #iUDT_Configuration."420".PEC_EoS,
+	                                            ii_DestinationA := 0,
+	                                            ii_DestinationB := 0,
+	                                            ii_DestinationC := 0,
+	                                            ii_DestinationD := 1,
+	                                            ix_HardwareOk := #iUDT_HardwareOk."420",
+	                                            ix_400vOk := #ix_400vOk,
+	                                            ix_24vOk := #ix_24vOk,
+	                                            ix_SafetyOk := #ix_SafetyOk,
+	                                            ix_AirPressureOk := #ix_AirPressureOk,
+	                                            ix_SectionIsDown := #sFB_MCOConveyLinxAixController420.sUDT_AixInputsFullModule.AllSensorPortInputs.RightPin2,
+	                                            ix_SectionIsUp := #sFB_MCOConveyLinxAixController420.sUDT_AixInputsFullModule.AllSensorPortInputs.RightSensor,
+	                                            ix_ConveyorAAuto := FALSE,
+	                                            ix_ConveyorBAuto := #iqUDT_WorkstationCommonStatus."430".AutoON,
+	                                            ix_ConveyorCAuto := FALSE,
+	                                            ix_ConveyorDAuto := #iqUDT_WorkstationCommonStatus."410".AutoON,
+	                                            ix_PEC := #sFB_MCOConveyLinxAixController420.sUDT_AixInputsFullModule.AllSensorPortInputs.LeftSensor,
+	                                            ix_ExternalReceiveRequestA := FALSE,
+	                                            ix_ExternalReceiveRequestB := FALSE,
+	                                            ix_ExternalReceiveRequestC := FALSE,
+	                                            ix_ExternalReceiveRequestD := NOT #iqUDT_WorkstationStatus."410".PEC_EoS.PEC,
+	                                            ix_PECInfeedA := false,
+	                                            ix_PECInfeedD := #iqUDT_WorkstationStatus."410".PEC_EoS.PEC,
+	                                            qUDT_HMIRATStatus => #iqUDT_WorkstationStatus."421".RightAngledTransfer,
+	                                            qUDT_HMIConveyorStatus => #iqUDT_WorkstationStatus."420".Conveyor,
+	                                            qUDT_HMIPECStatus => #iqUDT_WorkstationStatus."421".PEC_EoS,
+	                                            qUDT_RATStatus => #iqUDT_WorkstationCommonStatus."421",
+	                                            qUDT_ConveyorStatus => #iqUDT_WorkstationCommonStatus."420",
+	                                            qx_PopupControl => #qx_PopupControl421,
+	                                            qx_ExternalSendRequestA => #tx_dummy,
+	                                            qx_ExternalSendRequestB => #tx_dummy,
+	                                            qx_ExternalSendRequestC => #tx_dummy,
+	                                            qx_ExternalSendRequestD => #tx_dummy,
+	                                            iqUDT_EquipmentControl := #iqUDT_EquipmentControlFirstStation,
+	                                            iqUDT_RATCommand := #iqUDT_WorkstationCommands."421".RightAngledTransfer,
+	                                            iqUDT_ConveyorCommand := #iqUDT_WorkstationCommands."420".Conveyor,
+	                                            iqUDT_RATStatistics := #iqUDT_WorkstationStatistics."421".RightAngledTransfer,
+	                                            iqUDT_ConveyorStatistics := #iqUDT_WorkstationStatistics."420".Conveyor,
+	                                            iqUDT_PECStatistics := #iqUDT_WorkstationStatistics."421".PEC_EoS,
+	                                            iqUDT_HandShakeConveyorA := #tUDT_dummyHandshake,
+	                                            iqUDT_HandShakeConveyorB := #sUDT_Handshake420,
+	                                            iqUDT_HandShakeConveyorC := #tUDT_dummyHandshake,
+	                                            iqUDT_HandShakeConveyorD := #sUDT_Handshake410,
+	                                            iqUDT_LowerConveyorInterface := #sUDT_Interface420,
+	                                            iqUDT_UpperConveyorInterface := #sUDT_Interface421,
+	                                            iqUDT_RATPositioning := #iqUDT_RATPositioning420,
+	                                            iqUDT_BladeStopEoSInterface := #tudt_Bladeinterfacedummy,
+	                                            iqUDT_BladeStopBoSInterface := #tudt_Bladeinterfacedummy);
+	                
+	            END_REGION
+	            
+	            REGION MCO
+	                
+	                #sFB_MCOConveyLinxAixController421(iUDT_AixConfig := #iUDT_Configuration."421".MCO_M01,
+	                                                   iv_AixInputsModule := #iv_MotorInput420,
+	                                                   ii_PositionSetpoint := #iqUDT_RATPositioning420.Upper.EndPosition,
+	                                                   ix_24vOk := #ix_24vOk,
+	                                                   ix_SimulationModeActive := "DB_Memory".Simulation,
+	                                                   ii_MotorPositionId := 2,
+	                                                   ix_StartPositioning := #iqUDT_RATPositioning420.Upper.Start,
+	                                                   ix_ResetPosition := #iqUDT_RATPositioning420.Upper.ResetPosition,
+	                                                   qUDT_HMIStatus => #iqUDT_WorkstationStatus."421".MCO_M01,
+	                                                   qx_Positioned => #iqUDT_RATPositioning420.Upper.Done,
+	                                                   iqv_AixOutputsModule := #iqv_MotorOutput420,
+	                                                   iqUDT_ConveyorInterface := #sUDT_Interface421,
+	                                                   iqUDT_MCOStatistics := #iqUDT_WorkstationStatistics."421".MCO_M01);
+	            END_REGION
+	            
+	        END_REGION
+	        
+	        REGION 430
+	            REGION ZPA First conveyor 
+	                
+	                #sFB_ZpaFirstConveyor430(iUDT_AixInputsModule := #iUDT_InputsModule430,
+	                                         iUDT_AixZpaConfig := #iUDT_Configuration."430".Conveyor,
+	                                       ix_24vOk := NOT #ix_24vOk,
+	                                       ix_HardwareOk := #iUDT_HardwareOk."430",
+	                                       ix_SimulationModeActive := "DB_Memory".Simulation,
+	                                       qUDT_AixOutputsModule => #qUDT_OutputsModule430,
+	                                       iqUDT_ZPAinterface := #sUDT_ZPAinterface430,
+	                                       iqUDT_PecStatus := #iqUDT_WorkstationStatus."430".PEC_EoS,
+	                                       iqUDT_ZpaControllerStatus := #iqUDT_WorkstationStatus."430".MCO_ZPA,
+	                                       iqUDT_HandShakeUp := #sUDT_Handshake430);
+	            END_REGION
+	            
+	            REGION ZPA Zone status
+	                
+	                #sFB_ZpaStatus430(ii_ModuleID := 1,
+	                                        iqUDT_PecStatus := #iqUDT_WorkstationStatus."430".PEC_EoS,
+	                                        iqUDT_ZpaControllerStatus := #iqUDT_WorkstationStatus."430".MCO_ZPA,
+	                                        iqUDT_ZPAInterface := #sUDT_ZPAinterface430,
+	                                        qUDT_ConveyorStatus => #iqUDT_WorkstationStatus."430".Conveyor);
+	                
+	            END_REGION
+	        END_REGION
+	        
+	        REGION 440
+	            REGION ZPA Zone status
+	                
+	                #sFB_ZpaStatus440(ii_ModuleID := 1,
+	                                        iqUDT_PecStatus := #iqUDT_WorkstationStatus."440".PEC_EoS,
+	                                        iqUDT_ZpaControllerStatus := #iqUDT_WorkstationStatus."440".MCO_ZPA,
+	                                        iqUDT_ZPAInterface := #sUDT_ZPAinterface430,
+	                                        qUDT_ConveyorStatus => #iqUDT_WorkstationStatus."440".Conveyor);
+	                
+	            END_REGION
+	        END_REGION
+	        
+	        REGION 450
+	            REGION ZPA Zone status
+	                
+	                #sFB_ZpaStatus450(ii_ModuleID := 2,
+	                                        iqUDT_PecStatus := #iqUDT_WorkstationStatus."450".PEC_EoS,
+	                                        iqUDT_ZpaControllerStatus := #iqUDT_WorkstationStatus."450".MCO_ZPA,
+	                                        iqUDT_ZPAInterface := #sUDT_ZPAinterface430,
+	                                        qUDT_ConveyorStatus => #iqUDT_WorkstationStatus."450".Conveyor);
+	                
+	            END_REGION
+	        END_REGION
+	        
+	        REGION 260            
+	            REGION ZPA Zone status
+	                
+	                #sFB_ZpaStatus460(ii_ModuleID := 2,
+	                                        iqUDT_PecStatus := #iqUDT_WorkstationStatus."260".PEC_EoS,
+	                                        iqUDT_ZpaControllerStatus := #iqUDT_WorkstationStatus."260".MCO_ZPA,
+	                                        iqUDT_ZPAInterface := #sUDT_ZPAinterface230,
+	                                        qUDT_ConveyorStatus => #iqUDT_WorkstationStatus."260".Conveyor);
+	                
+	            END_REGION
+	        END_REGION
+	        
+	        REGION 470
+	            REGION ZPA Zone status
+	                
+	                #sFB_ZpaStatus470(ii_ModuleID := 3,
+	                                        iqUDT_PecStatus := #iqUDT_WorkstationStatus."470".PEC_EoS,
+	                                        iqUDT_ZpaControllerStatus := #iqUDT_WorkstationStatus."470".MCO_ZPA,
+	                                        iqUDT_ZPAInterface := #sUDT_ZPAinterface430,
+	                                        qUDT_ConveyorStatus => #iqUDT_WorkstationStatus."470".Conveyor);
+	                
+	            END_REGION
+	        END_REGION
+	        
+	        REGION 480   
+	            REGION ZPA Last conveyor
+	                
+	                #sFB_ZpaLastConveyor480(iUDT_AixInputsModule := #iUDT_InputsModule470,
+	                                        iUDT_AixZpaConfig := #iUDT_Configuration."480".Conveyor,
+	                                      ix_SafetyOk := #ix_SafetyOk,
+	                                      ix_24vOk := #ix_24vOk,
+	                                      ix_HardwareOk := #iUDT_HardwareOk."480",
+	                                      ix_SimulationModeActive := "DB_Memory".Simulation,
+	                                      qUDT_AixOutputsModule => #qUDT_OutputsModule470,
+	                                      qUDT_CommonStatus => #iqUDT_WorkstationCommonStatus."480",
+	                                      iqUDT_EquipmentControl := #iqUDT_EquipmentControlSecondStation,
+	                                      iqUDT_ZPACommand := #iqUDT_WorkstationCommands."480".SegmentZPA,
+	                                      iqUDT_ZPAinterface := #sUDT_ZPAinterface430,
+	                                      iqUDT_PecStatus := #iqUDT_WorkstationStatus."480".PEC_EoS,
+	                                      iqUDT_ZpaControllerStatus := #iqUDT_WorkstationStatus."480".MCO_ZPA,
+	                                      iqUDT_Handshake := #sUDT_Handshake480);
+	            END_REGION
+	            
+	            REGION ZPA Zone status
+	                
+	                #sFB_ZpaStatus480(ii_ModuleID := 3,
+	                                        iqUDT_PecStatus := #iqUDT_WorkstationStatus."280".PEC_EoS,
+	                                        iqUDT_ZpaControllerStatus := #iqUDT_WorkstationStatus."280".MCO_ZPA,
+	                                        iqUDT_ZPAInterface := #sUDT_ZPAinterface230,
+	                                        qUDT_ConveyorStatus => #iqUDT_WorkstationStatus."280".Conveyor);
+	                
+	            END_REGION
+	            
+	            REGION Barcode Scanner
+	                #sFB_Scanner_481(iUDT_ScannerInput := #iUDT_ScannerInput501,
+	                                 iUDT_ScannerConfiguration := #iUDT_Configuration."481",
+	                                 iUDT_ConveyorInterface := #sUDT_Interface480,
+	                                 ix_24vOk := TRUE,
+	                                 ix_HardwareOk := TRUE,
+	                                 ix_SimulationModeActive := FALSE,
+	                                 ix_CloseWindow := #iqUDT_WorkstationStatus."480".PEC_EoS.PEC,
+	                                 ix_Trigger := NOT #iqUDT_WorkstationStatus."480".PEC_EoS.PEC,
+	                                 qUDT_ScannerOutput => #qUDT_ScannerOutput501,
+	                                 qUDT_HMIStatus => #iqUDT_WorkstationStatus."481",
+	                                 qUDT_CommonStatus => #iqUDT_WorkstationCommonStatus."481",
+	                                 qs_Barcode => #ts_Barcode481,
+	                                 iqUDT_Statistics := #iqUDT_WorkstationStatistics."481",
+	                                 iqUDT_EquipmentControl := #iqUDT_EquipmentControlSecondStation);
+	            END_REGION
+	        END_REGION
+	        
+	        REGION 490
+	            
+	            REGION Displacement
+	                #sFB_Displacement490(#sUDT_Interface490);
+	            END_REGION
+	            
+	            REGION MCO
+	                
+	                #sFB_MCOConveyLinxAixController490(iUDT_AixConfig := #iUDT_Configuration."490".MCO_M01,
+	                                                   iv_AixInputsModule := #iv_MotorInput490,
+	                                                   ii_PositionSetpoint := #iqUDT_RATPositioning490.Lower.EndPosition,
+	                                                   ix_24vOk := #ix_24vOk,
+	                                                   ix_SimulationModeActive := "DB_Memory".Simulation,
+	                                                   ii_MotorPositionId := 1,
+	                                                   ix_StartPositioning := #iqUDT_RATPositioning490.Lower.Start,
+	                                                   ix_ResetPosition := #iqUDT_RATPositioning490.Lower.ResetPosition,
+	                                                   qUDT_HMIStatus => #iqUDT_WorkstationStatus."490".MCO_M01,
+	                                                   qx_Positioned => #iqUDT_RATPositioning490.Lower.Done,
+	                                                   iqv_AixOutputsModule := #iqv_MotorOutput490,
+	                                                   iqUDT_ConveyorInterface := #sUDT_Interface490,
+	                                                   iqUDT_MCOStatistics := #iqUDT_WorkstationStatistics."490".MCO_M01);
+	            END_REGION
+	        END_REGION
+	        
+	        
+	        REGION 491
+	            
+	            REGION Displacement
+	                #sFB_Displacement491(#sUDT_Interface491);
+	            END_REGION
+	            
+	            REGION RAT
+	                
+	                #sFB_RightAngledTransfer491(iUDT_Configuration := #iUDT_Configuration."491".RightAngledTransfer,
+	                                            iUDT_LowerConveyorConfiguration := #iUDT_Configuration."490".Conveyor,
+	                                            iUDT_UpperConveyorConfiguration := #iUDT_Configuration."491".Conveyor,
+	                                            iUDT_PECConfiguration := #iUDT_Configuration."490".PEC_EoS,
+	                                            ii_DestinationA := #si_DestinationA491,
+	                                            ii_DestinationB := 0,
+	                                            ii_DestinationC := 0,
+	                                            ii_DestinationD := 0,
+	                                            ix_HardwareOk := #iUDT_HardwareOk."490",
+	                                            ix_400vOk := #ix_400vOk,
+	                                            ix_24vOk := #ix_24vOk,
+	                                            ix_SafetyOk := #ix_SafetyOk,
+	                                            ix_AirPressureOk := #ix_AirPressureOk,
+	                                            ix_SectionIsDown := #sFB_MCOConveyLinxAixController490.sUDT_AixInputsFullModule.AllSensorPortInputs.RightPin2,
+	                                            ix_SectionIsUp := #sFB_MCOConveyLinxAixController490.sUDT_AixInputsFullModule.AllSensorPortInputs.RightSensor,
+	                                            ix_ConveyorAAuto := #iqUDT_WorkstationCommonStatus."480".AutoON,
+	                                            ix_ConveyorBAuto := FALSE,
+	                                            ix_ConveyorCAuto := FALSE,
+	                                            ix_ConveyorDAuto := #iqUDT_WorkstationCommonStatus."500".AutoON,
+	                                            ix_PEC := #sFB_MCOConveyLinxAixController490.sUDT_AixInputsFullModule.AllSensorPortInputs.LeftSensor,
+	                                            ix_ExternalReceiveRequestA := NOT #iqUDT_WorkstationStatus."480".PEC_EoS.PEC,
+	                                            ix_ExternalReceiveRequestB := FALSE,
+	                                            ix_ExternalReceiveRequestC := FALSE,
+	                                            ix_ExternalReceiveRequestD := FALSE,
+	                                            ix_PECInfeedA := #iqUDT_WorkstationStatus."480".PEC_EoS.PEC,
+	                                            qUDT_HMIRATStatus => #iqUDT_WorkstationStatus."491".RightAngledTransfer,
+	                                            qUDT_HMIConveyorStatus => #iqUDT_WorkstationStatus."490".Conveyor,
+	                                            qUDT_HMIPECStatus => #iqUDT_WorkstationStatus."491".PEC_EoS,
+	                                            qUDT_RATStatus => #iqUDT_WorkstationCommonStatus."491",
+	                                            qUDT_ConveyorStatus => #iqUDT_WorkstationCommonStatus."490",
+	                                            qx_PopupControl => #qx_PopupControl491,
+	                                            qx_ExternalSendRequestA => #tx_dummy,
+	                                            qx_ExternalSendRequestB => #tx_dummy,
+	                                            qx_ExternalSendRequestC => #tx_dummy,
+	                                            qx_ExternalSendRequestD => #tx_dummy,
+	                                            iqUDT_EquipmentControl := #iqUDT_EquipmentControlFirstStation,
+	                                            iqUDT_RATCommand := #iqUDT_WorkstationCommands."491".RAT,
+	                                            iqUDT_ConveyorCommand := #iqUDT_WorkstationCommands."490".Conveyor,
+	                                            iqUDT_RATStatistics := #iqUDT_WorkstationStatistics."491".RightAngledTransfer,
+	                                            iqUDT_ConveyorStatistics := #iqUDT_WorkstationStatistics."490".Conveyor,
+	                                            iqUDT_PECStatistics := #iqUDT_WorkstationStatistics."491".PEC_EoS,
+	                                            iqUDT_HandShakeConveyorA := #sUDT_Handshake480,
+	                                            iqUDT_HandShakeConveyorB := #tUDT_dummyHandshake,
+	                                            iqUDT_HandShakeConveyorC := #tUDT_dummyHandshake,
+	                                            iqUDT_HandShakeConveyorD := #sUDT_Handshake491,
+	                                            iqUDT_LowerConveyorInterface := #sUDT_Interface490,
+	                                            iqUDT_UpperConveyorInterface := #sUDT_Interface491,
+	                                            iqUDT_RATPositioning := #iqUDT_RATPositioning490,
+	                                            iqUDT_BladeStopEoSInterface := #tudt_Bladeinterfacedummy,
+	                                            iqUDT_BladeStopBoSInterface := #tudt_Bladeinterfacedummy);
+	                
+	                
+	                
+	            END_REGION
+	            
+	            REGION MCO
+	                
+	                #sFB_MCOConveyLinxAixController491(iUDT_AixConfig := #iUDT_Configuration."491".MCO_M01,
+	                                                   iv_AixInputsModule := #iv_MotorInput490,
+	                                                   ix_24vOk := #ix_24vOk,
+	                                                   ix_SimulationModeActive := "DB_Memory".Simulation,
+	                                                   ii_MotorPositionId := 2,
+	                                                   qUDT_HMIStatus => #iqUDT_WorkstationStatus."491".MCO_M01,
+	                                                   iqv_AixOutputsModule := #iqv_MotorOutput490,
+	                                                   iqUDT_ConveyorInterface := #sUDT_Interface491,
+	                                                   iqUDT_MCOStatistics := #iqUDT_WorkstationStatistics."491".MCO_M01);
+	            END_REGION
+	            
+	        END_REGION
+	        
+	        REGION 500
+	            
+	            REGION Displacement
+	                #sFB_Displacement500(#sUDT_Interface500);
+	            END_REGION
+	            
+	            REGION EoS               
+	                
+	                #sFB_PEC500(ix_PEC := #sFB_MCOConveyLinxAixController500.sUDT_AixInputsFullModule.AllSensorPortInputs.LeftSensor,
+	                            iUDT_PECConfiguration := #iUDT_Configuration."500".PEC_EoS,
+	                            qUDT_HMIStatus => #iqUDT_WorkstationStatus."500".PEC_EoS,
+	                            iqUDT_ConveyorInterface := #sUDT_Interface500,
+	                            iqUDT_PECStatistics := #iqUDT_WorkstationStatistics."500".PEC_EoS);
+	                
+	            END_REGION
+	            REGION Conveyor
+	                
+	                // IF #sUDT_Handshake500.TIP OR (#sFB_RightAngledTransfer491.sx_UpperTransportOut AND NOT #iqUDT_WorkstationStatus."491".PEC.PEC)
+	                // THEN
+	                //     #ti_externalSpeed_500 := #iUDT_Configuration."500".Conveyor.SpeedSetpointNominal;
+	                // ELSE
+	                //     #ti_externalSpeed_500 := #iUDT_Configuration."500".Conveyor.SpeedSetpointNominal / 2;
+	                // END_IF;
+	                
+	                #sUDT_Handshake500.RTR := #sUDT_Handshake500.RTR OR #iqUDT_WorkstationStatus."500".PEC_EoS.PEC;
+	                
+	                #sFB_Conveyor500(iUDT_ConveyorConfiguration := #iUDT_Configuration."500".Conveyor,
+	                                 idi_PECEoSDistance := #iUDT_Configuration."500".PEC_EoS.Distance,
+	                                 idi_PECBoSDistance := 0,
+	                                 ii_ExternalSpeed := #ti_externalSpeed_500,
+	                                 ix_SafetyOk := #ix_SafetyOk,
+	                                 ix_24vOk := #ix_24vOk,
+	                                 ix_400vOk := #ix_400vOk,
+	                                 ix_HardwareOk := #iUDT_HardwareOk."500",
+	                                 ix_PECEoS := #iqUDT_WorkstationStatus."500".PEC_EoS.PEC,
+	                                 ix_PECBoS := TRUE,
+	                                 ix_ReverseDirection := FALSE,
+	                                 ix_ExternalRequestDieBack := FALSE,
+	                                 ix_ExternalRequestHold := #iqUDT_WorkstationStatus."611".PEC_EoS.Jam,
+	                                 ix_ResetEnergySave := FALSE,
+	                                 qUDT_HMIStatus => #iqUDT_WorkstationStatus."500".Conveyor,
+	                                 qUDT_Status => #iqUDT_WorkstationCommonStatus."500",
+	                                 iqUDT_EquipmentControl := #iqUDT_EquipmentControlFirstStation,
+	                                 iqUDT_ConveyorCommand := #iqUDT_WorkstationCommands."500".Conveyor,
+	                                 iqUDT_ConveyorInterface := #sUDT_Interface500,
+	                                 iqUDT_HandShakeUp := #sUDT_Handshake491,
+	                                 iqUDT_HandShake := #sUDT_Handshake500,
+	                                 iqUDT_Statistics := #iqUDT_WorkstationStatistics."500".Conveyor);
+	                
+	            END_REGION
+	            REGION MCO
+	                
+	                #sFB_MCOConveyLinxAixController500(iUDT_AixConfig := #iUDT_Configuration."500".MCO_M01,
+	                                                   iv_AixInputsModule := #iv_MotorInput500,
+	                                                   ix_24vOk := #ix_24vOk,
+	                                                   ix_SimulationModeActive := "DB_Memory".Simulation,
+	                                                   ii_MotorPositionId := 1,
+	                                                   qUDT_HMIStatus => #iqUDT_WorkstationStatus."500".MCO_M01,
+	                                                   iqv_AixOutputsModule := #iqv_MotorOutput500,
+	                                                   iqUDT_ConveyorInterface := #sUDT_Interface500,
+	                                                   iqUDT_MCOStatistics := #iqUDT_WorkstationStatistics."500".MCO_M01);
+	            END_REGION
+	        END_REGION
+	    END_IF;
+	END_REGION
+	
+	REGION 6 - Station Outfeed
+	    REGION 610
+	        
+	        REGION Displacement
+	            #sFB_Displacement610(#sUDT_Interface610);
+	        END_REGION
+	        
+	        REGION MCO
+	            
+	            #sFB_MCOConveyLinxAixController610(iUDT_AixConfig := #iUDT_Configuration."610".MCO_M01,
+	                                               iv_AixInputsModule := #iv_MotorInput610,
+	                                               ix_24vOk := #ix_24vOk,
+	                                               ix_SimulationModeActive := "DB_Memory".Simulation,
+	                                               ii_MotorPositionId := 1,
+	                                               qUDT_HMIStatus => #iqUDT_WorkstationStatus."610".MCO_M01,
+	                                               iqv_AixOutputsModule := #iqv_MotorOutput610,
+	                                               iqUDT_ConveyorInterface := #sUDT_Interface610,
+	                                               iqUDT_MCOStatistics := #iqUDT_WorkstationStatistics."610".MCO_M01);
+	        END_REGION
+	    END_REGION
+	    
+	    REGION 611
+	        
+	        
+	        
+	        REGION Displacement
+	            #sFB_Displacement611(#sUDT_Interface611);
+	        END_REGION
+	        
+	        REGION RAT
+	            
+	            #sFB_RightAngledTransfer611(iUDT_Configuration := #iUDT_Configuration."611".RightAngledTransfer,
+	                                        iUDT_LowerConveyorConfiguration := #iUDT_Configuration."610".Conveyor,
+	                                        iUDT_UpperConveyorConfiguration := #iUDT_Configuration."611".Conveyor,
+	                                        iUDT_PECConfiguration := #iUDT_Configuration."610".PEC_EoS,
+	                                        ii_DestinationA := 0,
+	                                        ii_DestinationB := 0,
+	                                        ii_DestinationC := 1,
+	                                        ii_DestinationD := 1,
+	                                        ix_HardwareOk := #iUDT_HardwareOk."610",
+	                                        ix_400vOk := #ix_400vOk,
+	                                        ix_24vOk := #ix_24vOk,
+	                                        ix_SafetyOk := #ix_SafetyOk,
+	                                        ix_AirPressureOk := #ix_AirPressureOk,
+	                                        ix_SectionIsDown := #sFB_MCOConveyLinxAixController610.sUDT_AixInputsFullModule.AllSensorPortInputs.RightPin2,
+	                                        ix_SectionIsUp := #sFB_MCOConveyLinxAixController610.sUDT_AixInputsFullModule.AllSensorPortInputs.RightSensor,
+	                                        ix_ConveyorAAuto := TRUE,
+	                                        ix_ConveyorBAuto := #iqUDT_WorkstationCommonStatus."620".AutoON,
+	                                        ix_ConveyorCAuto := #iqUDT_WorkstationCommonStatus."500".AutoON,
+	                                        ix_ConveyorDAuto := #iqUDT_WorkstationCommonStatus."300".AutoON,
+	                                        ix_PEC := #sFB_MCOConveyLinxAixController610.sUDT_AixInputsFullModule.AllSensorPortInputs.LeftSensor,
+	                                        ix_ExternalReceiveRequestA := FALSE,
+	                                        ix_ExternalReceiveRequestB := FALSE,
+	                                        ix_ExternalReceiveRequestC := NOT #iqUDT_WorkstationStatus."500".PEC_EoS.PEC,
+	                                        ix_ExternalReceiveRequestD := NOT #iqUDT_WorkstationStatus."300".PEC_EoS.PEC,
+	                                        ix_PECInfeedC := #iqUDT_WorkstationStatus."500".PEC_EoS.PEC,
+	                                        ix_PECInfeedD := #iqUDT_WorkstationStatus."300".PEC_EoS.PEC,
+	                                        qUDT_HMIRATStatus => #iqUDT_WorkstationStatus."611".RightAngledTransfer,
+	                                        qUDT_HMIConveyorStatus => #iqUDT_WorkstationStatus."610".Conveyor,
+	                                        qUDT_HMIPECStatus => #iqUDT_WorkstationStatus."611".PEC_EoS,
+	                                        qUDT_RATStatus => #iqUDT_WorkstationCommonStatus."611",
+	                                        qUDT_ConveyorStatus => #iqUDT_WorkstationCommonStatus."610",
+	                                        qx_PopupControl => #qx_PopupControl611,
+	                                        qx_ExternalSendRequestA => #tx_dummy,
+	                                        qx_ExternalSendRequestB => #tx_dummy,
+	                                        qx_ExternalSendRequestC => #tx_dummy,
+	                                        qx_ExternalSendRequestD => #tx_dummy,
+	                                        iqUDT_EquipmentControl := #iqUDT_EquipmentControlInfeed,
+	                                        iqUDT_RATCommand := #iqUDT_WorkstationCommands."611".RightAngledTransfer,
+	                                        iqUDT_ConveyorCommand := #iqUDT_WorkstationCommands."610".Conveyor,
+	                                        iqUDT_RATStatistics := #iqUDT_WorkstationStatistics."611".RightAngledTransfer,
+	                                        iqUDT_ConveyorStatistics := #iqUDT_WorkstationStatistics."610".Conveyor,
+	                                        iqUDT_PECStatistics := #iqUDT_WorkstationStatistics."611".PEC_EoS,
+	                                        iqUDT_HandShakeConveyorA := #tUDT_dummyHandshake,
+	                                        iqUDT_HandShakeConveyorB := #sUDT_Handshake610,
+	                                        iqUDT_HandShakeConveyorC := #sUDT_Handshake500,
+	                                        iqUDT_HandShakeConveyorD := #sUDT_Handshake300,
+	                                        iqUDT_LowerConveyorInterface := #sUDT_Interface610,
+	                                        iqUDT_UpperConveyorInterface := #sUDT_Interface611,
+	                                        iqUDT_RATPositioning := #iqUDT_RATPositioning610,
+	                                        iqUDT_BladeStopEoSInterface := #tudt_Bladeinterfacedummy,
+	                                        iqUDT_BladeStopBoSInterface := #tudt_Bladeinterfacedummy);
+	            
+	        END_REGION
+	        
+	        REGION MCO
+	            
+	            #sFB_MCOConveyLinxAixController611(iUDT_AixConfig := #iUDT_Configuration."611".MCO_M01,
+	                                               iv_AixInputsModule := #iv_MotorInput610,
+	                                               ii_PositionSetpoint := #iqUDT_RATPositioning610.Upper.EndPosition,
+	                                               ix_24vOk := #ix_24vOk,
+	                                               ix_SimulationModeActive := "DB_Memory".Simulation,
+	                                               ii_MotorPositionId := 2,
+	                                               ix_StartPositioning := #iqUDT_RATPositioning610.Upper.Start,
+	                                               ix_ResetPosition := #iqUDT_RATPositioning610.Upper.ResetPosition,
+	                                               qUDT_HMIStatus => #iqUDT_WorkstationStatus."611".MCO_M01,
+	                                               qx_Positioned => #iqUDT_RATPositioning610.Upper.Done,
+	                                               iqv_AixOutputsModule := #iqv_MotorOutput610,
+	                                               iqUDT_ConveyorInterface := #sUDT_Interface611,
+	                                               iqUDT_MCOStatistics := #iqUDT_WorkstationStatistics."611".MCO_M01);
+	        END_REGION
+	        
+	    END_REGION
+	    
+	    REGION 620
+	        
+	        REGION Displacement
+	            #sFB_Displacement620(#sUDT_Interface620);
+	        END_REGION
+	        REGION EoS               
+	            
+	            #sFB_PEC620(ix_PEC := #sFB_MCOConveyLinxAixController620.sUDT_AixInputsFullModule.AllSensorPortInputs.LeftSensor,
+	                        iUDT_PECConfiguration := #iUDT_Configuration."620".PEC_EoS,
+	                        qUDT_HMIStatus => #iqUDT_WorkstationStatus."620".PEC_EoS,
+	                        iqUDT_ConveyorInterface := #sUDT_Interface620,
+	                        iqUDT_PECStatistics := #iqUDT_WorkstationStatistics."620".PEC_EoS);
+	            
+	        END_REGION
+	        
+	        REGION Conveyor
+	            
+	            #sFB_Conveyor620(iUDT_ConveyorConfiguration := #iUDT_Configuration."620".Conveyor,
+	                             idi_PECEoSDistance := 0,
+	                             idi_PECBoSDistance := 0,
+	                             ii_ExternalSpeed := 0,
+	                             ix_SafetyOk := #ix_SafetyOk,
+	                             ix_24vOk := #ix_24vOk,
+	                             ix_400vOk := #ix_400vOk,
+	                             ix_HardwareOk := #iUDT_HardwareOk."620",
+	                             ix_PECEoS := #iqUDT_WorkstationStatus."620".PEC_EoS.PEC,
+	                             ix_PECBoS := TRUE,
+	                             ix_ReverseDirection := FALSE,
+	                             ix_ExternalRequestDieBack := FALSE,
+	                             ix_ExternalRequestHold := FALSE,
+	                             ix_ResetEnergySave := FALSE,
+	                             qUDT_HMIStatus => #iqUDT_WorkstationStatus."620".Conveyor,
+	                             qUDT_Status => #iqUDT_WorkstationCommonStatus."620",
+	                             iqUDT_EquipmentControl := #iqUDT_EquipmentControlFirstStation,
+	                             iqUDT_ConveyorCommand := #iqUDT_WorkstationCommands."620".Conveyor,
+	                             iqUDT_ConveyorInterface := #sUDT_Interface620,
+	                             iqUDT_HandShakeUp := #sUDT_Handshake610,
+	                             iqUDT_HandShake := #sUDT_Handshake620,
+	                             iqUDT_Statistics := #iqUDT_WorkstationStatistics."620".Conveyor);
+	            
+	        END_REGION
+	        
+	        REGION MCO
+	            
+	            #sFB_MCOConveyLinxAixController620(iUDT_AixConfig := #iUDT_Configuration."620".MCO_M01,
+	                                               iv_AixInputsModule := #iv_MotorInput620,
+	                                               ix_24vOk := #ix_24vOk,
+	                                               ix_SimulationModeActive := "DB_Memory".Simulation,
+	                                               ii_MotorPositionId := 1,
+	                                               qUDT_HMIStatus => #iqUDT_WorkstationStatus."620".MCO_M01,
+	                                               iqv_AixOutputsModule := #iqv_MotorOutput620,
+	                                               iqUDT_ConveyorInterface := #sUDT_Interface620,
+	                                               iqUDT_MCOStatistics := #iqUDT_WorkstationStatistics."620".MCO_M01);
+	        END_REGION
+	        
+	    END_REGION
+	    
+	    REGION 630
+	        
+	        REGION Displacement
+	            #sFB_Displacement630(#sUDT_Interface630);
+	        END_REGION
+	        
+	        REGION EoS               
+	            
+	            #sFB_PEC630(ix_PEC := #sFB_MCOConveyLinxAixController630.sUDT_AixInputsFullModule.AllSensorPortInputs.LeftSensor,
+	                        iUDT_PECConfiguration := #iUDT_Configuration."630".PEC_EoS,
+	                        qUDT_HMIStatus => #iqUDT_WorkstationStatus."630".PEC_EoS,
+	                        iqUDT_ConveyorInterface := #sUDT_Interface630,
+	                        iqUDT_PECStatistics := #iqUDT_WorkstationStatistics."630".PEC_EoS);
+	            
+	        END_REGION
+	        
+	        REGION Conveyor
+	            
+	            #sFB_Conveyor630(iUDT_ConveyorConfiguration := #iUDT_Configuration."630".Conveyor,
+	                             idi_PECEoSDistance := 0,
+	                             idi_PECBoSDistance := 0,
+	                             ii_ExternalSpeed := 0,
+	                             ix_SafetyOk := #ix_SafetyOk,
+	                             ix_24vOk := #ix_24vOk,
+	                             ix_400vOk := #ix_400vOk,
+	                             ix_HardwareOk := #iUDT_HardwareOk."630",
+	                             ix_PECEoS := #iqUDT_WorkstationStatus."630".PEC_EoS.PEC,
+	                             ix_PECBoS := TRUE,
+	                             ix_ReverseDirection := FALSE,
+	                             ix_ExternalRequestDieBack := FALSE,
+	                             ix_ExternalRequestHold := FALSE,
+	                             ix_ResetEnergySave := FALSE,
+	                             qUDT_HMIStatus => #iqUDT_WorkstationStatus."630".Conveyor,
+	                             qUDT_Status => #iqUDT_WorkstationCommonStatus."630",
+	                             iqUDT_EquipmentControl := #iqUDT_EquipmentControlFirstStation,
+	                             iqUDT_ConveyorCommand := #iqUDT_WorkstationCommands."630".Conveyor,
+	                             iqUDT_ConveyorInterface := #sUDT_Interface630,
+	                             iqUDT_HandShakeUp := #sUDT_Handshake620,
+	                             iqUDT_HandShake := #sUDT_Handshake630,
+	                             iqUDT_Statistics := #iqUDT_WorkstationStatistics."630".Conveyor);
+	            
+	        END_REGION
+	        
+	        REGION MCO
+	            
+	            #sFB_MCOConveyLinxAixController630(iUDT_AixConfig := #iUDT_Configuration."630".MCO_M01,
+	                                               iv_AixInputsModule := #iv_MotorInput630,
+	                                               ix_24vOk := #ix_24vOk,
+	                                               ix_SimulationModeActive := "DB_Memory".Simulation,
+	                                               ii_MotorPositionId := 1,
+	                                               qUDT_HMIStatus => #iqUDT_WorkstationStatus."630".MCO_M01,
+	                                               iqv_AixOutputsModule := #iqv_MotorOutput630,
+	                                               iqUDT_ConveyorInterface := #sUDT_Interface630,
+	                                               iqUDT_MCOStatistics := #iqUDT_WorkstationStatistics."630".MCO_M01);
+	        END_REGION
+	    END_REGION
+	    
+	    REGION 640
+	        
+	        REGION Displacement
+	            #sFB_Displacement640(#sUDT_Interface640);
+	        END_REGION
+	        
+	        REGION EoS               
+	            
+	            #sFB_PEC640(ix_PEC := #sFB_MCOConveyLinxAixController640.sUDT_AixInputsFullModule.AllSensorPortInputs.LeftSensor,
+	                        iUDT_PECConfiguration := #iUDT_Configuration."640".PEC_EoS,
+	                        qUDT_HMIStatus => #iqUDT_WorkstationStatus."640".PEC_EoS,
+	                        iqUDT_ConveyorInterface := #sUDT_Interface640,
+	                        iqUDT_PECStatistics := #iqUDT_WorkstationStatistics."640".PEC_EoS);
+	            
+	        END_REGION
+	        REGION Conveyor
+	            
+	            #sFB_Conveyor640(iUDT_ConveyorConfiguration := #iUDT_Configuration."640".Conveyor,
+	                             idi_PECEoSDistance := #iUDT_Configuration."640".PEC_EoS.Distance,
+	                             idi_PECBoSDistance := 0,
+	                             ii_ExternalSpeed := 0,
+	                             ix_SafetyOk := #ix_SafetyOk,
+	                             ix_24vOk := #ix_24vOk,
+	                             ix_400vOk := #ix_400vOk,
+	                             ix_HardwareOk := #iUDT_HardwareOk."640",
+	                             ix_PECEoS := #iqUDT_WorkstationStatus."640".PEC_EoS.PEC,
+	                             ix_PECBoS := TRUE,
+	                             ix_ReverseDirection := FALSE,
+	                             ix_ExternalRequestDieBack := FALSE,
+	                             ix_ExternalRequestHold := FALSE,
+	                             ix_ResetEnergySave := FALSE,
+	                             qUDT_HMIStatus => #iqUDT_WorkstationStatus."640".Conveyor,
+	                             qUDT_Status => #iqUDT_WorkstationCommonStatus."640",
+	                             iqUDT_EquipmentControl := #iqUDT_EquipmentControlFirstStation,
+	                             iqUDT_ConveyorCommand := #iqUDT_WorkstationCommands."640".Conveyor,
+	                             iqUDT_ConveyorInterface := #sUDT_Interface640,
+	                             iqUDT_HandShakeUp := #sUDT_Handshake630,
+	                             iqUDT_HandShake := #iqUDT_HandshakeDownstream640,
+	                             iqUDT_Statistics := #iqUDT_WorkstationStatistics."640".Conveyor);
+	            
+	        END_REGION
+	        
+	        REGION MCO
+	            
+	            #sFB_MCOConveyLinxAixController640(iUDT_AixConfig := #iUDT_Configuration."640".MCO_M01,
+	                                               iv_AixInputsModule := #iv_MotorInput640,
+	                                               ix_24vOk := #ix_24vOk,
+	                                               ix_SimulationModeActive := "DB_Memory".Simulation,
+	                                               ii_MotorPositionId := 1,
+	                                               qUDT_HMIStatus => #iqUDT_WorkstationStatus."640".MCO_M01,
+	                                               iqv_AixOutputsModule := #iqv_MotorOutput640,
+	                                               iqUDT_ConveyorInterface := #sUDT_Interface640,
+	                                               iqUDT_MCOStatistics := #iqUDT_WorkstationStatistics."640".MCO_M01);
+	        END_REGION
+	    END_REGION
+	END_REGION
+	
+	
+END_FUNCTION_BLOCK
+

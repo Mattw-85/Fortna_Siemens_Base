@@ -1,0 +1,195 @@
+﻿TYPE "UDT_EventStatistic"
+TITLE = UDT_EventStatistic
+VERSION : 0.1
+//User-defined structure of event statistic data.
+   STRUCT
+      NumberOfTimes : DInt;   // Number of times the event occurred since last reset
+      LastEventSeconds : DInt;   // Number of seconds of the current or last event
+      TotalEventSeconds : DInt;   // Total number of seconds the event occurred since last reset
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_PneumaticBrakeConfiguration"
+VERSION : 0.1
+   STRUCT
+      BrakePuls { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Time [ms] brake is up in brake function
+      BrakePause { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Time [ms] brake is down in brake function
+      BrakeCycles { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Number of brake cycles
+      BrakeInterval { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Time [ms] between brake cycles
+      PECBrakeOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // On delay time PEC brake signal
+      PECBrakeOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Off delay time PEC brake signal
+      PECStopOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // On delay time PEC stop signal
+      PECStopOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Off delay time PEC stop signal
+      StopFunctionOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // On delay time stop function
+      StopFunctionOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Off delay time stop function
+      FailSafe { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Activate output to release
+      Slave { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Stopper is slave
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_StopRollerConfiguration"
+VERSION : 0.1
+   STRUCT
+      BrakePuls { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Time [ms] brake is up in brake function
+      BrakePause { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Time [ms] brake is down in brake function
+      BrakePauseLong { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Long time [ms] brake is down in brake function
+      PECBrakeOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // On delay time PEC brake signal
+      PECBrakeOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Off delay time PEC brake signal
+      PECStopOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // On delay time PEC stop signal
+      PECStopOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Off delay time PEC stop signal
+      StopFunctionOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // On delay time stop function
+      StopFunctionOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Off delay time stop function
+      FailSafe { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Activate output to release
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_Chute3BrakeStatus"
+VERSION : 0.1
+   STRUCT
+      Status : Int;   // Status number
+      Specific : Struct   // Chute specific status structure
+         ChuteJam : Bool;   // Jam on chute
+         ChuteFull : Bool;   // Chute is full
+         ChuteHalfFull : Bool;   // Chute is half full
+         DisableFromHMI : Bool;   // Disabled from HMI
+         DisableFromHLC : Bool;   // Disabled from HLC
+         BrakeFaultTop : Bool;   // Top brake bar  is faulty
+         BrakeFaultMiddle : Bool;   // Middle brake bar is faulty
+         BrakeFaultBottom : Bool;   // Bottom brake bar is faulty
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_Chute3BrakeStatistics"
+VERSION : 0.1
+   STRUCT
+      ChuteFull : "UDT_EventStatistic";   // Chute full statistics
+      ChuteJam : "UDT_EventStatistic";   // Chute jam statistics
+      ChuteHalfFull : "UDT_EventStatistic";   // Chute half full statistics
+      DisableFromHMI : "UDT_EventStatistic";   // Disable from HMI statistics
+      DisableFromHLC : "UDT_EventStatistic";   // Disable from HLC statistics
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_Chute3BrakesConfiguration"
+VERSION : 0.1
+   STRUCT
+      BrakeConfiguration1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_PneumaticBrakeConfiguration";   // First brake configuration
+      BrakeConfiguration2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_PneumaticBrakeConfiguration";   // Secound brake configuration
+      StopperConfiguration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_StopRollerConfiguration";   // Stopper configuration
+      PECFullOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // On delay time PEC full signal
+      PECFullOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Off delay time PEC full signal
+      PECHalfFullOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // On delay time PEC half full signal
+      PECHalfFullOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Off delay time PEC half full signal
+      PECMiddleOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // On delay time PEC middle signal
+      PECMiddleOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Off delay time PEC middle signal
+      LongBrakePauseOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // On delay time from common stop PEC signals
+      NumberOfTheEquipment { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[3];   // Number of the equipment 001-999
+      "Device ID" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[6];   // ID of the Device Type
+      DEPCOD { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[6];   // Depot Code
+      LOConEquipment { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[6];   // Location of the equipment
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_Chute3BrakeCommand"
+VERSION : 0.1
+   STRUCT
+      DisableFromHMI : Bool;   // Disable from HMI
+      DisableFromHLC : Bool;   // Disable from HLC
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_Chute2PECStatus"
+VERSION : 0.1
+//User-defined structure of FB_CH03 function block status.
+   STRUCT
+      Status : Int;   // Status number
+      Specific : Struct   // CH02 specific status structure
+         ChuteFull { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Chute is full status
+         ChuteHalfFull { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Chute is half full status
+         ChuteDisabled { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Chute is disabled status
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_Chute2PECStatistics"
+VERSION : 0.1
+//User-defined structure of FB_CH03 function block statistics.
+   STRUCT
+      ChuteFull { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Chute full statistics
+      ChuteHalfFull { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Chute half full statistics
+      ChuteDisabled { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Chute disabled statistics
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_Chute2PECConfiguration"
+VERSION : 0.1
+//User-defined structure of FB_Chute2PEC function block configuration.
+   STRUCT
+      FullDetectionTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Time after which chute full is detected
+      FullReleaseTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Time after which chute full is released
+      HalfFullDetectionTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Time after which chute half full is detected
+      HalfFullReleaseTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Time after which chute half full is released
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_Chute1PECStatus"
+VERSION : 0.1
+//User-defined structure of FB_Chute1PEC function block status.
+   STRUCT
+      Status : Int;   // Status number
+      Specific : Struct   // CH02 specific status structure
+         ChuteFull { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Chute is full status
+         ChuteDisabled { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Chute is disabled status
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_Chute1PECStatistics"
+VERSION : 0.1
+//User-defined structure of FB_Chute1PEC function block statistics.
+   STRUCT
+      ChuteFull { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Chute full statistics
+      ChuteDisabled { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Chute disabled statistics
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_Chute1PECConfiguration"
+VERSION : 0.1
+//User-defined structure of FB_Chute1PEC function block configuration.
+   STRUCT
+      FullDetectionTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Time after which chute full is detected
+      FullReleaseTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Time after which chute full is released
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_CH02Status"
+VERSION : 0.1
+   STRUCT
+      PEC : Bool;   // Current state of the photo eye
+      Full : Bool;   // Chute is full
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_CH02Statistics"
+VERSION : 0.1
+   STRUCT
+      Full : "UDT_EventStatistic";   // Number of times chute was full
+   END_STRUCT;
+
+END_TYPE
+

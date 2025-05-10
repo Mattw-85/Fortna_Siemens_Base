@@ -1,0 +1,80 @@
+﻿TYPE "UDT_EventStatistic"
+TITLE = UDT_EventStatistic
+VERSION : 0.1
+//User-defined structure of event statistic data.
+   STRUCT
+      NumberOfTimes : DInt;   // Number of times the event occurred since last reset
+      LastEventSeconds : DInt;   // Number of seconds of the current or last event
+      TotalEventSeconds : DInt;   // Total number of seconds the event occurred since last reset
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_MainControlPanelStatus"
+TITLE = Cabinet MCP Status
+VERSION : 0.1
+   STRUCT
+      Status : Int;   //  Status number
+      Specific : Struct
+         PN_PN_MSP_PNSlaveNotOnline { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  PNPN coupler is not online
+         PN_PN_MSP_PNSlaveError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  PNPN coupler has an error
+         PN_PN_MSP_PNSlaveWarning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  PNPN coupler has a warning
+         IOModule_PNSlaveNotOnline { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // I/O Module is not online
+         IOModule_PNSlaveError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // I/O Module has an error
+         IOModule_PNSlaveWarning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // I/O Module has a warning
+         ScalanceSwitchPNSlaveNotOnline { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Scalance switch is not online
+         ScalanceSwitchPNSlaveError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Scalance switch has an error
+         ScalanceSwitchPNSlaveWarning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Scalance switch has a warning
+         ScalanceSwitchStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when Scalance switch is not healthy
+         Singulator_PNSlaveNotOnline { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Singulator coupler is not online
+         Singulator_PNSlaveError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Singulator coupler has an error
+         Singulator_PNSlaveWarning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Singulator coupler has a warning
+         UPSSwitchTripped { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Unit Power Supply switch tripped
+         FireAlarmActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Fire alarm active when the signal is true
+         PS_201T1_Tripped { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE if power supply 201T1 tripped
+         "230VAC_CB201F4Tripped" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE if MCP circuit breaker 201F4 tripped
+         "230VAC_CB101F1Tripped" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE if MCP circuit breaker 101F1 tripped
+         "230VAC_CB101F4Tripped" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE if MCP circuit breaker 101F4 tripped
+         "230VAC_CB102F1Tripped" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE if MCU circuit breaker 102F1 tripped
+         "230VAC_CB102F3Tripped" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE if MCU circuit breaker 102F3 tripped
+         "24VDC_CB201F1Tripped" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE if MCU circuit breaker 205F1 tripped
+         "24VDC_CB205F5Tripped" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE if MCU circuit breaker 205F5 tripped
+         "24VDC_CB205F9Tripped" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE if MCU circuit breaker 205F9 tripped
+         Spare_1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Spare
+         Spare_2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Spare
+         Spare_3 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Spare
+         RackSlotError : Array[0..31] of Bool;   //  One of the main rack slots has an error
+         IOModuleSlotError : Array[0..31] of Bool;   //  Module error
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_MainControlPanelStatistics"
+TITLE = Cabinet MCP Statistics
+VERSION : 0.1
+   STRUCT
+      UPSFault { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Unit Power Supply fault statistics
+      FireAlarm { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Fire Alarm active statistics
+      "230VAC_CB101F1Tripped" { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Circuit braker 101F1 tripped  statistics
+      "230VAC_CB101F4Tripped" { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Circuit braker 101F4 tripped statistics
+      "230VAC_CB102F1Tripped" { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Circuit braker 102F1 tripped statistics
+      "230VAC_CB102F3Tripped" { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Circuit braker 102F3 tripped statistics
+      "230VAC_CB201F4Tripped" { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Circuit braker 201F4 tripped statistics
+      "24VDC_CB201F1Tripped" { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Circuit braker 201F1 tripped statistics
+      "24VDC_CB205F5Tripped" { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Circuit braker 205F5 tripped statistics
+      "24VDC_CB205F9Tripped" { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Circuit braker 205F9 tripped statistics
+      ScalanceSwitchStatus { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Scalance switch status statistics
+      Spare_1 { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Spare
+      Spare_2 { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Spare
+      Spare_3 { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Spare
+      PS_201T1_Tripped { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Circuit braker 201T1 tripped statistics
+      "PN/PNCouplerFault" { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // PN/PN coupler fault statistics
+      SingulatorCouplerFault { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // ProSoft coupler fault statistics
+      ScalanceSwitchFault { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Scalance switch fault statistics
+      IOModuleCouplerFault { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // IO Module fault statistics
+      RackModuleFault { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // A module fault occurred in the mainrack
+   END_STRUCT;
+
+END_TYPE
+

@@ -1,0 +1,548 @@
+﻿TYPE "UDT_GINUPS"
+VERSION : 0.1
+   STRUCT
+      TRKNUM { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[18];   // Tracking number
+      PKGUID { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[32];   // Package ID
+      MSGID { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[32];   // Message ID
+      Length { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Camera Length in mm
+      Width { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Camera Width in mm
+      Height { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Camera Height in mm
+      Weight { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Weight in g
+      IDCreated { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 1, Bit 0 - PLCID created or TrayID Read
+      DimDataRcv { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 1, Bit 1 - Package Dimensional Data Received via Camera Scan Data Message
+      PkgWrongInduct { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 1, Bit 2 - Package Did NOT Induct Properly (Non-Tray Systems)
+      IDCalcFromCamID { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 2, Bit 0 - PLCID/TrayID Calculated From CamID
+      UnknownParcelID { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 2, Bit 4 - Unknown Parcel ID
+      UndefinedProblem { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 2, Bit 5 - Un-Defined Problem
+      UnrecognizedCmd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 2, Bit 6 - Un-recognized command
+      SorterInMainteneceMode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 2, Bit 7 - Sorter in Maintenance/Commissioning Mode
+      DestUserSusp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 3, Bit 3 - Destination User Suspended
+      SorterNotSynch { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 3, Bit 6 - Sorter NOT Synchronized (Tilt Tray Systems)
+      PkgDetAtVerCheckPoint { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 4, Bit 0 - Package Detected at Verification Check Point
+      ChuteFullAftrAlterDest { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 4, Bit 7 - Preferred chute full after passed alternate destination
+      ChuteNotAvailAfterAlterDest { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 5, Bit 0 - Preferred chute not available after passed alternate destination
+      PLCRedirected { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 5, Bit 2 - PLC Redirected
+      ThreatParcel { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Threat parcel
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_UPSScanData2"
+TITLE = UDT_ScanData2
+VERSION : 0.1
+//User-defined structure of UPS SCAN_DATA2 data.
+   STRUCT
+      MSGID { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;
+      CONFLICT_CODE { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;
+      BARCODE_ZIP { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;
+      BARCODE_TRACK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;
+      BARCODE_PTN { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;
+      MAXI_ZIPCODE { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;
+      MAXI_COUNTRY { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;
+      MAXI_SERVICE { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;
+      MAXI_TRACK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;
+      MAXI_SHIPPER { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;
+      LENGTH1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;
+      LENGTH2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;
+      HEIGHT { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;
+      VERTEX { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;
+      ORIENTATION { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;
+      OVERHANG { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;
+      WEIGHT { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;
+      APPENDED_DATA { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct
+         Constant_1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String := '1';
+         FRAME_ID { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;
+         DIMENSION { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;
+         PACKAGE_NUMBER { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;
+         BARCODE_1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;
+         DESCRIPTION_1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;
+         BARCODE_2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;
+         DESCRIPTION_2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;
+         BARCODE_3 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;
+         DESCRIPTION_3 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;
+         Constant_4 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String := '4';
+         SCALE_WEIGHT { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;
+         Constant_5 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String := '5';
+         GIRTH { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;
+         Constant_6 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String := '6';
+         ERROR_CODE { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_UPSHealth"
+TITLE = UDT_Health
+VERSION : 0.1
+//User-defined structure of UPS health message data.
+   STRUCT
+      "Type" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;
+      Failure { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;
+      Model { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;
+      Error { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_UPSMessage"
+VERSION : 0.1
+   STRUCT
+      SCN { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[15];   // Sender Client Name
+      SCT { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[8];   // Sender Client Type
+      RCN { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[15];   // Receiver Client Name
+      RCT { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[8];   // Receiver Client Type
+      MT { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;   // Message type
+      Data { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[1..35] of String[32];   // Buffer for message data fields
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_UPSExternalReader"
+VERSION : 0.1
+   STRUCT
+      NameIdentifier { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String := 'CAMERA';   // Device name idetifier
+      IPAddress { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[15];
+      State { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      HealthMessage { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_UPSHealth";   // Health message data
+      ScanData2Message { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_UPSScanData2";   // ScanData2 message data
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_UPSHeartbeatStatistics"
+TITLE = UDT_HeartbeatStatistics
+VERSION : 0.1
+//User-defined structure of FB_Heartbeat function block statistics.
+   STRUCT
+      ConLost : UDInt;   // Statistics of connection lost
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_UPSSafetyZoneStatistics"
+VERSION : 0.1
+   STRUCT
+      NotHealthy { S7_SetPoint := 'False'} : "UDT_EventStatistic";
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_UPSPKGSTAT"
+TITLE = UDT_PKGSTAT
+VERSION : 0.1
+//User-defined structure of UPS package status.
+   STRUCT
+      IDCreated { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 1, Bit 0 - PLCID created or TrayID Read (Package Passed through Camera Tunnel)
+      DimDataRcv { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 1, Bit 1 - Package Dimensional Data Received via Camera Scan Data Message
+      PkgWrongInduct { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 1, Bit 2 - Package Did NOT Induct Properly (Non-Tray Systems)
+      SortCmdRcv { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 1, Bit 3 - SORT Command Received
+      SortCmdLate { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 1, Bit 4 - SORT Command Late
+      SortCmdInvaliDest { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 1, Bit 5 - SORT Command Invalid Destination
+      NoSortCmsRcv { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 1, Bit 6 - No SORT message Received for PKG or TRAY ID
+      GoodDivert { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 1, Bit 7 - Good Divert / Sort
+      IDCalcFromCamID { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 2, Bit 0 - PLCID/TrayID Calculated From CamID
+      DivertAttempted { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 2, Bit 1 - Divert/Tip Attempted
+      TrayDisabled { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 2, Bit 2 - Tray Disabled (Tray Systems)
+      DestDisabled { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 2, Bit 3 - Destination Disabled (via HMI or PFC)
+      UnkParcelID { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 2, Bit 4 - Unknown Parcel ID
+      UndefinedProblem { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 2, Bit 5 - Un-Defined Problem
+      UnrecognizedCmd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 2, Bit 6 - Un-recognized command
+      SorterInMainteneceMode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 2, Bit 7 - Sorter in Maintenance/Commissioning Mode
+      ChuteJam { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 3, Bit 0 - Chute Jam
+      FailedDivert { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 3, Bit 1 - Failed Divert
+      ParcelLost { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 3, Bit 2 - Parcel Lost in PFC Tracking
+      DestUserSusp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 3, Bit 3 - Destination User Suspended
+      ChuteFull { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 3, Bit 4 - Chute Full / Bag Closed
+      SorterNotAtSpeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 3, Bit 5 - Sorter NOT At Speed
+      SorterNotSynch { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 3, Bit 6 - Sorter NOT Synchronized (Tilt Tray Systems)
+      MaxRecirculation { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 3, Bit 7 - Max Recirculation (Revolving Systems)
+      PkgDetAtVerCheckPoint { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 4, Bit 0 - Package Detected at Verification Check Point
+      GapErrorLeadingEdge { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 4, Bit 1 - Gap Error Leading Edge
+      GapErrorTrailingEdge { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 4, Bit 2 - Gap Error Trailing Edge
+      PkgTooTall { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 4, Bit 3 - Package Too Tall
+      PkgTooSmall { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 4, Bit 4 - Package Too Small
+      PkgTooLong { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 4, Bit 5 - Package Too Long
+      CrossoverDest { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 4, Bit 6 - Crossover Destination
+      ChuteFullAftrAlterDest { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 4, Bit 7 - Preferred chute full after passed alternate destination
+      ChuteNotAvailAfterAlterDest { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 5, Bit 0 - Preferred chute not available after passed alternate destination
+      TakeAwayConvNotRun { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 5, Bit 1 - Take away conveyor not running
+      PLCRedirected { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 5, Bit 2 - PLC Redirected
+      Spare1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 5, Bit 3 - Future / or Machine Specific (To be identified)
+      Spare2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 5, Bit 4 - Future / or Machine Specific (To be identified)
+      Spare3 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 5, Bit 5 - Future / or Machine Specific (To be identified)
+      Spare4 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 5, Bit 6 - Future / or Machine Specific (To be identified)
+      Spare5 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Byte 5, Bit 7 - Future / or Machine Specific (To be identified)
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_UPSMSGIDCounters"
+VERSION : 0.1
+   STRUCT
+      Heartbeat { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Heartbeat MSGID counter
+      IDFWD { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // IDFWD MSGID counter
+      SORTCONF { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // SORTCONF MSGID counter
+      PLCINFO { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // PLCINFO MSGID counter
+      SORT { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // SORT MSGID counter
+      HB { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // HB MSGID counter
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_UPSMessageHeader"
+TITLE = UDT_UPSMessageHeader
+VERSION : 0.1
+//User-defined structure of UPS message header data.
+   STRUCT
+      SCN { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[15] := 'aaa.bbb.ccc.ddd';   // Sender client name
+      SCT { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[8] := 'AAA-BBBB';   // Sender client type
+      RCN { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[15] := 'aaa.bbb.ccc.ddd';   // Receiver client name
+      RCT { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[8] := 'AAA-BBBB';   // Receiver client type
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_UPSMACHSTAT"
+TITLE = UDT_MACHSTAT
+VERSION : 0.1
+//User-defined structure of UPS machine statuses.
+   STRUCT
+      OpsNormal : Struct   // Ops/Normal
+         StopMCP : Bool;   // Byte 1, Bit 0 - Operator Stop MCP Panel
+         StopRemoteCon1 : Bool;   // Byte 1, Bit 1 - Operator Stop Remote Console 1
+         StopRemoteCon2 : Bool;   // Byte 1, Bit 2 - Operator Stop Remote Console 2
+         BuildingStop : Bool;   // Byte 1, Bit 3 - Building Stop via HMI
+         BuildingBreak : Bool;   // Byte 1, Bit 4 - Building Break Time via HMI
+         PowerSaveShutdown : Bool;   // Byte 1, Bit 5 - Power Save Shutdown
+         SorterNotAtSpeed : Bool;   // Byte 1, Bit 6 - Sorter Not at speed
+         MaintenanceSysMode : Bool;   // Byte 1, Bit 7 - System in Maintenance Mode
+         Spare_8 : Bool;   // Byte 2, Bit 8 - Future / or Machine Specific (To be identyfied)
+         Spare_9 : Bool;   // Byte 2, Bit 9 - Future / or Machine Specific (To be identyfied)
+         Spare_10 : Bool;   // Byte 2, Bit 10 - Future / or Machine Specific (To be identyfied)
+         Spare_11 : Bool;   // Byte 2, Bit 11 - Future / or Machine Specific (To be identyfied)
+         Spare_12 : Bool;   // Byte 2, Bit 12 - Future / or Machine Specific (To be identyfied)
+         Spare_13 : Bool;   // Byte 2, Bit 13 - Future / or Machine Specific (To be identyfied)
+         Spare_14 : Bool;   // Byte 2, Bit 14 - Future / or Machine Specific (To be identyfied)
+         Spare_15 : Bool;   // Byte 2, Bit 15 - Future / or Machine Specific (To be identyfied)
+         Spare_16 : Bool;   // Byte 3, Bit 16 - Future / or Machine Specific (To be identyfied)
+         Spare_17 : Bool;   // Byte 3, Bit 17 - Future / or Machine Specific (To be identyfied)
+         Spare_18 : Bool;   // Byte 3, Bit 18 - Future / or Machine Specific (To be identyfied)
+         Spare_19 : Bool;   // Byte 3, Bit 19 - Future / or Machine Specific (To be identyfied)
+         Spare_20 : Bool;   // Byte 3, Bit 20 - Future / or Machine Specific (To be identyfied)
+         Spare_21 : Bool;   // Byte 3, Bit 21 - Future / or Machine Specific (To be identyfied)
+         Spare_22 : Bool;   // Byte 3, Bit 22 - Future / or Machine Specific (To be identyfied)
+         Spare_23 : Bool;   // Byte 3, Bit 23 - Future / or Machine Specific (To be identyfied)
+         Spare_24 : Bool;   // Byte 4, Bit 24 - Future / or Machine Specific (To be identyfied)
+         Spare_25 : Bool;   // Byte 4, Bit 25 - Future / or Machine Specific (To be identyfied)
+         Spare_26 : Bool;   // Byte 4, Bit 26 - Future / or Machine Specific (To be identyfied)
+         Spare_27 : Bool;   // Byte 4, Bit 27 - Future / or Machine Specific (To be identyfied)
+         Spare_28 : Bool;   // Byte 4, Bit 28 - Future / or Machine Specific (To be identyfied)
+         Spare_29 : Bool;   // Byte 4, Bit 29 - Future / or Machine Specific (To be identyfied)
+         Spare_30 : Bool;   // Byte 4, Bit 30 - Future / or Machine Specific (To be identyfied)
+         Spare_31 : Bool;   // Byte 4, Bit 31 - Future / or Machine Specific (To be identyfied)
+      END_STRUCT;
+      SafetyFaults : Struct   // Safety faults
+         BuildingEStop : Bool;   // Byte 5, Bit 0 - Building Emergency Stop
+         SystemEStop : Bool;   // Byte 5, Bit 1 - System Emergency Stop
+         EmerPullCord : Bool;   // Byte 5, Bit 2 - Emergency Pull Cord
+         PhotoEyeBlock1 : Bool;   // Byte 5, Bit 3 - Safety Photo Eye Blocked (Long Range Photo Eye) 1
+         PlatformLockout1 : Bool;   // Byte 5, Bit 4 - Platform Lockout 1
+         PlatformLockout2 : Bool;   // Byte 5, Bit 5 - Platform Lockout 2
+         PhotoEyeBlock2 : Bool;   // Byte 5, Bit 6 - Safety Photo Eye Blocked (Long Range Photo Eye) 2
+         PhotoEyeBlock3 : Bool;   // Byte 5, Bit 7 - Safety Photo Eye Blocked (Long Range Photo Eye) 3
+         Spare_8 : Bool;   // Byte 6, Bit 8 - Future / or Machine Specific (To be identyfied)
+         Spare_9 : Bool;   // Byte 6, Bit 9 - Future / or Machine Specific (To be identyfied)
+         Spare_10 : Bool;   // Byte 6, Bit 10 - Future / or Machine Specific (To be identyfied)
+         Spare_11 : Bool;   // Byte 6, Bit 11 - Future / or Machine Specific (To be identyfied)
+         Spare_12 : Bool;   // Byte 6, Bit 12 - Future / or Machine Specific (To be identyfied)
+         Spare_13 : Bool;   // Byte 6, Bit 13 - Future / or Machine Specific (To be identyfied)
+         Spare_14 : Bool;   // Byte 6, Bit 14 - Future / or Machine Specific (To be identyfied)
+         Spare_15 : Bool;   // Byte 6, Bit 15 - Future / or Machine Specific (To be identyfied)
+         Spare_16 : Bool;   // Byte 7, Bit 16 - Future / or Machine Specific (To be identyfied)
+         Spare_17 : Bool;   // Byte 7, Bit 17 - Future / or Machine Specific (To be identyfied)
+         Spare_18 : Bool;   // Byte 7, Bit 18 - Future / or Machine Specific (To be identyfied)
+         Spare_19 : Bool;   // Byte 7, Bit 19 - Future / or Machine Specific (To be identyfied)
+         Spare_20 : Bool;   // Byte 7, Bit 20 - Future / or Machine Specific (To be identyfied)
+         Spare_21 : Bool;   // Byte 7, Bit 21 - Future / or Machine Specific (To be identyfied)
+         Spare_22 : Bool;   // Byte 7, Bit 22 - Future / or Machine Specific (To be identyfied)
+         Spare_23 : Bool;   // Byte 7, Bit 23 - Future / or Machine Specific (To be identyfied)
+         Spare_24 : Bool;   // Byte 8, Bit 24 - Future / or Machine Specific (To be identyfied)
+         Spare_25 : Bool;   // Byte 8, Bit 25 - Future / or Machine Specific (To be identyfied)
+         Spare_26 : Bool;   // Byte 8, Bit 26 - Future / or Machine Specific (To be identyfied)
+         Spare_27 : Bool;   // Byte 8, Bit 27 - Future / or Machine Specific (To be identyfied)
+         Spare_28 : Bool;   // Byte 8, Bit 28 - Future / or Machine Specific (To be identyfied)
+         Spare_29 : Bool;   // Byte 8, Bit 29 - Future / or Machine Specific (To be identyfied)
+         Spare_30 : Bool;   // Byte 8, Bit 30 - Future / or Machine Specific (To be identyfied)
+         Spare_31 : Bool;   // Byte 8, Bit 31 - Future / or Machine Specific (To be identyfied)
+      END_STRUCT;
+      SystemFaults : Struct   // System faults
+         PLCRackFault : Bool;   // Byte 9, Bit 0 - PLC Rack Fault
+         EncoderFault : Bool;   // Byte 9, Bit 1 - Encoder Fault
+         TipperOrDiverterFault : Bool;   // Byte 9, Bit 2 - Tipper / Diverter Fault
+         TCPConFail : Bool;   // Byte 9, Bit 3 - TCP Connection Failure
+         SensorJam : Bool;   // Byte 9, Bit 4 - Package Detect Sensor Jam
+         CamOrScanFail : Bool;   // Byte 9, Bit 5 - Camera / Scanner Failure
+         InductPEJam : Bool;   // Byte 9, Bit 6 - Induct Photo Eye Jam
+         SortVerificationPEJam : Bool;   // Byte 9, Bit 7 - Sort Verification Photo Eye Jam
+         TakeAwayConvPEJam : Bool;   // Byte 10, Bit 8 - Take Away Conveyor Photo Eye Jam
+         SorterMechFault : Bool;   // Byte 10, Bit 9 - Sorter Mechanical Fault
+         Spare_10 : Bool;   // Byte 10, Bit 10 - Future / or Machine Specific (To be identyfied)
+         SorterJam : Bool;   // Byte 10, Bit 11 - Sorter Jam (Logical Failure)
+         InductPCAlignmentError : Bool;   // Byte 10, Bit 12 - Induct Photo Cell Alignment Error
+         MotorFault : Bool;   // Byte 10, Bit 13 - Motor Fault
+         PowerFault : Bool;   // Byte 10, Bit 14 - Power Fault
+         Spare_15 : Bool;   // Byte 10, Bit 15 - Future / or Machine Specific (To be identyfied)
+         IOComError : Bool;   // Byte 11, Bit 16 - I/O Communications Error
+         RemoteIOComError : Bool;   // Byte 11, Bit 17 - Remote I/O Communications Error
+         XLeChatComError : Bool;   // Byte 11, Bit 18 - XLe chat Communications Error
+         SerialComError : Bool;   // Byte 11, Bit 19 - Serial Communications Error
+         SubsystemError : Bool;   // Byte 11, Bit 20 - Subsytem Error (Scale, Camera, etc...)
+         VDFFault : Bool;   // Byte 11, Bit 21 - VDF Fault
+         SystemResetInitiated : Bool;   // Byte 11, Bit 22 - System Reset Initiated
+         PFCStopMode : Bool;   // Byte 11, Bit 23 - PFC not in Run Mode
+         NoHitPoints : Bool;   // Byte 12, Bit 24 - No Hit points / Divert Set Ponts found
+         MissingTraysDetected : Bool;   // Byte 12, Bit 25 - Missing Trays Detected
+         DataFault : Bool;   // Byte 12, Bit 26 - Data Fault, X number of sequential missing valid SORT messages
+         Spare_27 : Bool;   // Byte 12, Bit 27 - Future / or Machine Specific (To be identyfied)
+         Spare_28 : Bool;   // Byte 12, Bit 28 - Future / or Machine Specific (To be identyfied)
+         Spare_29 : Bool;   // Byte 12, Bit 29 - Future / or Machine Specific (To be identyfied)
+         Spare_30 : Bool;   // Byte 12, Bit 30 - Future / or Machine Specific (To be identyfied)
+         Spare_31 : Bool;   // Byte 12, Bit 31 - Future / or Machine Specific (To be identyfied)
+      END_STRUCT;
+      OtherFaults : Struct   // Other faults
+         ConsoleDisconnect : Bool;   // Byte 13, Bit 0 - Console Disconnect
+         PLCChassisPower : Bool;   // Byte 13, Bit 1 - PLC Chassis Power
+         SystemInputPower : Bool;   // Byte 13, Bit 2 - System Input Power
+         SystemPowerOutput : Bool;   // Byte 13, Bit 3 - System Power Output
+         DiverterTipperPower : Bool;   // Byte 13, Bit 4 - Diverter / Tipper Power
+         VFDServoFault : Bool;   // Byte 13, Bit 5 - VFD / Servo Fault
+         MotorStarterFault : Bool;   // Byte 13, Bit 6 - Motor Starter Fault
+         PLCFault : Bool;   // Byte 13, Bit 7 - PLC Fault
+         Spare_8 : Bool;   // Byte 14, Bit 8 - Future / or Machine Specific (To be identyfied)
+         Spare_9 : Bool;   // Byte 14, Bit 9 - Future / or Machine Specific (To be identyfied)
+         Spare_10 : Bool;   // Byte 14, Bit 10 - Future / or Machine Specific (To be identyfied)
+         Spare_11 : Bool;   // Byte 14, Bit 11 - Future / or Machine Specific (To be identyfied)
+         Spare_12 : Bool;   // Byte 14, Bit 12 - Future / or Machine Specific (To be identyfied)
+         Spare_13 : Bool;   // Byte 14, Bit 13 - Future / or Machine Specific (To be identyfied)
+         Spare_14 : Bool;   // Byte 14, Bit 14 - Future / or Machine Specific (To be identyfied)
+         Spare_15 : Bool;   // Byte 14, Bit 15 - Future / or Machine Specific (To be identyfied)
+         Spare_16 : Bool;   // Byte 15, Bit 16 - Future / or Machine Specific (To be identyfied)
+         Spare_17 : Bool;   // Byte 15, Bit 17 - Future / or Machine Specific (To be identyfied)
+         Spare_18 : Bool;   // Byte 15, Bit 18 - Future / or Machine Specific (To be identyfied)
+         Spare_19 : Bool;   // Byte 15, Bit 19 - Future / or Machine Specific (To be identyfied)
+         Spare_20 : Bool;   // Byte 15, Bit 20 - Future / or Machine Specific (To be identyfied)
+         Spare_21 : Bool;   // Byte 15, Bit 21 - Future / or Machine Specific (To be identyfied)
+         Spare_22 : Bool;   // Byte 15, Bit 22 - Future / or Machine Specific (To be identyfied)
+         Spare_23 : Bool;   // Byte 15, Bit 23 - Future / or Machine Specific (To be identyfied)
+         Spare_24 : Bool;   // Byte 16, Bit 24 - Future / or Machine Specific (To be identyfied)
+         Spare_25 : Bool;   // Byte 16, Bit 25 - Future / or Machine Specific (To be identyfied)
+         Spare_26 : Bool;   // Byte 16, Bit 26 - Future / or Machine Specific (To be identyfied)
+         Spare_27 : Bool;   // Byte 16, Bit 27 - Future / or Machine Specific (To be identyfied)
+         Spare_28 : Bool;   // Byte 16, Bit 28 - Future / or Machine Specific (To be identyfied)
+         Spare_29 : Bool;   // Byte 16, Bit 29 - Future / or Machine Specific (To be identyfied)
+         Spare_30 : Bool;   // Byte 16, Bit 30 - Future / or Machine Specific (To be identyfied)
+         Spare_31 : Bool;   // Byte 16, Bit 31 - Future / or Machine Specific (To be identyfied)
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_UPSLostCounters"
+VERSION : 0.1
+   STRUCT
+      LostInTracking { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Parcel lost in tracking
+      NoUPSID { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // No UPS ID created (missing SCAN_DATA_2)
+      NoSortRcv { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // No sort instruction
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_UPS1stStageFlowControlConfiguration"
+VERSION : 0.1
+   STRUCT
+      NumberOfInfeedsInUse { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Number of infeeds used
+      ThresholdConsecutivesAboveSP { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Number of consecutive intervals above set point to trigger flow control
+      ThresholdConsecutivesBelowSP { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Number of consecutive intervals below set point to reset flow control
+      IntervalsNumberOfEvaluationPeriod { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Number of intervals for evaluation of flow control
+      LegthBasedFlowControl { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE = The input of the counts is length FALSE = The input is counts of parcel
+      IsLengthImperial { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE =  Length is given in inches. FALSE = Lentgh is given in mm
+      IncrementingCounts { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE = Input data are incremented. FALSE =  Input data are updated every 15 sec
+      Infeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[1..10] of Struct
+         RegisterOffset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Number of register offset for evalueated flow calculation
+         MinimumTimeToStop { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UInt;   // Minimum stop time of divert
+         IsHighPriority { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE= The divert is high priority
+         IsNotAllowedToStop { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE= The divert is not allowed to stop (e.g. Recirculation)
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_UPSSspStatistics"
+VERSION : 0.1
+   STRUCT
+      CS_Start { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Number of times started
+      CS_Stop { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_EventStatistic";
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_UPSFlowRateCountingRegisters"
+VERSION : 0.1
+   STRUCT
+      iCR { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[1..60] of Int;   // Counting Register
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_UPSFlowControlHMI"
+VERSION : 0.1
+   STRUCT
+      Setpoint : Int;   // Setpoint value from HMI
+      CalculatedFlow : Int;   // Current calculated value to HMI
+      CommandToDisable : Bool;   // Command from HMI to disable
+      DisabledStatus : Bool;   // Disabled Status
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_UPSDecodeStatistics"
+TITLE = UDT_DecodeStatistics
+VERSION : 0.1
+//User-defined structure of FB_Decode function block statistics.
+   STRUCT
+      InvalidMsg : UDInt;   // Counter of incorrectly decoded messages
+      HBNotObserved : UDInt;   // Statistics of HB not observed in a preset time
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_UPSCIPStatus"
+VERSION : 0.1
+   STRUCT
+      Status : Int;   // Status number
+      Specific : Struct
+         CIP24VDCError : Bool;   // CIP 24VDC error
+         CIPCircuitBreakerTripped : Bool;   // CIP Circuit Breaker Tripped
+         XLE_SwitchError : Bool;   // XLE switched while stystem was ruuning
+         Camera_SwitchError : Bool;   // Camera switched while stystem was ruuning
+         WeighingScaleFault : Bool;   // Weighing Scale Fault
+         CameraTunel1 : Bool;   // Camera Tunel 1 Selected
+         CameraTunel2 : Bool;   // Camera Tunel 2 Selected
+         XLEBackUp : Bool;   // XLE BackUp selected
+         XLEPrimary : Bool;   // XLE Primary selected
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_UPSCIPStatistics"
+VERSION : 0.1
+   STRUCT
+      CIP24VDCFault { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // 24V fault
+      CIPCircuitBreakerTripped { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Circuit breaker tripped
+      WeighingScaleFault { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Weighing scale fault
+      SS_Camera : DInt;   // Number of times camera switch change over
+      SS_XLE : DInt;   // Number of times XLE switch change over
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_UPSChatStatistics"
+VERSION : 0.1
+   STRUCT
+      CommunicationError { S7_SetPoint := 'False'} : "UDT_EventStatistic";
+      LostChatConnection { S7_SetPoint := 'False'} : "UDT_EventStatistic";
+      LostXLeConnection { S7_SetPoint := 'False'} : "UDT_EventStatistic";
+      LostPLCCommunication { S7_SetPoint := 'False'} : "UDT_EventStatistic";
+      Heartbeat : DInt;   // Heartbeat message counter
+      IDFWD : DInt;   // IDFWD message counter
+      SORTCONF : DInt;   // SORTCONF message counter
+      PLCMsg : DInt;   // PLCMsg message counter
+      PLCINFO : DInt;   // PLCINFO message counter
+      SORT : DInt;   // SORT message counter
+      HB : DInt;   // HB message counter
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_ParcelData"
+VERSION : 0.1
+   STRUCT
+      AvgParcelLength { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt := 10;
+      TimeReadMessages { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Time := T#10s;
+      TimOutComm { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Time := T#30s;
+      NrOfParcels { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[1..500] of DInt;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_UPSConfiguration"
+TITLE = UDT_UPSConfiguration
+VERSION : 0.1
+//User-defined structure of UPS server parameters.
+   STRUCT
+      MsgHeader { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_UPSMessageHeader";   // UPS meassage header
+      MsgTypes { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[0..34] of String;   // UPS message type
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_UPSPKGFaults"
+TITLE = UDT_PKGFaults
+VERSION : 0.1
+//User-defined structure of  UPS package faults.
+   STRUCT
+      Sort { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      SortLate { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      Lost { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      TE_Gap { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      TL_Gap { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      OS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      US { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      SCAN_DATA2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      M_Length { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_UPSPkgInfo"
+TITLE = UDT_PkgInfo
+VERSION : 0.1
+//User-defined structure of UPS package information.
+   STRUCT
+      DivertDestination { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Divert destination
+      Length { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Parcel length
+      TrailingGap { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Trailing gap
+      LeadingGap { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Leading gap
+      DIMS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Dimensions structure
+         MeasurementSys { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[1];   // Measurement system
+         Length { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[4];   // Length
+         Width { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[4];   // Width
+         Height { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[4];   // Height
+         Weight { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[4];   // Weight
+      END_STRUCT;
+      ParcelRevolutions { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Package revolutions count
+      Destination { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[0..20] of Int;   // Destination
+      TRKNUM { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[18];   // Tracking number
+      PKGUID { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[32];   // Package ID
+      MSGID { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[32];   // Message ID
+      PACKSTAT { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_UPSPKGSTAT";   // Package status
+      SCN { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[15];   // Sender IP adrres
+      SCT { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[8];   // Receiver name
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_UPSCameraState"
+TITLE = UDT_CameraState
+VERSION : 0.1
+//User-defined structure of camera IP addresses and their states.
+   STRUCT
+      Camera { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[0..9] of Struct   // Camera
+         IPAddress { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[15];   // IP address
+         State { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // State
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+

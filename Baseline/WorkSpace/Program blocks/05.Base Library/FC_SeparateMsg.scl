@@ -1,0 +1,129 @@
+﻿FUNCTION "FC_SeparateMsg" : Void
+TITLE = FC_SeparateMsg
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 25
+// END_ATTRIBUTES
+//Function to separate the delimited message.
+   VAR_INPUT 
+      iUDT_Message : "UDT_Message";   // Character string to be separated
+      ii_Position : Int;   // Start position
+      ic_Delimiter : Char;   // Delimiter
+      ic_EndSign : Char;   // End of the message sign
+   END_VAR
+
+   VAR_OUTPUT 
+      qs_Msg : String;   // Separated part of the message
+      qui_Length : UInt;   // Length of the separated message
+      qx_EndMsg : Bool;   // End message sign found
+      qx_NoSeparationSign : Bool;   // Separation sign not detected
+   END_VAR
+
+   VAR_TEMP 
+      ti_i : Int;   // Loop counter
+      tui_NrOfConvChar : UInt;   // Number of converted message characters
+      ti_SizeOfMsg : Int;   // Message array size
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	24/05/2019  | 0.1       | K.Pokorski    | first release MHS TIA 15.1
+	14/06/2019  | 0.2       | K.Pokorski    | "ii_Position" input, "qx_NoSeparationSign" output added, additional logic programmed 
+	17/06/2019  | 0.3       | L.Klar        | "iqi_Position" deleted
+	24/07/2019  | 2.0       | L.Klar        | 2.0 MHS library release TIA 15.1
+	26/07/2019  | 2.1       | M.Kurpiers    | Comments adjusted
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 – Maximum number of the message characters
+	    
+	    #ti_SizeOfMsg := "FC_GetNrOfArrayEl"(iv_Array := #iUDT_Message.Character);
+	    
+	END_REGION
+	
+	REGION 2 – Message separation
+	    
+	    IF (#ii_Position <= #ti_SizeOfMsg - 1)                                        // Position is lower than size of a message array                                      
+	    THEN
+	        
+	        // Delimiter and end sign search loop
+	        FOR #ti_i := #ii_Position TO #ti_SizeOfMsg - 1 DO
+	            
+	            
+	            IF (#iUDT_Message.Character[#ti_i] = #ic_Delimiter                    // Check if delimiter and the end of the message was found                   
+	                OR #iUDT_Message.Character[#ti_i] = #ic_EndSign)
+	                
+	            THEN
+	                
+	                // Message length minus start position from INT to UInt conversion
+	                #tui_NrOfConvChar := INT_TO_UINT(IN := (#ti_i - #ii_Position));
+	                
+	                IF #tui_NrOfConvChar <> 0
+	                THEN
+	                    // Character array into the message character string conversion
+	                    Chars_TO_Strg(Chars := #iUDT_Message.Character,
+	                                  pChars := #ii_Position,
+	                                  Cnt := #tui_NrOfConvChar,
+	                                  Strg => #qs_Msg);
+	                    
+	                ELSE
+	                    #qs_Msg := '';
+	                END_IF;
+	                
+	                // Length of the separated message part
+	                #qui_Length := #tui_NrOfConvChar;
+	                
+	                // Separation sign not detected
+	                #qx_NoSeparationSign := FALSE;
+	                
+	                
+	                IF (#iUDT_Message.Character[#ti_i] = #ic_EndSign)                   // End of the message sign detected              
+	                THEN
+	                    
+	                    #qx_EndMsg := TRUE;
+	                    
+	                ELSE
+	                    
+	                    #qx_EndMsg := FALSE;
+	                    
+	                END_IF;
+	                // Exit the loop if end sign was found
+	                EXIT;
+	                
+	                
+	            ELSIF (#ti_i = #ti_SizeOfMsg - 1)                                         // Separate sign is not detected                                     
+	            THEN
+	                
+	                // End of the message and no separation sign detected bits are set
+	                #qs_Msg := '';
+	                #qui_Length := 0;
+	                #qx_EndMsg := TRUE;
+	                #qx_NoSeparationSign := TRUE;
+	                
+	            END_IF;
+	            
+	        END_FOR;
+	        // Clear variables if delimiter and end sign wasn't found    
+	    ELSE
+	        
+	        #qs_Msg := '';
+	        #qui_Length := 0;
+	        #qx_EndMsg := TRUE;
+	        #qx_NoSeparationSign := TRUE;
+	        
+	    END_IF;
+	    
+	END_REGION
+END_FUNCTION
+

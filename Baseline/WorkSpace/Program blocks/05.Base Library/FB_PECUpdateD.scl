@@ -1,0 +1,1092 @@
+﻿FUNCTION_BLOCK "FB_PECUpdateD"
+TITLE = FB_PECUpdate
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 23
+// END_ATTRIBUTES
+//Function block to update parcel data in a tracking array at PEC position.
+   VAR_INPUT 
+      iUDT_PECUpdateConfiguration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_PECDUpdateConfiguration";   //   PEC update configuration
+      iUDT_ConveyorCommonConfiguration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ConveyorCommonConfiguration";   //   Conveyor configuration
+      ix_PEC { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   TRUE when the end of section photoeye is not blocked
+      ix_TeachingMode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Teaching mode enable
+   END_VAR
+
+   VAR_OUTPUT 
+      qUDT_Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_PECUpdateStatus";   //   Status structure
+      qi_GINwrite { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //  Gin found or generated
+      qx_PECFiltered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Filtered photoeye signal
+   END_VAR
+
+   VAR_IN_OUT 
+      iqa_TrackingData : Array[*] of Int;   //   Tracking data
+      iqUDT_ConveyorInterface : "UDT_ConveyorInterface";   //   Conveyor interface
+      iqUDT_UnknownGINRange : "UDT_UnknownGIN";   //   Unknown GIN
+      iqUDT_FifoHeader : "UDT_FifoHeader";   //   FIFO header
+      iqa_FifoData : Array[*] of Int;   //   FIFO data
+      iqUDT_Statistics : "UDT_PECUpdateStatistics";   //   Statistic structure
+   END_VAR
+
+   VAR 
+      sFB_PEC { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_PECD";   //   Photoeye function
+      sFB_LengthMeasurement { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_ParcelLength";   //   Length measurement
+      s_R_TRIG_Parcel {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Parcel detected rising edge to count parcels
+      s_R_TRIG_ParcelFound {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Parcel detected rising edge to update the PEC position tracking record
+      s_R_TRIG_DataFound {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Any data found at a PEC position rising edge
+      s_R_TRIG_PositiveDataFound {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Positive data found at a PEC position rising edge
+      s_R_TRIG_TeachMode {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Teaching mode activation rising edge
+      s_R_TRIG_TooManyLost {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //   Too many lost parcels error statistics trigger
+      sUDT_LostGINFIFOStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_FifoStatus";   //   Lost GIN FIFO status
+      "ss_PEC/DataDeviation" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // PEC/Data deviation calculation structure
+         "Type" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // 1= match, 2 = PEC no Data, 3= Data no PEC, 4 Double data, 5 = Pec no data Lost
+         Last { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //  Last deviation of found data [cm]
+         GIN { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //  Last GIN deviation
+         Sum { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //  Deviation sum [cm]
+         Nr { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //  Deviation number
+      END_STRUCT;
+      ss_ValidGINRange { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   //   Valid GIN range
+         Start { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;
+         End { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;
+         GIN { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;
+      END_STRUCT;
+      ss_AlignedParcelsCounters { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   //   Aligned parcels counters
+         Total { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Total aligned parcels
+         DataNoPEC { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Parcels aligned in case data detected without photoeye signal
+         PECNoData { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Parcels aligned in case parcel detected without data
+      END_STRUCT;
+      ss_LostParcelsCounters { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   //   Lost parcels counters
+         Total { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Total number of lost parcels
+         DoubleData { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Parcels lost due to double data found in a search window
+         ParcelNotFound { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Parcels lost due to no parcel detected after travelling search window distance
+      END_STRUCT;
+      ss_LostValidParcelsCounters { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   //   Lost parcels counters
+         Total { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Total number of lost parcels
+         DoubleData { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Parcels lost due to double data found in a search window
+         ParcelNotFound { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Parcels lost due to no parcel detected after travelling search window distance
+      END_STRUCT;
+      si_UnknownParcelsCounters { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   //   Unknown parcels counters
+         Total { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Total number of unknown parcels
+         LostParcelFound { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Parcel found with a lost data, unknown GIN created
+         DataNotFound { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Data not found during search window scan
+      END_STRUCT;
+      slr_Performance { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : LReal := 100.0;   //   Update performance [%]
+      sdi_TotalNumberOfParcels { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //   Total number of parcels detected
+      sdi_TotalNumberOfData { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //   Total number of data detected
+      si_PECPosition { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Photoeye position [cm]
+      si_SearchWindow { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Data search distance from photoeye position [cm]
+      si_GINToWrite { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Found or generated GIN, which will be used to update photoeye position in the tracking array
+      si_PositionToUpdate { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Position in a tracking array to be updated
+      si_Direction { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Direction of the displacement to parametrize loops
+      si_Displacement { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Displacement [cm]
+      si_ParcelWaitDistance { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Parcel delay [cm]
+      si_LastUpdatedGIN { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Last updated GIN to check if next data is a new one
+      si_LastCountedData { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Last counted data
+      si_LostParcelsInARow { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Number of lost parcel in a row
+      si_NumberOfTeachedParcels { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Number of teached parcels
+      si_AverageSlip { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Average parcel slip [cm]
+      si_CalculatedLengthCorrection { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Calculated length correction after teaching
+      si_ParcelLengthFilterCounter { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //  Parcel length filter counter [cm]
+      si_ParcelLengthFilterOldGIN { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //  Parcel length filter old GIN
+      si_i { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Loop counter
+      sx_ParcelDetected { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Parcel detected
+      sx_ParcelWaitEnable { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Missing parcel monitoring
+      sx_TeachingMode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Teaching mode
+      sx_GenerateGIN { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Request to generate GIN
+      sx_LostGINFIFOError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Lost GIN FIFO error
+      sx_LostGINFIFOWarning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Lost GIN FIFO warning
+      sx_InvalidDirection { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Invalid direction
+      sx_InvalidGINRange { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Invalid GIN range
+      sx_InvalidDisplacement { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Invalid displacement
+      sx_InvalidSearchWindow { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Invalid search window
+      sx_DoubleDataFound { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Double data detected
+      sx_LengthMeasurementEnable { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+   END_VAR
+
+   VAR_TEMP 
+      tUDT_PECConfiguration : "UDT_PECDConfiguration";   //   PEC configuration
+      tUDT_PECStatus : "UDT_PECStatus";   //   PEC status
+   END_VAR
+
+   VAR CONSTANT 
+      ci_ZeroGIN : Int;   //   GIN = 0
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	24/05/2019  | 0.1       | L.Klar        | first release MHSE TIA 15.1
+	13/06/2019  | 0.2       | A.Nowak       | Replacement of instruction if for direct write into variable
+	21/06/2019  | 0.3       | A.Nowak       | Add gap mesurement function and reorganise block (regions) 
+	24/07/2019  | 2.0       | L.Klar        | 2.0 MHSE library release TIA 15.1
+	23/08/2019  | 2.1       | L.Klar        | "UDT_ConveyorConfiguration" changed to "UDT_ConveyorCommonConfiguration"
+	XX/08/2019  | 2.2       | L.Klar        | Update logic changed
+	19/09/2019  | 2.3       | P.Majka       | Updating checking PEC and PEC filtered signals
+	30/09/2019  | 2.4       | L.Klar        | FB_PEC added, Filtered PEC signal output added
+	21/10/2019  | 2.6       | L.Klar        | Configuration UDT chanaged to input, PEC configuration interface input name changed
+	23/10/2019  | 2.7       | P.Majka       | Added Region 1, renumerating Regions, changed logic in Region 10.3 and Region 5
+	29/10/2019  | 2.8       | L.Klar        | FB_PEC call changed
+	14/11/2019  | 2.9       | L.Klar        | Deviations calculation corrected
+	14/11/2019  | 3.0       | P.Majka       | 3.0 MHSE library release TIA 15.1
+	20/12/2019  | 3.1       | S.Deulkar     | Used configureation error bit to report to conveyor block     
+	07/01/2020  | 3.2       | L.Klar        | GIN record structure updated, GIN cleared with default one during generation
+	                                        | PECUpdate configuration UDT update - search window DINT -> INT, 
+	                                        | Conveyor common configuration UDT update - length INT -> DINT  conversion added
+	29/01/2020  | 3.3       | L.Klar        | Negative GIN handling fixed, configuration bit added to delete negative GIN instead of ignoing it.
+	24/02/2020  | 3.4       | L.Klar        | Formating changes, statistics counter added 
+	10/03/2020  | 3.5       | F.Baten       | Range check unknown GIN region 7
+	26/03/2020  | 3.6       | F.Baten       | Added output 'qi_GINwrite'
+	25/11/2020  | 3.7       | L.Klar        | Length filter added
+	07/12/2020  | 3.8       | L.Klar        | Length filter bug fix
+	22/01/2021  | 3.9       | L.Klar        | Total number of parcels and lost parcels counter fixed
+	14/08/2021  | 3.10      | S. Deulkar    | Update from EMA
+	20/04/2023  | 4.0       | F.Baten       | Added deviation parameter for easier configuration
+	                                        | PEC delay changed to distance
+	                                        | 4.0 Release TIA 17.5
+	*)
+	
+	
+	
+	REGION 1 – FIFO header status update
+	    
+	    "FC_Fifo"(ic_Mode := 'S',
+	              qUDT_Status => #sUDT_LostGINFIFOStatus,
+	              qx_Error => #sx_LostGINFIFOError,
+	              qx_Warning => #sx_LostGINFIFOWarning,
+	              iqv_Data := #si_GINToWrite,
+	              iqUDT_FifoHeader := #iqUDT_FifoHeader,
+	              iqv_DataBuffer := #iqa_FifoData);
+	    
+	END_REGION
+	
+	REGION 2 – Displacement read
+	    
+	    #si_Displacement := #iqUDT_ConveyorInterface.Displacement;
+	    
+	END_REGION
+	
+	REGION 3 – PEC Position conversion from mm to cm
+	    
+	    // The conversion is required because the photoeye position is given in mm and the tracking resolution is 1 cm. 
+	    #si_PECPosition := DINT_TO_INT(#iUDT_PECUpdateConfiguration.Distance / 10);
+	    
+	END_REGION
+	
+	REGION 4 – Teaching mode enable
+	    
+	    (* Teaching mode is used to calculate conveyor length correction, which allows to align real conveyor length with a tracking array length.
+	       Correction is calculated as a difference between photoeye signal and tracking data deviations.
+	       Calculated correction has to be manually copied from a FB_PECUpdate instance data block to conveyor configuration.*)
+	    
+	    // Teaching mode is initialized and activated manually via block input.
+	    #s_R_TRIG_TeachMode(CLK := #ix_TeachingMode);
+	    
+	    IF (#s_R_TRIG_TeachMode.Q
+	        AND NOT #sx_TeachingMode)
+	    THEN
+	        #"ss_PEC/DataDeviation".Type := 0;
+	        #"ss_PEC/DataDeviation".Nr := 0;
+	        #"ss_PEC/DataDeviation".Sum := 0;
+	        #si_NumberOfTeachedParcels := 0;
+	        #sx_TeachingMode := TRUE;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 5 – Photoeye
+	    
+	    (*FB_PEC block call to filter photoeye signal and calculate jam status.*)
+	    
+	    // Copy PEC configuration.
+	    #tUDT_PECConfiguration.Distance := #iUDT_PECUpdateConfiguration.Distance;
+	    #tUDT_PECConfiguration.JamDisplacementLimit := #iUDT_PECUpdateConfiguration.JamDisplacementLimit;
+	    #tUDT_PECConfiguration.OnDelayDistance := #iUDT_PECUpdateConfiguration.OnDelayDistance;
+	    #tUDT_PECConfiguration.OffDelayDistance := #iUDT_PECUpdateConfiguration.OffDelayDistance;
+	    #tUDT_PECConfiguration.ResetWithPECBlocked := #iUDT_PECUpdateConfiguration.ResetWithPECBlocked;
+	    
+	    //Call FB_PEC.
+	    #sFB_PEC(ix_PEC := #ix_PEC,
+	             iUDT_PECConfiguration := #tUDT_PECConfiguration,
+	             qUDT_HMIStatus => #tUDT_PECStatus,
+	             iqUDT_ConveyorInterface := #iqUDT_ConveyorInterface,
+	             iqUDT_PECStatistics := #iqUDT_Statistics.PEC);
+	    
+	    // Parcel length filter
+	    IF NOT #ix_PEC
+	        AND #iUDT_PECUpdateConfiguration.ParcelLengthFilter
+	        AND #iqa_TrackingData[#si_PECPosition - 1] > 0
+	        AND #iqa_TrackingData[#si_PECPosition - 1] <> #si_ParcelLengthFilterOldGIN THEN
+	        
+	        IF "DB_GIN".GIN[#iqa_TrackingData[#si_PECPosition - 1]].General.Length > 0 THEN
+	            #si_ParcelLengthFilterCounter := "DB_GIN".GIN[#iqa_TrackingData[#si_PECPosition - 1]].General.Length;
+	        END_IF;
+	        
+	        #si_ParcelLengthFilterOldGIN := #iqa_TrackingData[#si_PECPosition - 1];
+	        
+	    END_IF;
+	    
+	    IF #si_ParcelLengthFilterCounter > 0 THEN
+	        
+	        #qUDT_Status.PEC := FALSE;
+	        #qx_PECFiltered := FALSE;
+	        #si_ParcelLengthFilterCounter -= #iqUDT_ConveyorInterface.Displacement;
+	        
+	    ELSE
+	        
+	        #qUDT_Status.PEC := #sFB_PEC.qx_PECFiltered;
+	        #qx_PECFiltered := #sFB_PEC.qx_PECFiltered;
+	        
+	    END_IF;
+	    
+	    #qUDT_Status.Jam := #tUDT_PECStatus.Jam;
+	    
+	    // Parcel detected variable to simplify further photoeye position tracking record update.
+	    #sx_ParcelDetected := NOT #qUDT_Status.PEC;
+	    
+	END_REGION
+	
+	REGION 6 – Error reset
+	    
+	    // Reset errors when reset signal is given.
+	    IF (#iqUDT_ConveyorInterface.InternalErrorReset)
+	    THEN
+	        #si_LostParcelsInARow := 0;
+	        #qUDT_Status.TooManyLost := FALSE;
+	        #sx_InvalidDisplacement := FALSE;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 7 – GIN generator initialization
+	    
+	    // Valid GIN range configuration is moved to a structure.
+	    #ss_ValidGINRange.Start := #iUDT_PECUpdateConfiguration.GINRangeStart;
+	    #ss_ValidGINRange.End := #iUDT_PECUpdateConfiguration.GINRangeEnd;
+	    
+	    // Check if the unknown GIN is within range
+	    IF #iqUDT_UnknownGINRange.GIN < #iqUDT_UnknownGINRange.Start
+	        OR #iqUDT_UnknownGINRange.GIN > #iqUDT_UnknownGINRange.End
+	    THEN
+	        #iqUDT_UnknownGINRange.GIN := #iqUDT_UnknownGINRange.Start;
+	    END_IF;
+	    
+	    // Whenever valid GIN range is changed and the generated GIN doesn't fit, it's initialized.
+	    IF (#ss_ValidGINRange.GIN < #ss_ValidGINRange.Start
+	        OR #ss_ValidGINRange.GIN > #ss_ValidGINRange.End)
+	    THEN
+	        #ss_ValidGINRange.GIN := #ss_ValidGINRange.Start;
+	    END_IF;
+	    
+	    // Valid GIN range is set locally in PEC update configuration structure and it can't overlap with a global unknown GIN range.
+	    #sx_InvalidGINRange := #iUDT_PECUpdateConfiguration.GenerationPoint
+	    AND (#ss_ValidGINRange.End <= #ss_ValidGINRange.Start
+	    OR #ss_ValidGINRange.Start <= #iqUDT_UnknownGINRange.End
+	    OR #iqUDT_UnknownGINRange.End <= #iqUDT_UnknownGINRange.Start)
+	    AND #ss_ValidGINRange.Start < 1000;   // Until 1000 it is UFO range
+	    
+	END_REGION
+	
+	REGION 8 – Search window and displacement validation
+	    
+	    (*Both parameters have to be checked to prevent tracking array exceeding.*)
+	    
+	    // Search window cannot be lower than zero and greater than distance between PEC position and conveyor edge.
+	    #sx_InvalidSearchWindow := #iUDT_PECUpdateConfiguration.SearchWindowFwd < 0
+	    OR #iUDT_PECUpdateConfiguration.SearchWindowFwd >= #iUDT_ConveyorCommonConfiguration.Length + #iUDT_ConveyorCommonConfiguration.LengthCorrection - #si_PECPosition
+	    OR #iUDT_PECUpdateConfiguration.SearchWindowRvs < 0
+	    OR #iUDT_PECUpdateConfiguration.SearchWindowRvs >= #si_PECPosition;
+	    
+	    // Displacement cannot be greater than the photoeye position.
+	    IF (ABS(#si_Displacement) > #si_PECPosition)
+	    THEN
+	        #sx_InvalidDisplacement := TRUE;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 9 – Total number of parcels counter
+	    
+	    (*Parcels are counted basing on parcel detection rising edge trigger. Counting is blocked
+	      during PLC first scan, when photoeye signal becomes 0.*)
+	    
+	    #s_R_TRIG_Parcel(CLK := #sx_ParcelDetected);
+	    
+	    IF (#s_R_TRIG_Parcel.Q
+	        AND NOT "DB_Memory".FirstScan)
+	    THEN
+	        // Total number of parcels.
+	        #sdi_TotalNumberOfParcels += 1;
+	        
+	        // Every detected parcel resets lost parcels in a row counter.
+	        #si_LostParcelsInARow := 0;
+	        
+	        // Number of teached parcels is incremented if teaching mode is activated.
+	        IF (#sx_TeachingMode)
+	        THEN
+	            #si_NumberOfTeachedParcels += 1;
+	        END_IF;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 10 – PEC Update
+	    (* Photoeye position record is updated after every tracking register shift, basing on
+	       actual situation - photoeye signal and data availability. In case of displacement
+	       graeter than one, the loop will be executed the proper number of times. The update loop
+	       can be executed if there is no configuration errors and the displacement was given.*)
+	    
+	    WHILE #si_Displacement <> 0
+	        AND NOT #sx_InvalidGINRange
+	        AND NOT #sx_InvalidDisplacement
+	        AND NOT #sx_InvalidSearchWindow
+	    DO
+	        
+	        REGION 10.1 – Direction
+	            
+	            (*Depending on displacement sign, the direction of movement is determinated. This allows to choose 
+	            ` correct search window and parametrize all search loops to count up or down.*)
+	            
+	            IF (#si_Displacement < 0)
+	            THEN
+	                #si_Direction := -1;
+	                #si_SearchWindow := #iUDT_PECUpdateConfiguration.SearchWindowRvs;
+	            ELSIF (#si_Displacement > 0)
+	            THEN
+	                #si_Direction := 1;
+	                #si_SearchWindow := #iUDT_PECUpdateConfiguration.SearchWindowFwd;
+	            END_IF;
+	            
+	        END_REGION
+	        
+	        REGION 10.2 – Position to update
+	            
+	            // Position pointer used to specify the tracking array record to be updated.
+	            #si_PositionToUpdate := #si_PECPosition - #si_Displacement + #si_Direction;
+	            
+	        END_REGION
+	        
+	        
+	        REGION 10.3 – Total number of data counter
+	            
+	            (*Total number of data is incremented every time when new GIN is detected.*)
+	            
+	            IF (#iqa_TrackingData[#si_PositionToUpdate + 1] > 0
+	                AND #iqa_TrackingData[#si_PositionToUpdate + 1] <> #si_LastCountedData)
+	            THEN
+	                #sdi_TotalNumberOfData += 1;
+	                #si_LastCountedData := #iqa_TrackingData[#si_PositionToUpdate + 1];
+	            END_IF;
+	            
+	        END_REGION
+	        
+	        REGION 10.4 – GIN detection
+	            
+	            (* Data found and parcel found triggers are used to determine the update case,
+	               whether the data occurred first or a parcel.*)
+	            
+	            // Trigger on any data found at a PEC position to detect the front of the parcel data. 
+	            #s_R_TRIG_DataFound(CLK := #iqa_TrackingData[#si_PositionToUpdate] <> 0);
+	            
+	            // Trigger on positive data found at a PEC position to detect the front of the parcel data.   
+	            #s_R_TRIG_PositiveDataFound(CLK := #iqa_TrackingData[#si_PositionToUpdate] > 0);
+	            
+	            // Trigger to detect front of the parcel.
+	            #s_R_TRIG_ParcelFound(CLK := #sx_ParcelDetected);
+	            
+	(*
+	Data detected without PEC signal
+	
+	                         Search window
+	                          <--------|
+	Data                              PEC
+	|----------------------------------|------------------------------------------|
+	|                           XXXXXXXX                                          |
+	|----------------------------------|------------------------------------------|
+	                                   |
+	Conveyor                           |
+	|----------------------------------|------------------------------------------|
+	|                      YYYYYYYY    |                                          | 
+	|                      YYYYYYYY    |                                          |
+	|                      YYYYYYYY    |                                          |
+	|----------------------------------|------------------------------------------|
+	*)
+	(* Data detected without PEC signal.*)
+	            IF (#s_R_TRIG_PositiveDataFound.Q
+	                AND NOT #sx_ParcelDetected)
+	            THEN
+	                #si_GINToWrite := 0;
+	                // Double data detection loop.
+	                FOR #si_i := #si_PositionToUpdate TO #si_PECPosition + (#si_SearchWindow * #si_Direction) BY #si_Direction DO
+	                    // Data found in a search window.
+	                    IF (#iqa_TrackingData[#si_i] > 0)
+	                    THEN
+	                        // First GIN found.
+	                        IF (#si_GINToWrite = 0)
+	                        THEN
+	                            // Get the GIN if it's different than last updated GIN.
+	                            IF #iqa_TrackingData[#si_i] <> #si_LastUpdatedGIN THEN
+	                                #si_GINToWrite := #iqa_TrackingData[#si_i];
+	                            END_IF;
+	                            // If the first GIN was found, the scan loop conitues to check if there is no other data.
+	                        ELSE
+	                            // Next found data is different than the first one. Double data detected.
+	                            IF (#iqa_TrackingData[#si_i] <> #si_GINToWrite)
+	                            THEN
+	                                #sx_DoubleDataFound := TRUE;
+	                                // First found GIN is marked as a lost one and the GIN is stored in a FIFO register.
+	                                IF ("DB_GIN".GIN[#si_GINToWrite].General.Lost = FALSE)
+	                                THEN
+	                                    "DB_GIN".GIN[#si_GINToWrite].General.Lost := TRUE;
+	                                    
+	                                    "FC_Fifo"(ic_Mode := 'W',
+	                                              qUDT_Status => #sUDT_LostGINFIFOStatus,
+	                                              qx_Error => #sx_LostGINFIFOError,
+	                                              qx_Warning => #sx_LostGINFIFOWarning,
+	                                              iqv_Data := #si_GINToWrite,
+	                                              iqUDT_FifoHeader := #iqUDT_FifoHeader,
+	                                              iqv_DataBuffer := #iqa_FifoData);
+	                                    
+	                                    // Update statistics
+	                                    #ss_LostParcelsCounters.Total += 1;
+	                                    #ss_LostParcelsCounters.DoubleData += 1;
+	                                    
+	                                    
+	                                    ////////////////////
+	                                    
+	                                    IF #si_GINToWrite >= 1000 THEN
+	                                        #ss_LostValidParcelsCounters.Total += 1;
+	                                        #ss_LostValidParcelsCounters.DoubleData += 1;
+	                                    END_IF;
+	                                    
+	                                    ////////////////
+	                                END_IF;
+	                                
+	                                // Second found GIN is marked as a lost one and the GIN is stored in a FIFO register.
+	                                IF ("DB_GIN".GIN[#iqa_TrackingData[#si_i]].General.Lost = FALSE)
+	                                THEN
+	                                    "DB_GIN".GIN[#iqa_TrackingData[#si_i]].General.Lost := TRUE;
+	                                    
+	                                    "FC_Fifo"(ic_Mode := 'W',
+	                                              qUDT_Status => #sUDT_LostGINFIFOStatus,
+	                                              qx_Error => #sx_LostGINFIFOError,
+	                                              qx_Warning => #sx_LostGINFIFOWarning,
+	                                              iqv_Data := #iqa_TrackingData[#si_i],
+	                                              iqUDT_FifoHeader := #iqUDT_FifoHeader,
+	                                              iqv_DataBuffer := #iqa_FifoData);
+	                                    
+	                                    // Update statistics
+	                                    #ss_LostParcelsCounters.Total += 1;
+	                                    #ss_LostParcelsCounters.DoubleData += 1;
+	                                    
+	                                    ////////////////////
+	                                    
+	                                    IF #iqa_TrackingData[#si_i] >= 1000 THEN
+	                                        #ss_LostValidParcelsCounters.Total += 1;
+	                                        #ss_LostValidParcelsCounters.DoubleData += 1;
+	                                    END_IF;
+	                                    
+	                                    ////////////////
+	                                    //
+	                                END_IF;
+	                                // Stop search window scan in case of double data detection
+	                                EXIT;
+	                            END_IF;
+	                        END_IF;
+	                    END_IF;
+	                END_FOR;
+	                
+	                // Becasue the data was found as a first one, GIN is stored and the logic to wait for a parcel is enebaled.
+	                // If the double data was found there is no need to wait for a parcel. Data has been marked as a lost one.
+	                IF NOT #sx_DoubleDataFound
+	                THEN
+	                    #sx_ParcelWaitEnable := TRUE;
+	                END_IF;
+	                
+	                #sx_DoubleDataFound := FALSE;
+	(*
+	Data and PEC signal detected at the same time - perfect match
+	
+	                         Search window
+	                          <--------|
+	Data                              PEC
+	|----------------------------------|------------------------------------------|
+	|                           XXXXXXXX                                          |
+	|----------------------------------|------------------------------------------|
+	                                   |
+	Conveyor                           |
+	|----------------------------------|------------------------------------------|
+	|                           XXXXXXXX                                          | 
+	|                           XXXXXXXX                                          |
+	|                           XXXXXXXX                                          |
+	|----------------------------------|------------------------------------------|
+	
+	or PEC signal found without data or with old ones
+	
+	                         Search window
+	                          <--------|
+	Data                              PEC
+	|----------------------------------|------------------------------------------|
+	|                    XXXXXXXX      |                                          |
+	|----------------------------------|------------------------------------------|
+	                                   |
+	Conveyor                           |
+	|----------------------------------|------------------------------------------|
+	|                           XXXXXXXX                                          | 
+	|                           XXXXXXXX                                          |
+	|                           XXXXXXXX                                          |
+	|----------------------------------|------------------------------------------|
+	*)
+	(*Data and PEC signal detected at the same time (perfect match) or PEC signal found without data or with old ones.*)
+	            ELSIF (#s_R_TRIG_ParcelFound.Q
+	                AND (#s_R_TRIG_PositiveDataFound.Q
+	                OR (#iqa_TrackingData[#si_PositionToUpdate] = 0
+	                OR #iqa_TrackingData[#si_PositionToUpdate] = #si_LastUpdatedGIN)
+	                AND NOT #sx_ParcelWaitEnable))
+	            THEN
+	                // If the PEC is set as a GIN generation point, skip data detection loop and go to GIN generator.
+	                IF (#iUDT_PECUpdateConfiguration.GenerationPoint)
+	                THEN
+	                    #sx_GenerateGIN := TRUE;
+	                    // If the the PEC isn't a generation point, data search loop is enabled.
+	                ELSE
+	                    #si_GINToWrite := 0;
+	                    
+	                    // Double data detection loop.
+	                    FOR #si_i := #si_PositionToUpdate TO
+	                        (#si_PECPosition + (#si_SearchWindow * #si_Direction)) BY #si_Direction DO
+	                        
+	                        // Data found in a search window.
+	                        IF (#iqa_TrackingData[#si_i] > 0)
+	                        THEN
+	                            // First GIN found.
+	                            IF (#si_GINToWrite = 0)
+	                            THEN
+	                                // Get the GIN if it's different than last updated GIN.
+	                                IF #iqa_TrackingData[#si_i] <> #si_LastUpdatedGIN THEN
+	                                    #si_GINToWrite := #iqa_TrackingData[#si_i];
+	                                    
+	                                    // PEC/Data deviation acquisition 
+	                                    #"ss_PEC/DataDeviation".Last := DINT_TO_INT(#si_PECPosition - #si_i);
+	                                    #"ss_PEC/DataDeviation".GIN := #si_GINToWrite;
+	                                    #"ss_PEC/DataDeviation".Sum -= ABS(#"ss_PEC/DataDeviation".Last);
+	                                    #"ss_PEC/DataDeviation".Nr += 1;
+	                                    IF #"ss_PEC/DataDeviation".Last = 0 THEN
+	                                        #"ss_PEC/DataDeviation".Type := 1;
+	                                    ELSIF #"ss_PEC/DataDeviation".Last < 0 THEN
+	                                        #"ss_PEC/DataDeviation".Type := 2;
+	                                    END_IF;
+	                                    
+	                                    // Parcel aligned statistics
+	                                    IF (ABS(#"ss_PEC/DataDeviation".Last) > ABS(#si_Displacement - 1))
+	                                    THEN
+	                                        #ss_AlignedParcelsCounters.Total += 1;
+	                                        #ss_AlignedParcelsCounters.PECNoData += 1;
+	                                    END_IF;
+	                                END_IF;
+	                                // If the first GIN was found, the scan loop conitues to check if there is no other data.
+	                            ELSE
+	                                // Next found data is different than the first one. Double data detected.
+	                                IF (#iqa_TrackingData[#si_i] <> #si_GINToWrite)
+	                                THEN
+	                                    // First found GIN is marked as a lost one and the GIN is stored in a FIFO register.
+	                                    IF ("DB_GIN".GIN[#si_GINToWrite].General.Lost = FALSE)
+	                                    THEN
+	                                        "DB_GIN".GIN[#si_GINToWrite].General.Lost := TRUE;
+	                                        "FC_Fifo"(ic_Mode := 'W',
+	                                                  qUDT_Status => #sUDT_LostGINFIFOStatus,
+	                                                  qx_Error => #sx_LostGINFIFOError,
+	                                                  qx_Warning => #sx_LostGINFIFOWarning,
+	                                                  iqv_Data := #si_GINToWrite,
+	                                                  iqUDT_FifoHeader := #iqUDT_FifoHeader,
+	                                                  iqv_DataBuffer := #iqa_FifoData);
+	                                        
+	                                        // PEC/Data deviation acquisition 
+	                                        #"ss_PEC/DataDeviation".GIN := #si_GINToWrite;
+	                                        #"ss_PEC/DataDeviation".Type := 4;
+	                                        
+	                                        // Update statistics
+	                                        #ss_LostParcelsCounters.Total += 1;
+	                                        #ss_LostParcelsCounters.DoubleData += 1;
+	                                        
+	                                        ////////////////////
+	                                        
+	                                        IF #si_GINToWrite >= 1000 THEN
+	                                            #ss_LostValidParcelsCounters.Total += 1;
+	                                            #ss_LostValidParcelsCounters.DoubleData += 1;
+	                                        END_IF;
+	                                        
+	                                        ////////////////
+	                                        //
+	                                    END_IF;
+	                                    
+	                                    // Second found GIN is marked as a lost one and the GIN is stored in a FIFO register.
+	                                    IF ("DB_GIN".GIN[#iqa_TrackingData[#si_i]].General.Lost = FALSE)
+	                                    THEN
+	                                        "DB_GIN".GIN[#iqa_TrackingData[#si_i]].General.Lost := TRUE;
+	                                        "FC_Fifo"(ic_Mode := 'W',
+	                                                  qUDT_Status => #sUDT_LostGINFIFOStatus,
+	                                                  qx_Error => #sx_LostGINFIFOError,
+	                                                  qx_Warning => #sx_LostGINFIFOWarning,
+	                                                  iqv_Data := #iqa_TrackingData[#si_i],
+	                                                  iqUDT_FifoHeader := #iqUDT_FifoHeader,
+	                                                  iqv_DataBuffer := #iqa_FifoData);
+	                                        
+	                                        // Update statistics
+	                                        #ss_LostParcelsCounters.Total += 1;
+	                                        #ss_LostParcelsCounters.DoubleData += 1;
+	                                        
+	                                        ////////////////////
+	                                        
+	                                        IF #iqa_TrackingData[#si_i] >= 1000 THEN
+	                                            #ss_LostValidParcelsCounters.Total += 1;
+	                                            #ss_LostValidParcelsCounters.DoubleData += 1;
+	                                        END_IF;
+	                                        
+	                                        ////////////////
+	                                        //
+	                                    END_IF;
+	                                    // Stop search window scan in case of double data detection
+	                                    EXIT;
+	                                END_IF;
+	                            END_IF;
+	                        END_IF;
+	                    END_FOR;
+	                    
+	                    // GIN not found in a search window
+	                    IF (#si_GINToWrite = 0)
+	                    THEN
+	                        #sx_GenerateGIN := TRUE;
+	                        #si_UnknownParcelsCounters.DataNotFound += 1;
+	                    END_IF;
+	                    
+	                    // Found GIN is a lost one - generate unknown GIN
+	                    // Found GIN isn't lost or it's negative - don't do anything
+	                    IF (#si_GINToWrite > 0)
+	                    THEN
+	                        IF ("DB_GIN".GIN[#si_GINToWrite].General.Lost)
+	                        THEN
+	                            #sx_GenerateGIN := TRUE;
+	                            #si_UnknownParcelsCounters.LostParcelFound += 1;
+	                        END_IF;
+	                    END_IF;
+	                END_IF;
+	                
+	                (*Second parcel has been found during data update. Situation can occur when search window is too short
+	                  and the data is shifted. In that case found GIN will be marked as a lost one and new unknown GIN will be 
+	                  generated. Negative GIN will be ignored.*)
+	            ELSIF (#s_R_TRIG_ParcelFound.Q
+	                AND (#iqa_TrackingData[#si_PositionToUpdate] <> 0
+	                AND #iqa_TrackingData[#si_PositionToUpdate] <> #si_LastUpdatedGIN)
+	                AND NOT #sx_ParcelWaitEnable)
+	            THEN
+	                IF (#iqa_TrackingData[#si_PositionToUpdate] > 0)
+	                THEN
+	                    IF ("DB_GIN".GIN[#iqa_TrackingData[#si_PositionToUpdate]].General.Lost = FALSE)
+	                    THEN
+	                        "DB_GIN".GIN[#iqa_TrackingData[#si_PositionToUpdate]].General.Lost := TRUE;
+	                        "FC_Fifo"(ic_Mode := 'W',
+	                                  qUDT_Status => #sUDT_LostGINFIFOStatus,
+	                                  qx_Error => #sx_LostGINFIFOError,
+	                                  qx_Warning => #sx_LostGINFIFOWarning,
+	                                  iqv_Data := #iqa_TrackingData[#si_PositionToUpdate],
+	                                  iqUDT_FifoHeader := #iqUDT_FifoHeader,
+	                                  iqv_DataBuffer := #iqa_FifoData);
+	                        
+	                        // Update statistics
+	                        #ss_LostParcelsCounters.Total += 1;
+	                        #ss_LostParcelsCounters.DoubleData += 1;
+	                        
+	                        ////////////////////
+	                        
+	                        IF #iqa_TrackingData[#si_PositionToUpdate] >= 1000 THEN
+	                            #ss_LostValidParcelsCounters.Total += 1;
+	                            #ss_LostValidParcelsCounters.DoubleData += 1;
+	                        END_IF;
+	                        
+	                        ////////////////
+	                        //
+	                    END_IF;
+	                END_IF;
+	                
+	                // Generate GIN 
+	                #sx_GenerateGIN := TRUE;
+	                #si_UnknownParcelsCounters.LostParcelFound += 1;
+	                
+	                (*Second data has been found during data update. Situation can occur when search window is too short
+	                  and the data is shifted. In that case found GIN will be marked as a lost one.*)
+	            ELSIF (#s_R_TRIG_PositiveDataFound.Q
+	                AND #sx_ParcelDetected
+	                AND #iqa_TrackingData[#si_PositionToUpdate] <> #si_GINToWrite)
+	            THEN
+	                // Mark GIN as a lost one
+	                IF ("DB_GIN".GIN[#iqa_TrackingData[#si_PositionToUpdate]].General.Lost = FALSE)
+	                THEN
+	                    "DB_GIN".GIN[#iqa_TrackingData[#si_PositionToUpdate]].General.Lost := TRUE;
+	                    "FC_Fifo"(ic_Mode := 'W',
+	                              qUDT_Status => #sUDT_LostGINFIFOStatus,
+	                              qx_Error => #sx_LostGINFIFOError,
+	                              qx_Warning => #sx_LostGINFIFOWarning,
+	                              iqv_Data := #iqa_TrackingData[#si_PositionToUpdate],
+	                              iqUDT_FifoHeader := #iqUDT_FifoHeader,
+	                              iqv_DataBuffer := #iqa_FifoData);
+	                    
+	                    // Update statistics
+	                    #ss_LostParcelsCounters.Total += 1;
+	                    #ss_LostParcelsCounters.DoubleData += 1;
+	                    
+	                    ////////////////////
+	                    
+	                    IF #iqa_TrackingData[#si_PositionToUpdate] >= 1000 THEN
+	                        #ss_LostValidParcelsCounters.Total += 1;
+	                        #ss_LostValidParcelsCounters.DoubleData += 1;
+	                    END_IF;
+	                    
+	                    ////////////////
+	                END_IF;
+	            END_IF;
+	            
+	        END_REGION
+	        
+	        REGION 10.5 – GIN generator
+	            
+	            (*Used to generate new GIN. If the PEC position is a generation point, the number is taken from an internal GIN range.
+	              If it's not, then GIN is taken from a global unknown GIN range.*)
+	            
+	            IF (#sx_GenerateGIN)
+	            THEN
+	                // Generation point.
+	                IF (#iUDT_PECUpdateConfiguration.GenerationPoint)
+	                THEN
+	                    // Generate GIN from a valid GIN range.
+	                    IF (#ss_ValidGINRange.GIN <= #ss_ValidGINRange.End)
+	                    THEN
+	                        #si_GINToWrite := #ss_ValidGINRange.GIN;
+	                        #ss_ValidGINRange.GIN += 1;
+	                    ELSE
+	                        #si_GINToWrite := #ss_ValidGINRange.Start;
+	                        #ss_ValidGINRange.GIN := #ss_ValidGINRange.Start + 1;
+	                    END_IF;
+	                    // Unknown GIN generator.
+	                ELSE
+	                    // Generate GIN from a unknown GIN range.
+	                    IF (#iqUDT_UnknownGINRange.GIN <= #iqUDT_UnknownGINRange.End)
+	                    THEN
+	                        #si_GINToWrite := #iqUDT_UnknownGINRange.GIN;
+	                        #iqUDT_UnknownGINRange.GIN += 1;
+	                    ELSE
+	                        #si_GINToWrite := #iqUDT_UnknownGINRange.Start;
+	                        #iqUDT_UnknownGINRange.GIN := #iqUDT_UnknownGINRange.Start + 1;
+	                    END_IF;
+	                    
+	                    // Unknwn parcels statistics.
+	                    #si_UnknownParcelsCounters.Total += 1;
+	                END_IF;
+	                
+	                // Reset generte GIN command.
+	                #sx_GenerateGIN := FALSE;
+	                
+	                // GIN record is cleared with configured default GIN record while it's generated.
+	                "DB_GIN".GIN[#si_GINToWrite] := "DB_GINDefault".GIN[#iUDT_PECUpdateConfiguration.DefaultGIN];
+	            END_IF;
+	            
+	            #qi_GINwrite := #si_GINToWrite;
+	            
+	        END_REGION
+	        
+	        
+	        REGION 10.6 – PEC position data update
+	            
+	            (*While parcel is detected, calculated GIN is written into the PEC position record.
+	              If not, then the record is cleared with 0. Negative GIN is ignored or deleted, depending on configuration.*)
+	            
+	            IF (#sx_ParcelDetected)
+	            THEN
+	                
+	                "FC_WriteGIN"(ii_GIN := #si_GINToWrite,
+	                              ii_PositionToWrite := #si_PositionToUpdate,
+	                              ii_NumberOfPositions := 1,
+	                              ix_Direction := TRUE,
+	                              iqa_TrackingData := #iqa_TrackingData);
+	                
+	            ELSE
+	                IF (#iqa_TrackingData[#si_PositionToUpdate] > 0
+	                    OR #iUDT_PECUpdateConfiguration.NegativeGINDelete)
+	                THEN
+	                    
+	                    "FC_WriteGIN"(ii_GIN := #ci_ZeroGIN,
+	                                  ii_PositionToWrite := #si_PositionToUpdate,
+	                                  ii_NumberOfPositions := 1,
+	                                  ix_Direction := TRUE,
+	                                  iqa_TrackingData := #iqa_TrackingData);
+	                    
+	                END_IF;
+	            END_IF;
+	            
+	        END_REGION
+	        
+	        REGION 10.7 – Parcel waiting logic
+	            
+	            (*Parcel waiting logic is used to wait for the photoeye signal for a search window distance.*)
+	            IF (#sx_ParcelWaitEnable)
+	            THEN
+	                // Counting parcel wait distance depending on conveyor running direction if not detected.
+	                IF (NOT #sx_ParcelDetected)
+	                THEN
+	                    IF (#si_Direction = 1)
+	                    THEN
+	                        #si_ParcelWaitDistance += 1;
+	                        
+	                    ELSE
+	                        #si_ParcelWaitDistance -= ABS(#si_Displacement);   //1;
+	                    END_IF;
+	                    
+	                    // Parcel detected - stop waiting, use found GIN to update.   
+	                ELSE
+	                    // PEC/Data deviation acquisition
+	                    #"ss_PEC/DataDeviation".Type := 3;
+	                    #"ss_PEC/DataDeviation".Last := #si_ParcelWaitDistance;
+	                    #"ss_PEC/DataDeviation".GIN := #si_GINToWrite;
+	                    #"ss_PEC/DataDeviation".Sum += ABS(#"ss_PEC/DataDeviation".Last);
+	                    #"ss_PEC/DataDeviation".Nr += 1;
+	                    
+	                    
+	                    // Parcel aligned statistics
+	                    IF (#"ss_PEC/DataDeviation".Last > ABS(#si_Displacement - 1))
+	                    THEN
+	                        #ss_AlignedParcelsCounters.Total += 1;
+	                        #ss_AlignedParcelsCounters.DataNoPEC += 1;
+	                    END_IF;
+	                    
+	                    // Parcel waiting logic reset.
+	                    #sx_ParcelWaitEnable := FALSE;
+	                    #si_ParcelWaitDistance := 0;
+	                END_IF;
+	            END_IF;
+	            
+	            // Parcel not found in a search window - stop waiting, mark found GIN as a lost one.
+	            IF (ABS(#si_ParcelWaitDistance) = #si_SearchWindow)
+	                AND (#si_GINToWrite > 0)
+	            THEN
+	                // Parcel lost
+	                IF "DB_GIN".GIN[#si_GINToWrite].General.Lost = FALSE THEN
+	                    "DB_GIN".GIN[#si_GINToWrite].General.Lost := TRUE;
+	                    "FC_Fifo"(ic_Mode := 'W',
+	                              qUDT_Status => #sUDT_LostGINFIFOStatus,
+	                              qx_Error => #sx_LostGINFIFOError,
+	                              qx_Warning => #sx_LostGINFIFOWarning,
+	                              iqv_Data := #si_GINToWrite,
+	                              iqUDT_FifoHeader := #iqUDT_FifoHeader,
+	                              iqv_DataBuffer := #iqa_FifoData);
+	                    
+	                    // PEC/Data deviation acquisition
+	                    #"ss_PEC/DataDeviation".Type := 5;
+	                    #"ss_PEC/DataDeviation".Last := #si_ParcelWaitDistance;
+	                    #"ss_PEC/DataDeviation".GIN := #si_GINToWrite;
+	                    #"ss_PEC/DataDeviation".Sum += ABS(#"ss_PEC/DataDeviation".Last);
+	                    #"ss_PEC/DataDeviation".Nr += 1;
+	                    
+	                    // Parcel waiting logic reset.
+	                    #si_ParcelWaitDistance := 0;
+	                    #sx_ParcelWaitEnable := FALSE;
+	                    
+	                    // Lost parcels ina  row counter.
+	                    #si_LostParcelsInARow += 1;
+	                    
+	                    // Update statistics.
+	                    #ss_LostParcelsCounters.Total += 1;
+	                    #ss_LostParcelsCounters.ParcelNotFound += 1;
+	                    
+	                    ////////////////////
+	                    
+	                    IF #si_GINToWrite >= 1000 THEN
+	                        #ss_LostValidParcelsCounters.Total += 1;
+	                        #ss_LostValidParcelsCounters.ParcelNotFound += 1;
+	                    END_IF;
+	                    
+	                    ////////////////
+	                    //
+	                END_IF;
+	                
+	            END_IF;
+	            
+	            // Reset monitoring in case of going backwards.
+	            IF (#si_ParcelWaitDistance = 0
+	                AND NOT #sx_ParcelDetected
+	                AND #sx_InvalidDirection)
+	            THEN
+	                #sx_ParcelWaitEnable := FALSE;
+	            END_IF;
+	            
+	            #sx_InvalidDirection := ((#si_Direction = 1
+	            AND #si_ParcelWaitDistance < 0)
+	            OR (#si_Direction = -1
+	            AND #si_ParcelWaitDistance > 0));
+	            
+	        END_REGION
+	        
+	        REGION 10.8 – Last updated GIN
+	            
+	            (*Last updated GIN to avoid processing the same data.*)
+	            IF (#s_R_TRIG_DataFound.Q)
+	            THEN
+	                #si_LastUpdatedGIN := #iqa_TrackingData[#si_PositionToUpdate];
+	            END_IF;
+	            
+	        END_REGION
+	        
+	        REGION 10.8 – Update displacement
+	            
+	            #si_Displacement := #si_Displacement - #si_Direction;
+	            
+	        END_REGION
+	        
+	    END_WHILE;
+	    
+	END_REGION
+	
+	REGION 11 – Length measurement
+	    
+	    
+	    
+	    (*Length and gap measurements can be enabled via PEC update configuration*)
+	    #sFB_LengthMeasurement(ii_PECPosition := #si_PECPosition,
+	                           ii_Displacement := #iqUDT_ConveyorInterface.Displacement,
+	                           ix_LengthMeasurementEnable := #iUDT_PECUpdateConfiguration.ParcelLengthMeasurement OR #sx_LengthMeasurementEnable,
+	                           ix_GapMeasurementEnable := #iUDT_PECUpdateConfiguration.GapLengthMeasurement,
+	                           iqa_TrackingData := #iqa_TrackingData);
+	    
+	    IF #iqa_TrackingData[#si_PECPosition] > 0
+	        AND #iqa_TrackingData[#si_PECPosition] >= #iqUDT_UnknownGINRange.Start
+	        AND #iqa_TrackingData[#si_PECPosition] <= #iqUDT_UnknownGINRange.End
+	    THEN
+	        
+	        #sx_LengthMeasurementEnable := "DB_GIN".GIN[#iqa_TrackingData[#si_PECPosition]].General.Length = 0;
+	    ELSE
+	        
+	        #sx_LengthMeasurementEnable := FALSE;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 12 – Teaching done 
+	    
+	    // Average slip calculation
+	    #si_AverageSlip := #"ss_PEC/DataDeviation".Sum / #"ss_PEC/DataDeviation".Nr;
+	    #si_CalculatedLengthCorrection := DINT_TO_INT(#iUDT_ConveyorCommonConfiguration.LengthCorrection) + #si_AverageSlip * 10;
+	    IF (#sx_TeachingMode                                                                                                            // Teaching mode enabled 
+	        AND #si_NumberOfTeachedParcels = #iUDT_PECUpdateConfiguration.NrOfTeachParcels)                                                 // Number of teaching parcels equal to the preset one                                                                                                                                                              // Teaching mode enabled ("sx_TeachMode") 
+	    THEN
+	        
+	        #si_CalculatedLengthCorrection := DINT_TO_INT(#iUDT_ConveyorCommonConfiguration.LengthCorrection) + #si_AverageSlip * 10;
+	        #sx_TeachingMode := FALSE;
+	        #si_NumberOfTeachedParcels := 0;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 13 – Performance    
+	    
+	    (*Performnce is a percentage ratio between number of lost parcels and total number of data, used to monitor data update efficiency.*)
+	    
+	    IF (#sdi_TotalNumberOfData >= #ss_LostParcelsCounters.Total
+	        AND #sdi_TotalNumberOfData > 0)
+	    THEN
+	        #slr_Performance := 100.0 - INT_TO_LREAL(#ss_LostParcelsCounters.Total) / #sdi_TotalNumberOfData * 100.0;
+	    END_IF;
+	    
+	    // Warning is generated if performance drops below 80%.
+	    #qUDT_Status.LowPerformance := #slr_Performance < 80;
+	    
+	END_REGION
+	
+	REGION 14 – Reset statistics
+	    
+	    // Statistics are reset if reset signal is given.
+	    IF #iqUDT_ConveyorInterface.ResetStatistics
+	    THEN
+	        #sdi_TotalNumberOfParcels := 0;
+	        #ss_AlignedParcelsCounters.Total := 0;
+	        #ss_AlignedParcelsCounters.PECNoData := 0;
+	        #ss_AlignedParcelsCounters.DataNoPEC := 0;
+	        #ss_LostParcelsCounters.Total := 0;
+	        #ss_LostParcelsCounters.DoubleData := 0;
+	        #ss_LostParcelsCounters.ParcelNotFound := 0;
+	        #ss_LostValidParcelsCounters.Total := 0;
+	        #ss_LostValidParcelsCounters.DoubleData := 0;
+	        #ss_LostValidParcelsCounters.ParcelNotFound := 0;
+	        #sdi_TotalNumberOfData := 0;
+	        #si_UnknownParcelsCounters.Total := 0;
+	        #si_UnknownParcelsCounters.LostParcelFound := 0;
+	        #si_UnknownParcelsCounters.DataNotFound := 0;
+	        #"ss_PEC/DataDeviation".Sum := 0;
+	        #"ss_PEC/DataDeviation".Nr := 0;
+	        #slr_Performance := 100;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 15 – Too many lost parcels error
+	    
+	    (*Error is generated if too many parcels will is marked as a lost one in a row*)
+	    IF (#si_LostParcelsInARow >= #iUDT_PECUpdateConfiguration.MaxLost)
+	    THEN
+	        #qUDT_Status.TooManyLost := TRUE;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 16 – Statistics
+	    
+	    // Too many lost
+	    #s_R_TRIG_TooManyLost(CLK := #qUDT_Status.TooManyLost);
+	    IF #qUDT_Status.TooManyLost
+	        OR #iqUDT_ConveyorInterface.ResetStatistics
+	    THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_ConveyorInterface.ResetStatistics,
+	                        ix_Activate := #qUDT_Status.TooManyLost,
+	                        ix_RTrigActivate := #s_R_TRIG_TooManyLost.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.TooManyLost);
+	    END_IF;
+	    
+	    // Total number of parcels
+	    #iqUDT_Statistics.TotalNrOfParcels := #sdi_TotalNumberOfParcels;
+	    
+	END_REGION
+	
+	REGION 17 – Internal tracking warning and error
+	    
+	    // Internal tracking warning
+	    IF (#qUDT_Status.LowPerformance
+	        OR #sx_LostGINFIFOWarning)
+	    THEN
+	        #iqUDT_ConveyorInterface.InternalWarningTracking := TRUE;
+	    END_IF;
+	    
+	    // Internal tracking error
+	    IF #qUDT_Status.TooManyLost
+	    THEN
+	        #iqUDT_ConveyorInterface.InternalErrorTracking := TRUE;
+	    END_IF;
+	    
+	    // Configuration error
+	    IF (#sx_InvalidDisplacement
+	        OR #sx_InvalidGINRange
+	        OR #sx_InvalidSearchWindow)
+	    THEN
+	        #iqUDT_ConveyorInterface.ConfigurationError := TRUE;
+	    END_IF;
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

@@ -1,0 +1,80 @@
+﻿FUNCTION_BLOCK "FB_Communication"
+TITLE = FB_Communication
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : Communication
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 2
+// END_ATTRIBUTES
+//Function block to handle communication.
+   VAR 
+      sx_Connected { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TCPIP connection established
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	|                                                                                      |
+	|  Copyright  2019             MHS                                                     |
+	|  All Rights Reserved         Larenweg 90                                             |
+	|                              5234 KC 's-Hertogenbosch,                               |
+	|                              Netherlands                                             |
+	|                                                                                      |     
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	24/05/2019  | 0.1       | L.Klar        | first release MHS TIA 15.1
+	24/07/2019  | 2.0       | L.Klar        | 2.0 MHS library release TIA 15.1
+	23/10/2019  | 2.1       | L.Klar        | FIFO access changed
+	23/10/2019  | 2.2       | S.Theocharis  | System number 1 added
+	04/11/2019  | 2.3       | L.Klar        | Reconnect command bit changed from memory to DB variable
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION Step 1 – Connection initialization
+	    
+	    "DI_TCPIPConnect"(iUDT_Connection := "DB_Configuration".System.Connection,
+	                      qUDT_HMIStatus => "DB_Status".Communication.TCPIPConnect,
+	                      qUDT_Status => "DB_CommonStatus".Communication.TCPIPConnect,
+	                      iqUDT_EquipmentControl := "DB_Control".System1,
+	                      iqUDT_Statistics := "DB_Statistics".Communication.TCPIPConnect,
+	                      qx_Connected => #sx_Connected,
+	                      iqx_Reconnect := "DB_Memory".ReconnectCommand);
+	    
+	END_REGION
+	
+	REGION Step 2 – Receive data
+	    
+	    "DI_TCPIPReceive"(iUDT_Connection := "DB_Configuration".System.Connection,
+	                      ix_EnableReceive := #sx_Connected,
+	                      qx_Error => "DB_ParametrizationErrors".System.Communication.TCPIPReceiveError,
+	                      qx_Warning => "DB_ParametrizationErrors".System.Communication.TCPIPReceiveWarning,
+	                      iqUDT_FifoHeader := "DB_FIFORcvMsg".Header,
+	                      iqa_FifoData := "DB_FIFORcvMsg".Data,
+	                      iqUDT_Statistics := "DB_Statistics".Communication.TCPIPReceive);
+	    
+	    
+	END_REGION
+	
+	REGION Step 3 – Send data
+	    
+	    "DI_TCPIPSend"(iUDT_Connection := "DB_Configuration".System.Connection,
+	                   ix_EnableSend := #sx_Connected,
+	                   qx_Error => "DB_ParametrizationErrors".System.Communication.TCPIPSendError,
+	                   qx_Warning => "DB_ParametrizationErrors".System.Communication.TCPIPSendWarning,
+	                   iqUDT_FifoLowHeader := "DB_FIFOLowPrioMsg".Header,
+	                   iqs_FifoLowData := "DB_FIFOLowPrioMsg".Data,
+	                   iqUDT_FifoMedHeader := "DB_FIFOMedPrioMsg".Header,
+	                   iqs_FifoMedData := "DB_FIFOMedPrioMsg".Data,
+	                   iqUDT_FifoHighHeader := "DB_FIFOHighPrioMsg".Header,
+	                   iqs_FifoHighData := "DB_FIFOHighPrioMsg".Data);
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

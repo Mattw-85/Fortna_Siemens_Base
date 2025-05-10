@@ -1,0 +1,90 @@
+﻿FUNCTION "FC_GetDevicePN" : Void
+TITLE = FC_GetDevicePN
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 18
+// END_ATTRIBUTES
+   VAR_INPUT 
+      is_PNDeviceName : String;   // Name of the device
+      ix_SimulationModeActive : Bool;   // True = Simulation mode active
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_PND : "UDT_PNDevice";   // Device found in Profinet structure
+   END_VAR
+
+   VAR_TEMP 
+      ti_NrOfConfiguredPNNetworks : Int;   // Number of networks configured in project
+      ti_NrOfDevices : Int;   // Nr of devices is networks
+      ti_LcPNNetworkNumber : Int;   // Loop counter to find PN network number
+      ti_LcPNDeviceNumber : Int;   // Loop counter to find PN device number
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	16/09/2019  | 2.3       | F.Baten       | Cut out of 'FB_RIO'
+	29/09/2019  | 2.4       | K.Pokorski    | Network seach started from 1 instead 0
+	30/09/2019  | 2.5       | K.Pokorski    | Chagne prefixes of temporary varaibles from 'si' to 'ti'
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 - Get Device Profinet number
+	    // if simulation is disabled 
+	    IF NOT #ix_SimulationModeActive
+	    THEN
+	        // And the profinet device is not found yet
+	        IF (#is_PNDeviceName <> "DB_ProfinetDiagnostic".ProfinetNetworks[#iqUDT_PND.PNNetworknumber].DeviceStatus[#iqUDT_PND.PNDeviceNumber].DeviceState.PNDeviceName)
+	            OR #iqUDT_PND.PNDeviceFound = FALSE
+	        THEN
+	            #iqUDT_PND.PNDeviceFound := FALSE;
+	            
+	            // check how many profinet networks are configured
+	            #ti_NrOfConfiguredPNNetworks := "FC_GetNrOfArrayEl"("DB_ProfinetDiagnostic".ProfinetNetworks);
+	            
+	            FOR #ti_LcPNNetworkNumber := 1 TO (#ti_NrOfConfiguredPNNetworks) DO
+	                
+	                #iqUDT_PND.PNNetworknumber := #ti_LcPNNetworkNumber;
+	                
+	                // and check how many devices are configured per network
+	                #ti_NrOfDevices := "FC_GetNrOfArrayEl"("DB_ProfinetDiagnostic".ProfinetNetworks[#iqUDT_PND.PNNetworknumber].DeviceStatus);
+	                
+	                // check for each of the devices in the networks if the PN device name is similair to the configured device name
+	                FOR #ti_LcPNDeviceNumber := 0 TO (#ti_NrOfDevices - 1) DO
+	                    
+	                    #iqUDT_PND.PNDeviceNumber := #ti_LcPNDeviceNumber;
+	                    
+	                    // set device found when a match is found for the device name in the PN network
+	                    IF (#is_PNDeviceName = "DB_ProfinetDiagnostic".ProfinetNetworks[#iqUDT_PND.PNNetworknumber].DeviceStatus[#iqUDT_PND.PNDeviceNumber].DeviceState.PNDeviceName
+	                        AND #is_PNDeviceName <> '')
+	                    THEN
+	                        
+	                        #iqUDT_PND.PNDeviceFound := TRUE;
+	                        EXIT;
+	                        
+	                    END_IF;
+	                END_FOR;
+	                
+	                // exit loop when device name is matching
+	                IF #iqUDT_PND.PNDeviceFound
+	                THEN
+	                    
+	                    EXIT;
+	                    
+	                END_IF;
+	            END_FOR;
+	        END_IF;
+	    END_IF;
+	    
+	END_REGION
+END_FUNCTION
+

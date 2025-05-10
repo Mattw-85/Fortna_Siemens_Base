@@ -1,0 +1,164 @@
+﻿FUNCTION_BLOCK "FB_PECD"
+TITLE = FB_PEC
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : Conveyor
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 22
+// END_ATTRIBUTES
+   VAR_INPUT 
+      iUDT_PECConfiguration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_PECDConfiguration";   // PEC configuration structure
+      ix_PEC { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Signal of the PEC
+   END_VAR
+
+   VAR_OUTPUT 
+      qUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_PECStatus";   // Status structure
+      qx_PECFiltered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // PEC Filtered
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_ConveyorInterface : "UDT_ConveyorInterface";   // Interface structure
+      iqUDT_PECStatistics : "UDT_PECStatistics";   // Statistics structure
+   END_VAR
+
+   VAR 
+      s_Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_PECStatus";   // Status structure
+      s_StatusOld { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_PECStatus";   // Auxiliary status structure
+      PEC_OnOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_OnOffDelayDistance";   // Filtering end of section photo eye signal
+      R_TRIG_PECJam {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge trigger PEC jam
+      sx_Enable { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Enable
+   END_VAR
+   VAR RETAIN
+      si_AuxJamDisplacement { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Auxiliary variable to calculate displacement when PEC is blocked
+   END_VAR
+   VAR 
+      sx_PECFiltered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Photo eye filtered
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                      
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	 16/04/2023 | 1.0       | F.Baten       | Adapt from PEC timer based 
+	 03/05/2023 | 4.0       | F.Baten       | 4.0 Release TIA 17.5 
+	*)
+	
+	REGION 1 - Triggers
+	    
+	    // Rising edge PEC Jam
+	    #R_TRIG_PECJam(CLK := #s_Status.Jam);
+	    
+	END_REGION
+	
+	REGION 2 - Active function  
+	    
+	    // To activate the jam monitoring the jam displacement limit  must be configured up to zero. 
+	    #sx_Enable := #iUDT_PECConfiguration.JamDisplacementLimit > 0;
+	    
+	END_REGION
+	
+	REGION 3 - Reset errors
+	    
+	    // Jam error is reset when reset bit is active and jam error is active and is connfigured alllow reset jam with PEC blocked or photo eye is not active
+	    IF #iqUDT_ConveyorInterface.InternalErrorReset
+	        AND (#iUDT_PECConfiguration.ResetWithPECBlocked
+	        OR (NOT #iUDT_PECConfiguration.ResetWithPECBlocked
+	        AND #sx_PECFiltered))
+	        AND #s_Status.Jam
+	    THEN
+	        
+	        #si_AuxJamDisplacement := 0;
+	        #s_Status.Jam := FALSE;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 4 - Photo eye filters
+	    
+	    // End of section photo eye signal filter measurement
+	    #PEC_OnOffDelay(ii_Displacement := #iqUDT_ConveyorInterface.Displacement,
+	                    idi_OnDelayDistance := #iUDT_PECConfiguration.OnDelayDistance,
+	                    idi_OffDelayDistance := #iUDT_PECConfiguration.OffDelayDistance,
+	                    ix_SignalToDelay := #ix_PEC,
+	                    ix_Enable := TRUE,
+	                    qx_DelayedSignal => #sx_PECFiltered);
+	    
+	    // Write the current status of the photo eye
+	    #s_Status.PEC := #sx_PECFiltered;
+	    #qx_PECFiltered := #sx_PECFiltered;
+	    
+	END_REGION
+	
+	REGION 5 - Jam detection   
+	    
+	    IF NOT #sx_PECFiltered                                             // Photo eye blocked
+	        AND #sx_Enable                                                  // Active of checking the PEC jam 
+	    THEN
+	        
+	        #si_AuxJamDisplacement += ABS(#iqUDT_ConveyorInterface.Displacement);
+	        
+	    ELSE
+	        
+	        #si_AuxJamDisplacement := 0;
+	        
+	    END_IF;
+	    
+	    // Compare jam auxiliary counter with displacement jam configured
+	    IF #si_AuxJamDisplacement > #iUDT_PECConfiguration.JamDisplacementLimit
+	    THEN
+	        
+	        #s_Status.Jam := TRUE;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 6 - Statistics
+	    
+	    // Statistics Jam PEC
+	    IF #s_Status.Jam                                                    // PEC jam error active
+	        OR #iqUDT_ConveyorInterface.ResetStatistics                    // Reset statistics
+	    THEN
+	        
+	        "FC_Statistics"(ix_Reset := #iqUDT_ConveyorInterface.ResetStatistics,
+	                        ix_Activate := #s_Status.Jam,
+	                        ix_RTrigActivate := #R_TRIG_PECJam.Q,
+	                        iqUDT_Statistics := #iqUDT_PECStatistics.Jam);
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 7 - Internal PEC error
+	    
+	    IF #s_Status.Jam
+	    THEN
+	        
+	        #iqUDT_ConveyorInterface.InternalErrorPEC := TRUE;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	
+	REGION 8 - Status
+	    
+	    // Status update on change
+	    IF #s_StatusOld <> #s_Status
+	    THEN
+	        
+	        #qUDT_HMIStatus := #s_Status;
+	        #s_StatusOld := #s_Status;
+	        
+	    END_IF;
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

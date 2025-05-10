@@ -1,0 +1,501 @@
+﻿FUNCTION_BLOCK "FB_DataLogicBlade"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      iUDT_ScannerInput { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_DataLogicIN";   // Scanner input structure
+      iUDT_ScannerConfiguration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ScannerConfiguration";   // Scanner configuration
+      iUDT_ConveyorInterface { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ConveyorInterface";   // Conveyor interface
+      ii_GIN { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // GIN number of tracked object
+      ix_24vOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when 24VDC is healthy
+      ix_HardwareOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when hardware is ok
+      ix_SimulationModeActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when simulation mode active
+      ix_CloseWindow { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // External condition to stop scanning
+      ix_Trigger { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // External trigger
+   END_VAR
+
+   VAR_OUTPUT 
+      qUDT_ScannerOutput { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_DataLogicOUT";   // Scanner output structure
+      qUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ScannerStatus";   // Status structure
+      qUDT_CommonStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_CommonStatus";   // Common status
+      qs_Barcode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;   // Barcode
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_Statistics : "UDT_ScannerStatistics";   // Statistics structure
+      iqUDT_EquipmentControl : "UDT_EquipmentControl";   // Equipment control structure
+   END_VAR
+
+   VAR 
+      sFB_TimerOnOffDelayCheck24V { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // Time for DataLogic for initialisation
+      sFB_TimerOnOffDelayEndOfWindow { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // Time to wait for the signal from the scanner after the scanning window has ended
+      sFB_TimerOnOffDelayTimeout { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // Timeout
+      sR_TRIG_StartWindowMode1 {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge for start scanning window when GIN is detected
+      sR_TRIG_StartWindowMode2 {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge for start scanning window when trigger is detected
+      sR_TRIG_Success {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge for success
+      sR_TRIG_Failure {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge for failure
+      sR_TRIG_Multiread {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge for multiple read
+      sR_TRIG_NoScanning {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge at the end of the scanning window and no signal from the scanner
+      sR_TRIG_Trigger {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge for extrernal trigger
+      sR_TRIG_GAPError {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge for GAP error
+      sF_TRIG_StartWindow {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   // Falling edge for start window
+      sUDT_PNDevice { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_PNDevice" := ((), 1, ());   // PN device info structure
+      sUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_ScannerStatus";   // Detailed scanner status overview
+      sUDT_CommonStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   // Common status structure
+      sUDT_CommonStatusOld { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   // Common status structure
+      sa_PNPortsStatusController { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[1..8] of Bool;   // TRUE when specific port has an error
+      ss_Barcode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;   // Barcode
+      si_NoReadErrorCounter { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Number of no read consecutively
+      si_MultireadErrorCounter { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Number of multiple read consecutively
+      si_WindowLength { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Length of scanning window
+      si_ProcessedGIN { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Processed GIN
+      sx_24vOK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when 24VDC is healthy
+      sx_HardwareOK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when hardware is OK
+      sx_PNDeviceHealthy { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet device is online and error free
+      sx_StartWindow { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Start scanning window after detecting GIN
+      sx_EndOfScanning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE: end of scanning
+      sx_Signal { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE: any signal received from the scanner within one scanning window
+      sx_ScanningInProgress { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Scanning in progress
+      sx_NoScanning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE: no signals from the scanner after trigger
+      sx_GapError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // GAP error - more than one GIN/trigger during one scanning window
+      sx_ModeError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Mode error
+      sx_NextTrigger { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Next trigger when the scan window is in progress.
+      sx_Ready { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Scanner ready
+   END_VAR
+
+   VAR CONSTANT 
+      cudi_HardwareCheckDelay : UDInt := 2000;   // Delay to enable hardware to start up, checking will start after this time
+      ci_NumberOfProfinetPorts : Int := 2;   // Number of Profinet ports in device
+      cs_NoRead : String := '"NOREAD"';
+      cs_Multiread : String := '"MULTIREAD"';
+      cs_NoData : String := '"NODATA"';
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                      
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	16/12/2024  | 0.1       | Z. Kunikowska | First release TIA 18
+	07/03/2025  | 0.2       | K. Pokorski   | Add constans for nodata, noread, multiread
+	
+	*)
+	
+	REGION 1 - Get Device Profinet information
+	    
+	    // Get device profinet name
+	    "FC_GetDevicePN"(is_PNDeviceName         := #iUDT_ScannerConfiguration.ScannerPNDeviceName,
+	                     ix_SimulationModeActive := #ix_SimulationModeActive,
+	                     iqUDT_PND               := #sUDT_PNDevice);
+	    
+	    // Get number of ports
+	    "FC_GetPNPortStatus"(ii_NumberOfPorts  := #ci_NumberOfProfinetPorts,
+	                         iUDT_DevicePNInfo := #sUDT_PNDevice,
+	                         qa_PortFault      => #sa_PNPortsStatusController);
+	END_REGION
+	
+	REGION 2 - Hardware checks
+	    
+	    // Hardware will only be available after the delay, so the device has time for the initialisation
+	    #sFB_TimerOnOffDelayCheck24V(iudi_OnDelayTime := #cudi_HardwareCheckDelay,
+	                                 ix_SignalToDelay := #ix_24vOk);
+	    
+	    #sx_24vOK := #sFB_TimerOnOffDelayCheck24V.qx_DelayedSignal;
+	    
+	    #sx_HardwareOK := NOT #ix_SimulationModeActive
+	    AND #sx_24vOK
+	    AND #ix_HardwareOk
+	    AND (#sa_PNPortsStatusController[1]
+	    OR #sa_PNPortsStatusController[2]);
+	    
+	    // Check if PN device is online
+	    IF NOT "DB_ProfinetDiagnostic".ProfinetNetworks[#sUDT_PNDevice.PNNetworknumber].DeviceStatus[#sUDT_PNDevice.PNDeviceNumber].DeviceState.Exist
+	        AND NOT #ix_SimulationModeActive
+	        AND #ix_24vOk
+	    THEN
+	        #sUDT_HMIStatus.PNSlaveNotOnline := TRUE;
+	    END_IF;
+	    
+	    // Check IF PN ports are healthy 
+	    IF #sa_PNPortsStatusController[1] XOR #sa_PNPortsStatusController[2]
+	    THEN
+	        #sUDT_HMIStatus.PNSlaveWarning := TRUE;
+	    END_IF;
+	    
+	    // Check if PN device has an error
+	    IF "DB_ProfinetDiagnostic".ProfinetNetworks[#sUDT_PNDevice.PNNetworknumber].DeviceStatus[#sUDT_PNDevice.PNDeviceNumber].DeviceState.Error
+	        AND #sx_HardwareOK
+	        AND NOT #sUDT_HMIStatus.PNSlaveWarning
+	    THEN
+	        #sUDT_HMIStatus.PNSlaveError := TRUE;
+	    END_IF;
+	    
+	    // Set bit when PN device is healthy (online and no error)
+	    #sx_PNDeviceHealthy := NOT #sUDT_HMIStatus.PNSlaveNotOnline
+	    AND NOT #sUDT_HMIStatus.PNSlaveError
+	    AND #sUDT_PNDevice.PNDeviceFound
+	    AND #sx_24vOK;
+	END_REGION
+	
+	REGION 3 - Errors
+	    REGION 3.1 - No data error
+	        // Set error when the trigger was set, but there are no signals from the scanner.
+	        #sF_TRIG_StartWindow(CLK := #sx_StartWindow);                                               // Detect end of the window
+	        IF #sF_TRIG_StartWindow.Q
+	        THEN
+	            #sx_EndOfScanning := TRUE;
+	        END_IF;
+	        // Signal delay for scanner signals to be sent
+	        #sFB_TimerOnOffDelayEndOfWindow(iudi_OnDelayTime  := 0,
+	                                        iudi_OffDelayTime := #iUDT_ScannerConfiguration.DelayEndWindow,
+	                                        ix_SignalToDelay  := #sF_TRIG_StartWindow.Q);
+	        
+	        IF #sx_EndOfScanning AND NOT #sFB_TimerOnOffDelayEndOfWindow.qx_DelayedSignal               // Detect end of the window and signals have had enough time to arrive
+	        THEN
+	            IF NOT #sx_Signal                                                                       // No signal detected
+	            THEN
+	                #sx_NoScanning := TRUE;                                                             // No scanning after trigger
+	                #sx_EndOfScanning := FALSE;
+	                #sUDT_HMIStatus.ScannerError := TRUE;                                               // Set scanner error
+	                IF #iUDT_ScannerConfiguration.Mode = 1 AND NOT "DB_GIN".GIN[#si_ProcessedGIN].General.Identification.GoodRead
+	                THEN
+	                    "DB_GIN".GIN[#si_ProcessedGIN].General.Identification.NoRead := TRUE;           // Write no read status to DB_GIN
+	                END_IF;
+	            END_IF;
+	        END_IF;
+	        
+	        #sR_TRIG_NoScanning(CLK := #sx_NoScanning);                                                 // Detect no scanning after trigger
+	        IF #sR_TRIG_NoScanning.Q
+	        THEN
+	            #iqUDT_Statistics.NumerOfNoData += 1;                                                   // Increment no data counter
+	            #ss_Barcode := #cs_NoData;                                                                // Write 'NoData' to barcode
+	        END_IF;
+	    END_REGION
+	    REGION 3.2 - No read error
+	        // Count "no read" in turn
+	        IF #sR_TRIG_Failure.Q
+	        THEN
+	            #si_NoReadErrorCounter += 1;
+	        END_IF;
+	        
+	        // Reset no read error counter
+	        IF #sR_TRIG_Multiread.Q OR #sR_TRIG_Success.Q
+	        THEN
+	            #si_NoReadErrorCounter := 0;
+	        END_IF;
+	        
+	        // Set error when more than acceptable "no read" in turn
+	        IF #si_NoReadErrorCounter >= #iUDT_ScannerConfiguration.MaxNoReadConsecutively
+	        THEN
+	            #sUDT_HMIStatus.ScannerError := TRUE;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 3.3 - Multiple read error
+	        // Count multiple read consecutively
+	        IF #sR_TRIG_Multiread.Q
+	        THEN
+	            #si_MultireadErrorCounter += 1;
+	        END_IF;
+	        
+	        // Reset multiple read error counter                                                  
+	        IF #sR_TRIG_Failure.Q OR #sR_TRIG_Success.Q
+	        THEN
+	            #si_MultireadErrorCounter := 0;
+	        END_IF;
+	        
+	        // Set error when more than acceptable multiple read consecutively
+	        IF #si_MultireadErrorCounter >= #iUDT_ScannerConfiguration.MaxMultireadConsecutively
+	        THEN
+	            #sUDT_HMIStatus.ScannerError := TRUE;
+	        END_IF;
+	    END_REGION
+	    
+	    REGION 3.4 - GAP error
+	        // Set GAP error - more than one GIN/trigger during one scanning window
+	        IF ((#ii_GIN <> 0
+	            AND #ii_GIN <> #si_ProcessedGIN
+	            AND #iUDT_ScannerConfiguration.Mode = 1)
+	            OR (#sx_NextTrigger
+	            AND #iUDT_ScannerConfiguration.Mode = 2))
+	            AND #sx_ScanningInProgress
+	        THEN
+	            #sx_GapError := TRUE;
+	        END_IF;
+	        
+	        #sR_TRIG_GAPError(CLK := NOT #sFB_TimerOnOffDelayEndOfWindow.qx_DelayedSignal
+	                          AND #sx_EndOfScanning
+	                          AND #sx_GapError);
+	        IF #sR_TRIG_GAPError.Q
+	            AND NOT #sx_NoScanning
+	        THEN
+	            #iqUDT_Statistics.NumberOfGAPError += 1;                                            // Increment GAP error counter
+	            #ss_Barcode := 'GapError';
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    // Reset counter
+	    IF #sUDT_HMIStatus.ScannerError
+	    THEN
+	        #si_NoReadErrorCounter := 0;                                                            // Reset no read counter
+	        #si_MultireadErrorCounter := 0;                                                         // Reset multiple read counter
+	    END_IF;
+	    
+	    // Common status error
+	    #sUDT_CommonStatus.Error := #sUDT_HMIStatus.ScannerError
+	    OR #sUDT_HMIStatus.PNSlaveNotOnline
+	    OR #sUDT_HMIStatus.PNSlaveError;
+	END_REGION
+	
+	REGION 4 - Check conditions to enable scanning
+	    #sx_Ready := NOT #sUDT_CommonStatus.Error
+	    AND #ix_24vOk
+	    AND #ix_HardwareOk;
+	END_REGION
+	
+	REGION 5 - Scanner activation and deactivation
+	    
+	    REGION 5.1 - New scanning window conditions
+	        IF #iUDT_ScannerConfiguration.Mode = 1
+	        THEN
+	            // Detect condition to start new scanning window in mode 1
+	            #sR_TRIG_StartWindowMode1(CLK := #ii_GIN <> 0
+	                                      AND #ii_GIN <> #si_ProcessedGIN
+	                                      AND NOT #sx_ScanningInProgress
+	                                      AND #sx_Ready);
+	        ELSIF #iUDT_ScannerConfiguration.Mode = 2
+	        THEN
+	            #sR_TRIG_Trigger(CLK := #ix_Trigger);                                               // Detect trigger
+	            #sx_NextTrigger := #sR_TRIG_Trigger.Q AND #sx_ScanningInProgress;                   // Detect next trigger when the scan window is in progress
+	            // Detect condition to start new scanning window in mode 2
+	            #sR_TRIG_StartWindowMode2(CLK := #ix_Trigger
+	                                      AND NOT #sx_ScanningInProgress);
+	        ELSE
+	            #sx_ModeError := TRUE;                                                              // Mode error: 1-start sacnning after detecting GIN in tracking array; 2 - start scanning window after trigger
+	            #sUDT_HMIStatus.ScannerError := TRUE;
+	        END_IF;
+	    END_REGION
+	    
+	    
+	    REGION 5.2 - Start scanning
+	        // Start scanning in mode 1 or mode 2
+	        IF (#sR_TRIG_StartWindowMode1.Q
+	            OR #sR_TRIG_StartWindowMode2.Q)
+	            AND #sx_Ready
+	        THEN
+	            // Start the scanning process
+	            #sx_ScanningInProgress := TRUE;
+	            
+	            // Clear scanning procces data
+	            #sx_GapError := FALSE;
+	            #sx_NoScanning := FALSE;
+	            #sx_EndOfScanning := FALSE;
+	            #sx_Signal := FALSE;
+	            
+	            #iqUDT_Statistics.NumberOfInductions += 1;                                          // Increment inductions counter
+	            #sx_StartWindow := TRUE;                                                            // Start scanning window
+	            #qUDT_ScannerOutput.BladeTrigger := TRUE;                                           // Trigger to scanner - strat scanning
+	            
+	            // Conditions only for mode 1
+	            IF #sR_TRIG_StartWindowMode1.Q
+	            THEN
+	                #si_WindowLength := 0;
+	                #si_ProcessedGIN := #ii_GIN;                                                    // Update processed GIN
+	                
+	                // Clear data in DB_GIN
+	                "DB_GIN".GIN[#si_ProcessedGIN].General.Identification.NoRead := FALSE;
+	                "DB_GIN".GIN[#si_ProcessedGIN].General.Identification.MultiRead := FALSE;
+	            END_IF;
+	        END_IF;
+	    END_REGION
+	    
+	    REGION 5.3 - Stop scanning
+	        // Counting window actual length
+	        IF #sx_StartWindow AND #iUDT_ScannerConfiguration.Mode = 1
+	        THEN
+	            #si_WindowLength += #iUDT_ConveyorInterface.Displacement;
+	        END_IF;
+	        
+	        // Check timeout
+	        IF #iUDT_ScannerConfiguration.ScanningWindowTimeout > 0
+	        THEN
+	            #sFB_TimerOnOffDelayTimeout(iudi_OnDelayTime := #iUDT_ScannerConfiguration.ScanningWindowTimeout,
+	                                        ix_SignalToDelay := #sx_StartWindow);
+	        END_IF;
+	        
+	        // Checking conditions to stop scanning
+	        IF (#si_WindowLength >= #iUDT_ScannerConfiguration.WindowLenght
+	            AND #iUDT_ScannerConfiguration.Mode = 1)
+	            OR #ix_CloseWindow
+	            OR #sFB_TimerOnOffDelayTimeout.qx_DelayedSignal
+	        THEN
+	            #sx_StartWindow := FALSE;                                                           // Stop window scanning
+	            #si_WindowLength := 0;                                                              // Reset window lenght
+	            #qUDT_ScannerOutput.BladeTrigger := FALSE;                                          // Trigger to scanner - stop scanning
+	        END_IF;
+	        
+	        // End of the scanning process
+	        IF (NOT #sx_StartWindow
+	            AND #sx_Signal)
+	            OR #sx_NoScanning
+	        THEN
+	            #sx_ScanningInProgress := FALSE;
+	        END_IF;
+	    END_REGION
+	END_REGION
+	
+	REGION 6 - Signals from scanner
+	    #sR_TRIG_Success(CLK := #iUDT_ScannerInput.Success);                                        // Detect success
+	    #sR_TRIG_Failure(CLK := #iUDT_ScannerInput.Failure);                                        // Detect failure
+	    #sR_TRIG_Multiread(CLK := #iUDT_ScannerInput.Multiread);                                    // Detect multiple read
+	    
+	    // Detect if any signal received from the scanner
+	    IF #sR_TRIG_Success.Q
+	        OR #sR_TRIG_Failure.Q
+	        OR #sR_TRIG_Multiread.Q
+	    THEN
+	        #sx_Signal := TRUE;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 7 - Reading statuses and barcode
+	    IF NOT #sx_GapError                                                                         // Only one trigger/GIN during on scanning window
+	    THEN
+	        
+	        IF #sR_TRIG_Success.Q                                                                   // Success signal received from scanner
+	        THEN
+	            REGION 7.1 - Success
+	                
+	                Chars_TO_Strg(Chars  := #iUDT_ScannerInput.Barcode,                             // Wtire barcode to string
+	                              pChars := 0,
+	                              Cnt    := 0,
+	                              Strg   => #ss_Barcode);
+	                
+	                #iqUDT_Statistics.NumberOfGoodReads += 1;                                       // Increment good read counter
+	                IF #iUDT_ScannerConfiguration.Mode = 1
+	                THEN
+	                    "DB_GIN".GIN[#si_ProcessedGIN].General.Identification.Barcode := #ss_Barcode;   // Write barcode to DB_GIN
+	                    "DB_GIN".GIN[#si_ProcessedGIN].General.Identification.GoodRead := TRUE;         // Write good read to "DB_GIN"
+	                END_IF;
+	            END_REGION
+	            
+	        ELSIF #sR_TRIG_Failure.Q                                                                // Failure signal received from scanner
+	        THEN
+	            REGION 7.2 - Failure
+	                #iqUDT_Statistics.NumberOfNoReads += 1;                                         // Increment no read counter when failure
+	                #ss_Barcode := #cs_NoRead;                                                        // Write 'NoRead' to barcode
+	                IF #iUDT_ScannerConfiguration.Mode = 1 AND NOT "DB_GIN".GIN[#si_ProcessedGIN].General.Identification.GoodRead
+	                THEN
+	                    "DB_GIN".GIN[#si_ProcessedGIN].General.Identification.NoRead := TRUE;       // Write no read status to "DB_GIN"
+	                    "DB_GIN".GIN[#si_ProcessedGIN].General.Identification.Barcode := #ss_Barcode;   // Write barcode to DB_GIN
+	                    
+	                END_IF;
+	               
+	                
+	                
+	                
+	            END_REGION
+	            
+	        ELSIF #sR_TRIG_Multiread.Q                                                              // Multiple read signal received from scanner
+	        THEN
+	            REGION 7.3 - Multiple read
+	                #iqUDT_Statistics.NumberOfMultiReads += 1;                                      // Increment multiple read counter
+	                #ss_Barcode := #cs_Multiread;                                                     // Write 'Multiread' to barcode
+	                IF #iUDT_ScannerConfiguration.Mode = 1 AND NOT "DB_GIN".GIN[#si_ProcessedGIN].General.Identification.GoodRead
+	                THEN
+	                    "DB_GIN".GIN[#si_ProcessedGIN].General.Identification.MultiRead := TRUE;    // Write multiple read status to DB_GIN
+	                    "DB_GIN".GIN[#si_ProcessedGIN].General.Identification.Barcode := #ss_Barcode;   // Write barcode to DB_GIN
+	                END_IF;
+	            END_REGION
+	        END_IF;
+	        
+	    ELSE
+	        REGION 7.4 - GAP error
+	            IF #iUDT_ScannerConfiguration.Mode = 1
+	                AND #si_ProcessedGIN > 0
+	                AND #ii_GIN > 0
+	            THEN
+	                IF NOT "DB_GIN".GIN[#si_ProcessedGIN].General.Identification.GoodRead
+	                THEN
+	                    "DB_GIN".GIN[#si_ProcessedGIN].General.Identification.NoRead := TRUE;       // Write no read status to DB_GIN
+	                END_IF;
+	                
+	                IF NOT "DB_GIN".GIN[#ii_GIN].General.Identification.GoodRead
+	                THEN
+	                    "DB_GIN".GIN[#ii_GIN].General.Identification.NoRead := TRUE;                // Write no read status TO "DB_GIN"
+	                END_IF;
+	                #si_ProcessedGIN := #ii_GIN;
+	            END_IF;
+	        END_REGION
+	    END_IF;
+	    #qs_Barcode := #ss_Barcode;                                                                 // Write barcode to output
+	END_REGION
+	
+	REGION 8 - Status
+	    // HMI status update
+	    IF #sUDT_CommonStatusOld <> #sUDT_CommonStatus                                              // Update on change
+	    THEN
+	        // HMI status initialization
+	        #sUDT_HMIStatus.Status := 0;
+	        IF #sUDT_HMIStatus.ScannerError
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Error;                        // Scanning error
+	        END_IF;
+	        
+	        IF #sUDT_HMIStatus.PNSlaveNotOnline OR #sUDT_HMIStatus.PNSlaveError                     // Profinet error
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".ProfinetError;
+	        END_IF;
+	    END_IF;
+	    
+	    //Active window status
+	    #sUDT_HMIStatus.ReadingWindowActive := #sx_StartWindow;
+	    //Latest barcode
+	    IF #ss_Barcode <> ''
+	    THEN
+	        #sUDT_HMIStatus.LatestBarcode := #ss_Barcode;
+	        #ss_Barcode := '';
+	    END_IF;
+	    
+	    //Copy status to output
+	    #qUDT_HMIStatus := #sUDT_HMIStatus;                                                         // Copy HMI status to output
+	    #qUDT_CommonStatus := #sUDT_CommonStatus;                                                   // Copy status to output
+	    #sUDT_CommonStatusOld := #sUDT_CommonStatus;                                                // Copy status to memory
+	END_REGION
+	
+	REGION 9 - Report to control block    
+	    "FC_EquipmentReport"(iUDT_Status   := #sUDT_CommonStatus,
+	                         iqUDT_Control := #iqUDT_EquipmentControl);
+	END_REGION
+	
+	REGION 10 - Reset statistics
+	    IF #iqUDT_EquipmentControl.Command.ResetData
+	    THEN
+	        #iqUDT_Statistics.NumberOfGoodReads := 0;                                               // Reset number of good reads
+	        #iqUDT_Statistics.NumberOfNoReads := 0;                                                 // Reset number of no reads
+	        #iqUDT_Statistics.NumberOfMultiReads := 0;                                              // Reset number of multiple read
+	        #iqUDT_Statistics.NumerOfNoData := 0;                                                   // Reset number of no data
+	        #iqUDT_Statistics.NumberOfInductions := 0;                                              // Reset number of inductions
+	        #iqUDT_Statistics.NumberOfGAPError := 0;                                                // Reset number of gap error
+	    END_IF;
+	END_REGION
+	
+	REGION 11 - Reset errors
+	    // Reset Profinet error/not online
+	    IF #iqUDT_EquipmentControl.Command.Reset OR NOT #ix_24vOk
+	    THEN
+	        #sUDT_HMIStatus.PNSlaveNotOnline := FALSE;
+	        #sUDT_HMIStatus.PNSlaveError := FALSE;
+	        #sUDT_HMIStatus.PNSlaveWarning := FALSE;
+	        #sUDT_HMIStatus.ScannerError := FALSE;
+	        #sx_ModeError := FALSE;
+	    END_IF;
+	END_REGION
+	
+END_FUNCTION_BLOCK
+

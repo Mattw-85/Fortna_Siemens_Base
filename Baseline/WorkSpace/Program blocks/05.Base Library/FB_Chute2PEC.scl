@@ -1,0 +1,228 @@
+﻿FUNCTION_BLOCK "FB_Chute2PEC"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 204
+// END_ATTRIBUTES
+   VAR_INPUT 
+      iUDT_ChuteConfiguration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_Chute2PECConfiguration";   // Chute Configuration structure
+      iUDT_UpstreamConveyorStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_CommonStatus";   // Upstream conveyor status
+      ix_PECFull { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when Chute Full photoeye is not blocked
+      ix_PECHalfFull { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when Chute Half Full photoeye is not blocked
+      ix_Disabled { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when chute is disabled
+      ix_HardwareOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when chute hardware is Ok
+      iudi_DelayHardwareOK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Time to delay for hardware ok signal
+   END_VAR
+
+   VAR_OUTPUT 
+      qx_Lamp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Output Chute Lamp half full/ full
+      qUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_Chute2PECStatus";   // HMI status structure
+      qUDT_Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_CommonStatus";   // Common status structure
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_EquipmentControl : "UDT_EquipmentControl";   // Equipment control structure
+      iqUDT_UpstreamConveyorHandshake : "UDT_ConveyorHandshake";   // Upstream handshake structure
+      iqUDT_Statistics : "UDT_Chute2PECStatistics";   // Statistics structure
+   END_VAR
+
+   VAR 
+      sUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_Chute2PECStatus";   // HMI status structure
+      sUDT_CommonStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   // Common status structure
+      sUDT_CommonStatusOld { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   // Auxiliary status structure
+      sFB_HardwareOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // Timer on/off delay for hardware ok signal
+      sFB_ChuteHalfFullDetectionDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // Timer on/off delay for chute half  full detection
+      sFB_ChuteFullDetectionDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // Timer on/off delay for chute full detection
+      sR_TRIG_HalfFull {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge trigger on chute half full signal
+      sR_TRIG_Disabled {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge trigger on chute disabled signal
+      sR_TRIG_ChuteFull {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge trigger on chute full signal
+      sF_TRIG_UpdateStatus {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   // Falling edge trigger on status change
+      sx_Full { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Full status
+      sx_HalfFull { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Half full status
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                      
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	19/10/2021  | 0.1       | J. Krawczuk   | first release TIA 16.0
+	29/10/2021  | 0.1       | M. Piela      | Design change, comments corrections
+	14/01/2022  | 0.2       | G. Vlooswijk  | Fixed statistics reset
+	30/07/2022  | 0.3       | G. Vlooswijk  | Removed running and energy save status for FedEx Scada
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	 *)
+	
+	REGION 1 - Timers
+	    
+	    // Chute full detection timer 
+	    #sFB_ChuteFullDetectionDelay(iudi_OnDelayTime := #iUDT_ChuteConfiguration.FullDetectionTime,
+	                                 iudi_OffDelayTime := #iUDT_ChuteConfiguration.FullReleaseTime,
+	                                 ix_SignalToDelay := NOT #ix_PECFull,
+	                                 qx_DelayedSignal => #sx_Full);
+	    
+	    // Chute half full detection timer
+	    #sFB_ChuteHalfFullDetectionDelay(iudi_OnDelayTime := #iUDT_ChuteConfiguration.HalfFullDetectionTime,
+	                                     iudi_OffDelayTime := #iUDT_ChuteConfiguration.HalfFullReleaseTime,
+	                                     ix_SignalToDelay := NOT #ix_PECHalfFull,
+	                                     qx_DelayedSignal => #sx_HalfFull);
+	    
+	    // Hardware ok signal delay
+	    #sFB_HardwareOk(iudi_OnDelayTime := #iudi_DelayHardwareOK,
+	                    ix_SignalToDelay := #ix_HardwareOk);
+	    
+	    
+	END_REGION
+	
+	REGION 2 - Stop upstream conveyor 
+	    
+	    // Stop upstream conveyor when chute is full or disabled
+	    #iqUDT_UpstreamConveyorHandshake.RTR := NOT #sx_Full AND NOT #ix_Disabled AND #sFB_HardwareOk.qx_DelayedSignal;
+	    
+	END_REGION
+	
+	REGION 3 - Update output
+	    
+	    // Update the outputs
+	    #qx_Lamp := #sx_Full OR (#sx_HalfFull AND "DB_Memory".Clock_1Hz);
+	    
+	END_REGION
+	
+	REGION 4 - Status
+	    
+	    // Update chute full specific status
+	    #sUDT_HMIStatus.Specific.ChuteFull := #sx_Full AND #sFB_HardwareOk.qx_DelayedSignal;
+	    
+	    // Update chute half full specific status
+	    #sUDT_HMIStatus.Specific.ChuteHalfFull := #sx_HalfFull AND #sFB_HardwareOk.qx_DelayedSignal;
+	    
+	    //Update chute disabled specific status
+	    #sUDT_HMIStatus.Specific.ChuteDisabled := #ix_Disabled AND #sFB_HardwareOk.qx_DelayedSignal;
+	    
+	    // Update common safety stop
+	    #sUDT_CommonStatus.SafetyStop := #iUDT_UpstreamConveyorStatus.SafetyStop;
+	    
+	    // Update common automatic on 
+	    #sUDT_CommonStatus.AutoON := #iUDT_UpstreamConveyorStatus.AutoON;
+	    
+	    // Update common stopped
+	    #sUDT_CommonStatus.Stopped := #iUDT_UpstreamConveyorStatus.Stopped;
+	    
+	    // Update HMI status number for chute disabled
+	    IF #sUDT_HMIStatus.Specific.ChuteDisabled AND NOT #sUDT_CommonStatus.SafetyStop
+	    THEN
+	        #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".DisableByManagement;
+	        
+	    END_IF;
+	    
+	    // Update HMI status number for chute half full
+	    IF #sUDT_HMIStatus.Specific.ChuteHalfFull AND NOT #sUDT_CommonStatus.SafetyStop
+	    THEN
+	        #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".ChuteHalfFull;
+	        
+	    END_IF;
+	    
+	    // Update HMI status number for chute full
+	    IF #sUDT_HMIStatus.Specific.ChuteFull AND NOT #sUDT_CommonStatus.SafetyStop
+	    THEN
+	        #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".ChuteFull;
+	        
+	    END_IF;
+	    
+	    // Collecting F_TRIG on chute full, chute half full or chute disabled status to update common status 
+	    #sF_TRIG_UpdateStatus(CLK := #sUDT_HMIStatus.Specific.ChuteFull
+	                          OR #sUDT_HMIStatus.Specific.ChuteDisabled
+	                          OR #sUDT_HMIStatus.Specific.ChuteHalfFull);
+	    
+	    // HMI status number calculation
+	    IF #sUDT_CommonStatusOld <> #sUDT_CommonStatus OR #sF_TRIG_UpdateStatus.Q
+	    THEN
+	        
+	        // Update auto on status number
+	        IF #sUDT_CommonStatus.AutoON
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".AutoON;
+	            
+	        END_IF;
+	        
+	        IF #sUDT_CommonStatus.Stopped
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Stopped;
+	            
+	        END_IF;
+	        
+	        IF #sUDT_CommonStatus.SafetyStop
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".SafetyStop;
+	            
+	        END_IF;
+	        
+	        // Copy common status structure to the old common status structure
+	        #sUDT_CommonStatusOld := #sUDT_CommonStatus;
+	        #qUDT_Status := #sUDT_CommonStatus;
+	        
+	    END_IF;
+	    
+	    #qUDT_HMIStatus := #sUDT_HMIStatus;
+	    
+	END_REGION
+	
+	REGION 5 - Statistics
+	    
+	    // Chute full R_TRIG for statistics purpose
+	    #sR_TRIG_ChuteFull(CLK := #sUDT_HMIStatus.Specific.ChuteFull);
+	    
+	    // Chute full statistics
+	    IF #sUDT_HMIStatus.Specific.ChuteFull
+	        OR #iqUDT_EquipmentControl.Command.ResetData
+	    THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #sUDT_HMIStatus.Specific.ChuteFull,
+	                        ix_RTrigActivate := #sR_TRIG_ChuteFull.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.ChuteFull);
+	        
+	    END_IF;
+	    
+	    // Chute disabled R_TRIG for statistics purpose 
+	    #sR_TRIG_Disabled(CLK := #sUDT_HMIStatus.Specific.ChuteDisabled);
+	    
+	    // Chute disabled statistics
+	    IF #sUDT_HMIStatus.Specific.ChuteDisabled
+	        OR #iqUDT_EquipmentControl.Command.ResetData
+	    THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #sUDT_HMIStatus.Specific.ChuteDisabled,
+	                        ix_RTrigActivate := #sR_TRIG_Disabled.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.ChuteDisabled);
+	        
+	    END_IF;
+	    
+	    // Chute half full R_TRIG for statistics purpose
+	    #sR_TRIG_HalfFull(CLK := #sUDT_HMIStatus.Specific.ChuteHalfFull);
+	    
+	    // Chute half full statistics
+	    IF #sUDT_HMIStatus.Specific.ChuteHalfFull
+	        OR #iqUDT_EquipmentControl.Command.ResetData
+	    THEN
+	        
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #sUDT_HMIStatus.Specific.ChuteHalfFull,
+	                        ix_RTrigActivate := #sR_TRIG_HalfFull.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.ChuteHalfFull);
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 6 - Equipment Report
+	    
+	    "FC_EquipmentReport"(iUDT_Status := #sUDT_CommonStatus,
+	                         iqUDT_Control := #iqUDT_EquipmentControl);
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

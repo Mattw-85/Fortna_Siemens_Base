@@ -1,0 +1,401 @@
+﻿FUNCTION_BLOCK "FB_SystemControl"
+TITLE = FB_SystemControl
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 230
+// END_ATTRIBUTES
+//Function block to control the system.
+   VAR_INPUT 
+      iudi_SignalingTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Signaling time [ms]
+      ix_SignalingIOModuleOK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Beeper and lamp IO module ok
+      ix_HMIConnectionOK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE = HMI connection is active
+      ix_ExternalError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE - External error occurred
+      ix_SafetyOK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE - Safety OK
+      ix_Start { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Start command from control panel
+      ix_Stop { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Stop command from control panel
+      ix_Reset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reset command from control panel
+   END_VAR
+
+   VAR_OUTPUT 
+      qUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_SystemControlStatus";   // HMI status structure
+      qUDT_Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_CommonStatus";   // Status structure
+      qx_StartingFlashLamp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Flash lamp
+      qx_StartingBeeper { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Beeper starting
+      qx_ErrorLamp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Equipment error lamp
+      qx_SafetyStopLamp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Safety stop lamp
+      qx_StoppedLamp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Equipment stopped lamp
+      qx_StartedLamp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Equipment started lamp
+      qx_WarningLamp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Equipment warning lamp
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_SystemControlCommand : "UDT_SystemControlCommand";   // HMI system control structure
+      iqUDT_Equipment : "UDT_EquipmentControl";   // Equipment control structure
+      iqUDT_Statistics : "UDT_SystemControlStatistics";   // Statistics structure
+   END_VAR
+
+   VAR 
+      sUDT_CommonStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   // Status structure
+      sUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_SystemControlStatus";   // Status structure
+      sUDT_CommonStatusOld { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   // Old status structure
+      sUDT_SystemControlCommand { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_SystemControlCommand";   // HMI system control structure
+      sFB_TimerOnOffDelaySignaling { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // Timer to calculate the signaling time
+      sR_TRIG_PB_Start {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge for start push button
+      sR_TRIG_PB_Stop {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge for stop push button
+      sR_TRIG_PB_Reset {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge for reset push button
+      sR_TRIG_SystemStarted {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge for system started statistics
+      sR_TRIG_SystemError {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge for system error statistics
+      sR_TRIG_EnergySave {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge for system in energy save mode statistics
+      sx_SignalingDone { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Signaling finished
+      sx_StartSignalingRequired { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Start signaling required
+      sx_SystemStartup { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // System startup procedure in progress
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	24/05/2019  | 0.1       | K.Pokorski    | first release MHS TIA 15.1
+	17/06/2019  | 0.2       | K.Pokorski    | implementation a new concept
+	18/06/2019  | 0.3       | K.Pokorski    | remove reset safety handling
+	24/07/2019  | 2.0       | L.Klar        | 2.0 MHS library release TIA 15.1
+	28/08/2019  | 2.1       | K.Pokorski    | Correction of block logic and adjusting comments
+	13/09/2019  | 2.2       | K.Pokorski    | Lamp outputs added
+	14/10/2019  | 2.3       | L.Klar        | Updated status structure
+	28/10/2019  | 2.4       | K. Pokorski   | Updated region 1, 6 & 9 - compliance with the new status
+	04/11/2019  | 2.5       | L.Klar        | 1 Hz clock and first scan changed from memory bit to DB variable
+	20/11/2019  | 2.6       | S. Deulkar    | Always Reseting commads to equipment at the beginning of the block 
+	21/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	22/05/2020  | 3.1       | M.Roijen      | Disable Start in Signaling handling when in System-Manualmode.
+	09/07/2020  | 3.2       | S.Theocharis  | Bug fix in status update. Initialize static status instead output status
+	31/07/2020  | 3.3       | S.Theocharis  | Add one shot detection of the push buttons
+	11/01/2021  | 3.4       | L.Klar        | iq_UDT_Equipment.Report.SafetyStop removed from automatic on/off
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	12/03/2024  | 4.1       | S. Nieswiec   | Variable name changes according to standard
+	*)
+	
+	REGION 1 - Push button triggers
+	    
+	    #sR_TRIG_PB_Start(CLK := #ix_Start);                                            //Start button
+	    
+	    
+	    #sR_TRIG_PB_Stop(CLK := #ix_Stop);                                              //Stop button 
+	    
+	    
+	    #sR_TRIG_PB_Reset(CLK := #ix_Reset);                                            //Reset button 
+	    
+	END_REGION
+	
+	
+	REGION 2 – HMI and control panel commands handling
+	    
+	    // Reset all HMI commands during first PLC cycle
+	    IF "DB_Memory".FirstScan                                                        // First PLC cycle occurred
+	    THEN
+	        #iqUDT_SystemControlCommand.Start := FALSE;
+	        #iqUDT_SystemControlCommand.Stop := FALSE;
+	        #iqUDT_SystemControlCommand.Reset := FALSE;
+	        #iqUDT_SystemControlCommand.ResetSafety := FALSE;
+	        #iqUDT_SystemControlCommand.ResetData := FALSE;
+	        #iqUDT_SystemControlCommand.ManualMode := FALSE;
+	        #iqUDT_Equipment.Command.AutomaticOn := FALSE;
+	        #iqUDT_Equipment.Command.ManualMode := FALSE;
+	        #iqUDT_Equipment.Command.DisableManualMode := FALSE;
+	        #iqUDT_Equipment.Request.RestartRequired := FALSE;
+	        #iqUDT_Equipment.Request.SignalingRequest := FALSE;
+	    END_IF;
+	    
+	    // Clear commands to equipments
+	    #iqUDT_Equipment.Command.Start := FALSE;
+	    #iqUDT_Equipment.Command.Stop := FALSE;
+	    #iqUDT_Equipment.Command.Reset := FALSE;
+	    #iqUDT_Equipment.Command.ResetData := FALSE;
+	    
+	    // Move HMI control structure to static buffer
+	    #sUDT_SystemControlCommand := #iqUDT_SystemControlCommand;
+	    
+	    // Extension of HMI commands with a commands from control panel 
+	    #sUDT_SystemControlCommand.Start := #sUDT_SystemControlCommand.Start OR #sR_TRIG_PB_Start.Q;        // Extension of HMI start command with a start command from control panel 
+	    #sUDT_SystemControlCommand.Stop := #sUDT_SystemControlCommand.Stop OR #sR_TRIG_PB_Stop.Q;           // Extension of HMI stop command with a stop command from control panel
+	    #sUDT_SystemControlCommand.Reset := #sUDT_SystemControlCommand.Reset OR #sR_TRIG_PB_Reset.Q;        // Extension of HMI reset command with a reset command from control panel 
+	    
+	END_REGION
+	
+	REGION 3 – Signaling handling
+	    
+	    // Starting signaling time
+	    IF ((NOT #ix_ExternalError                                                      // External error not occurred 
+	        AND (#sUDT_SystemControlCommand.Start                                       // Start command received
+	        AND NOT #sUDT_SystemControlCommand.ManualMode                               // Not in manual Mode
+	        )
+	        AND NOT #sUDT_SystemControlCommand.Stop                                     // Stop command not received
+	        AND (#iqUDT_Equipment.Report.Stopped                                        // System stopped 
+	        OR #iqUDT_Equipment.Request.RestartRequired                                 // Restart Required
+	        ))
+	        OR #iqUDT_Equipment.Request.SignalingRequest
+	        )                                                                           // Equipment request signaling 
+	        AND #ix_SignalingIOModuleOK                                                 // Signaling module OK
+	        
+	    THEN
+	        
+	        #sx_StartSignalingRequired := TRUE;
+	        
+	        IF (#sUDT_SystemControlCommand.Start)
+	        THEN
+	            #sx_SystemStartup := TRUE;                                              // Set the system startup flag
+	        END_IF;
+	        
+	        // Stopping signaling time
+	    ELSIF (#sUDT_SystemControlCommand.Stop                                          // Stop command from HMI available
+	        OR #ix_ExternalError                                                        // Exernal error occured
+	        OR NOT #ix_SignalingIOModuleOK)                                             // Signaling module ok 
+	    THEN
+	        #sx_StartSignalingRequired := FALSE;
+	        #sx_SystemStartup := FALSE;
+	    END_IF;
+	    
+	    // Measure the signaling time
+	    #sFB_TimerOnOffDelaySignaling(iudi_OnDelayTime := #iudi_SignalingTime,
+	                                  iudi_OffDelayTime := 0,
+	                                  ix_SignalToDelay := #sx_StartSignalingRequired,
+	                                  ix_Enable := TRUE,
+	                                  qx_DelayedSignal => #sx_SignalingDone);
+	    
+	END_REGION
+	
+	REGION 4 – Automatic ON / OFF
+	    
+	    // Signaling time elapsed
+	    IF (#sx_SignalingDone) THEN
+	        
+	        #iqUDT_Equipment.Request.SignalingRequest := FALSE;                         // Reset signaling request
+	        
+	        IF #sx_SystemStartup
+	            AND #ix_SafetyOK
+	        THEN
+	            #iqUDT_Equipment.Command.Start := TRUE;                                 // Start system 
+	            #iqUDT_Equipment.Command.AutomaticOn := TRUE;                           // And turn on automatic mode
+	            #sx_SystemStartup := FALSE;
+	        END_IF;
+	        
+	        IF #sx_SystemStartup
+	            OR #ix_SafetyOK
+	        THEN
+	            #sx_SystemStartup := FALSE;
+	        END_IF;
+	        
+	        #sx_StartSignalingRequired := FALSE;                                        // Reset signaling timer
+	        #sx_SignalingDone := FALSE;
+	    END_IF;
+	    
+	    // Stopping system and reset automatic mode command 
+	    IF #ix_ExternalError                                                            // External error occured
+	        OR #sUDT_SystemControlCommand.Stop                                          // Stop command received from HMI
+	        OR #sUDT_SystemControlCommand.ManualMode                                    // Manual mode active
+	        OR NOT #ix_SafetyOK
+	        
+	    THEN
+	        #iqUDT_Equipment.Command.Stop := TRUE;
+	        #iqUDT_Equipment.Command.AutomaticOn := FALSE;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 5 – Commands to equipment
+	    
+	    #iqUDT_Equipment.Command.Reset := #sUDT_SystemControlCommand.Reset;             // Move reset HMI command to reset equipment command
+	    #iqUDT_Equipment.Command.ResetData := #sUDT_SystemControlCommand.ResetData;     // Move reset data HMI command to reset data equipment command
+	    #iqUDT_Equipment.Command.ManualMode := #sUDT_SystemControlCommand.ManualMode;   // Move manual mode HMI command to manual mode equipment command
+	    #iqUDT_Equipment.Command.DisableManualMode := NOT #ix_HMIConnectionOK;          // Disable manual mode if HMI connection is broken  
+	    
+	END_REGION
+	
+	REGION 6 – Lamp state updating
+	    
+	    // Light warning before equipment starting. Flashes with a frequency of one period per second.
+	    #qx_StartingFlashLamp :=
+	    #sx_StartSignalingRequired
+	    AND NOT #sx_SignalingDone
+	    AND "DB_Memory".Clock_1Hz;
+	    
+	    // Audiable warning before equipment starting. Intermittent signaling with a frequency of one period per second.
+	    #qx_StartingBeeper :=
+	    #sx_StartSignalingRequired
+	    AND NOT #sx_SignalingDone
+	    AND "DB_Memory".Clock_1Hz;
+	    
+	    // Lamp lighting when an external error or equipment's error occurred
+	    #qx_ErrorLamp :=
+	    #iqUDT_Equipment.Report.Error
+	    OR #ix_ExternalError;
+	    
+	    // Lamp lighting when the safety error occurred or equipment report the safety stop
+	    #qx_SafetyStopLamp :=
+	    #iqUDT_Equipment.Report.SafetyStop
+	    OR NOT #ix_SafetyOK;
+	    
+	    // Lamp lighting when the system is stopped
+	    #qx_StoppedLamp := NOT #iqUDT_Equipment.Command.AutomaticOn;
+	    
+	    // Lamp lighting when the system is started
+	    #qx_StartedLamp := #iqUDT_Equipment.Report.Running;
+	    
+	    // Lamp lighting when the equipment report a warning
+	    #qx_WarningLamp := #iqUDT_Equipment.Report.Warning;
+	    
+	END_REGION
+	
+	REGION 7 – Equipment state update
+	    
+	    #sUDT_CommonStatus.EnergySave := #iqUDT_Equipment.Report.EnergySave;                         // Move equipment state "EnergySave" from the equipment structure to status structure
+	    #sUDT_CommonStatus.Error := #iqUDT_Equipment.Report.Error;                                   // Move equipment state "Error" from the equipment structure to status structure 
+	    #sUDT_CommonStatus.Running := #iqUDT_Equipment.Report.Running;                               // Move equipment state "Started" from the equipment structure  to status structure 
+	    #sUDT_CommonStatus.SafetyStop := #iqUDT_Equipment.Report.SafetyStop OR NOT #ix_SafetyOK;     // Move equipment state "Safety" from the input and the equipment structure to status structure
+	    #sUDT_CommonStatus.Stopped := #iqUDT_Equipment.Report.Stopped;                               // Move equipment state "Stopped" from the equipment structure to status structure 
+	    #sUDT_CommonStatus.Warning := #iqUDT_Equipment.Report.Warning;                               // Move equipment state "Warning" from the equipment structure to status structure 
+	    #sUDT_CommonStatus.Manual := #iqUDT_Equipment.Report.Manual;                                 // Move equipment state "ManualMode" from the equipment structure to status structure
+	    
+	END_REGION
+	
+	REGION 8 – Status update
+	    
+	    IF #sUDT_CommonStatus <> #sUDT_CommonStatusOld                                  // Actual status is different than the old one
+	    THEN
+	        
+	        // HMI status initialization
+	        #sUDT_HMIStatus.Status := 0;
+	        
+	        // HMI status calculation
+	        IF #sUDT_CommonStatus.EnergySave                                            // Energy save
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".EnergySave;
+	        END_IF;
+	        
+	        IF #sUDT_CommonStatus.Running                                               // Running
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Running;
+	        END_IF;
+	        
+	        IF #sUDT_CommonStatus.Stopped                                               // Stopped
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Stopped;
+	        END_IF;
+	        
+	        IF #sUDT_CommonStatus.Dieback                                               // Dieback
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Dieback;
+	        END_IF;
+	        
+	        IF #sUDT_CommonStatus.Halted                                                // Halted
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Halted;
+	        END_IF;
+	        
+	        IF #sUDT_CommonStatus.Manual                                                // Manual
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Manual;
+	        END_IF;
+	        
+	        IF #sUDT_CommonStatus.ManualRun                                             // Running in manual mode
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".ManualRun;
+	        END_IF;
+	        
+	        IF #sUDT_CommonStatus.Warning                                               // Warning
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Warning;
+	        END_IF;
+	        
+	        IF #sUDT_CommonStatus.Error                                                 // Error
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Error;
+	        END_IF;
+	        
+	        
+	        IF (#sUDT_CommonStatus.SafetyStop)                                          // Safety stop
+	        THEN
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".SafetyStop;
+	        END_IF;
+	        
+	        
+	        #sUDT_CommonStatusOld := #sUDT_CommonStatus;                                // Copy status to memory
+	        #qUDT_Status := #sUDT_CommonStatus;
+	        
+	    END_IF;
+	    
+	    #qUDT_HMIStatus := #sUDT_HMIStatus;                                            // Copy status to output
+	    
+	END_REGION
+	
+	REGION 9 – Statistics   
+	    
+	    // System started
+	    #sR_TRIG_SystemStarted(CLK := #iqUDT_Equipment.Report.Running);                 // The system has started
+	    
+	    IF #iqUDT_Equipment.Report.Running OR #iqUDT_SystemControlCommand.ResetData     // System running statistics handling
+	    THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_SystemControlCommand.ResetData,
+	                        ix_Activate := #iqUDT_Equipment.Report.Running,
+	                        ix_RTrigActivate := #sR_TRIG_SystemStarted.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.Run);
+	    END_IF;
+	    
+	    // System error
+	    #sR_TRIG_SystemError(CLK := #iqUDT_Equipment.Report.Error);                     // System error occured
+	    
+	    IF #iqUDT_Equipment.Report.Error OR #iqUDT_SystemControlCommand.ResetData       // Error statistics
+	    THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_SystemControlCommand.ResetData,
+	                        ix_Activate := #iqUDT_Equipment.Report.Error,
+	                        ix_RTrigActivate := #sR_TRIG_SystemError.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.Error);
+	    END_IF;
+	    
+	    // Energy save
+	    #sR_TRIG_EnergySave(CLK := #iqUDT_Equipment.Report.EnergySave);                 // Energy save
+	    
+	    IF #iqUDT_Equipment.Report.EnergySave OR #iqUDT_SystemControlCommand.ResetData  // Energy save 
+	    THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_SystemControlCommand.ResetData,
+	                        ix_Activate := #iqUDT_Equipment.Report.EnergySave,
+	                        ix_RTrigActivate := #sR_TRIG_EnergySave.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.EnergySave);
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 11 – Reset the equipment states
+	    
+	    #iqUDT_Equipment.Report.EnergySave := FALSE;           // Reset equipment report - energy save
+	    #iqUDT_Equipment.Report.Error := FALSE;                // Reset equipment report - error
+	    #iqUDT_Equipment.Report.Manual := FALSE;               // Reset equipment report - manual mode
+	    #iqUDT_Equipment.Report.ManualRun := FALSE;            // Reset equipment report - run in manual mode
+	    #iqUDT_Equipment.Report.AutoON := FALSE;               // Reset equipment report - automatic mode on
+	    #iqUDT_Equipment.Report.Dieback := FALSE;              // Reset equipment report - dieback
+	    #iqUDT_Equipment.Report.Halted := FALSE;               // Reset equipment report - halted
+	    #iqUDT_Equipment.Report.SafetyStop := FALSE;           // Reset equipment report - safety stop
+	    #iqUDT_Equipment.Report.Running := FALSE;              // Reset equipment report - started
+	    #iqUDT_Equipment.Report.Stopped := FALSE;              // Reset equipment report - stopped
+	    #iqUDT_Equipment.Report.Warning := FALSE;              // Reset equipment report - warning
+	    #iqUDT_Equipment.Request.RestartRequired := FALSE;     // Reset equipment report - restart required
+	    
+	END_REGION
+	
+	REGION 12 – Reset the HMI commands
+	    
+	    #iqUDT_SystemControlCommand.Start := FALSE;             // Reset the HMI start command bit 
+	    #iqUDT_SystemControlCommand.Stop := FALSE;              // Reset the HMI stop command bit 
+	    #iqUDT_SystemControlCommand.ResetData := FALSE;         // Reset the HMI statistic reset bit
+	    #iqUDT_SystemControlCommand.Reset := FALSE;             // Reset the HMI faults reset bit
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

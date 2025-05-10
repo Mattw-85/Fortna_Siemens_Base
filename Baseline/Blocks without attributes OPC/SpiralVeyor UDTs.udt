@@ -1,0 +1,48 @@
+﻿TYPE "UDT_EventStatistic"
+TITLE = UDT_EventStatistic
+VERSION : 0.1
+//User-defined structure of event statistic data.
+   STRUCT
+      NumberOfTimes : DInt;   // Number of times the event occurred since last reset
+      LastEventSeconds : DInt;   // Number of seconds of the current or last event
+      TotalEventSeconds : DInt;   // Total number of seconds the event occurred since last reset
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_OilPumpStatistics"
+VERSION : 0.1
+   STRUCT
+      Error { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Oil Pump fault
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_OilPumpStatus"
+VERSION : 0.1
+   STRUCT
+      Error : Bool;   // Oil Pump fault
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_SpiralVeyorStatus"
+VERSION : 0.1
+   STRUCT
+      MissingSlat : Bool;   // Missing slat detected in SpiralVeyor lane
+      BrokenChain : Bool;   // Broken chain detected in SpiralVeyor lane
+      ChainOverlength : Bool;   // Warning chain overlength detected in SpiralVeyor lane
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_SpiralVeyorStatistics"
+VERSION : 0.1
+   STRUCT
+      MissingSlat { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Statistics of missing slat event
+      BrokenChain { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Statistics of broken chain event
+      ChainOverlength { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Statistics of chain overlength event
+   END_STRUCT;
+
+END_TYPE
+

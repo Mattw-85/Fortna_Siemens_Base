@@ -1,0 +1,1022 @@
+﻿FUNCTION_BLOCK "FB_FlowSplitter"
+TITLE = Flow Splitter
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : CLeite
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 211
+// END_ATTRIBUTES
+   VAR_INPUT 
+      iUDT_FlowSplitterConfiguration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_FlowSplitterConfiguration";   //  Flow splitter configuration structure
+      iui_ExternalSpeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //  External speed [mm/s]
+      ix_AirPressureOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Air pressure circuit healthy
+      ix_SafetyOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE when safety is ok
+      ix_24vOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE when 24VDC is healthy
+      ix_400vOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE when 400VAC is healthy
+      ix_Connected { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE when the Isolator is electrically closed
+      ix_HardwareOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   TRUE when  hardware is Ok
+      ix_DebrisSensor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Signal from debris sensor
+      ix_PECEos { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  End of section photo eye
+      ix_PECUpstream { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Upstream end of section photo eye
+      ix_PECDivertChute { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  PEC of the divert chute
+      ix_FlowSplitterEncoderError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  True if there is an error with the flow splitter encoder
+      ix_ExternalRequestHold { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  External request hold
+      ix_HMICommunicationError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  HMI Communication Error
+      ix_ResetEnergySave { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Reset save energy mode timer
+   END_VAR
+
+   VAR_OUTPUT 
+      qUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_FlowSplitterStatus";   //  HMI status structure
+      qUDT_Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_CommonStatus";   //  Common status structure
+      qx_Zone1Divert { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Activation of the divert in zone divert side
+      qx_Zone2Divert { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Activation of the divert in zone straight side
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_EquipmentControl : "UDT_EquipmentControl";   //  Equipment control structure
+      iqUDT_FlowSplitterCommand : "UDT_FlowSplitterCommand";   //  Flow splitter command structure
+      iqUDT_FlowSplitterInterface : "UDT_ConveyorInterface";   //  Interface structure
+      iqUDT_HandShakeUp : "UDT_ConveyorHandshake";   //  Handshake upstream structure
+      iqUDT_HandShakeStraight : "UDT_ConveyorHandshake";   //  Handshake downstream straight structure
+      iqUDT_HandShakeDivert : "UDT_ConveyorHandshake";   //  Handshake downstream divert structure
+      iqUDT_Statistics : "UDT_FlowSplitterStatistics";   //  Statistics structure
+   END_VAR
+
+   VAR 
+      sUDT_CommonStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   //  Common status structure
+      sUDT_CommonStatusOld { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   //  Auxiliary status structure
+      sUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_FlowSplitterStatus";   //  HMI status structure
+      sFB_DebrisTimer { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   //  Filtering debris photo eye signal
+      sFB_CascadeModeTimer { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   //  Timer to cascade start
+      PEC_TimerOnOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   //  Timer to filter EOS PEC signal
+      PEC_ChuteTimerOnOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   //  Timer to filter chute PEC signal
+      PEC_UpstreamTimerOnOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   //  Timer to filter upstream PEC signal
+      sFB_DivertsActivationTimer { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   //  Timer to delay divert activation
+      sR_TRIG_ManualMode {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge trigger manual mode
+      sF_TRIG_ManualMode {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   //  Falling edge trigger manual mode
+      sR_TRIG_PECJam {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge trigger PEC jam
+      sR_TRIG_PECDivertChuteJam {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge trigger PEC divert chute jam
+      sR_TRIG_RunManual {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge run conveyor in manual mode
+      sF_TRIG_RunManual {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   //  Falling edge run conveyor in manual mode
+      sR_TRIG_Jog {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge trigger manual jog
+      sF_TRIG_Jog {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   //  Falling edge trigger manual mode jog
+      sR_TRIG_FlowSplitterUpTime {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge trigger flow splitter up time
+      sR_TRIG_FlowSplitterDownTime {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge trigger flow splitter down
+      sR_TRIG_AirPressureError {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge trigger air pressure error
+      sR_TRIG_DebrisDetected {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge debris detected
+      sR_TRIG_EnconderError {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge enconder error
+      sR_TRIG_Mode1 {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge Mode 1 active
+      sR_TRIG_Mode2 {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge Mode 2 active
+      sR_TRIG_Mode3 {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge Mode 3 active
+      sR_TRIG_Mode4 {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge Mode 4 active
+      sR_TRIG_Mode5 {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge Mode 5 active
+      sR_TRIG_EnergySave {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //  Rising edge trigger save energy mode active
+   END_VAR
+   VAR RETAIN
+      si_AuxJamDisplacement { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //  Auxiliary jam displacement
+      si_AuxJamDivertChuteDisplacement { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //  Divert chute displcement
+      si_Mode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //  Mode
+      si_SwitchDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //  Switch delay time
+      si_Mode4AuxTimer { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //  Auxiliary variable to count time
+      si_Mode4DivertTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //  Auxiliary variable divert time
+   END_VAR
+   VAR 
+      si_AuxEnergySave { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //   Auxinalary energy save
+      sx_DebrisSignalFiltered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Debris detected
+      sx_Ready { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Flow splitter ready to operate in Automatic mode
+   END_VAR
+   VAR RETAIN
+      sx_ManualModeActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Manual mode active
+      sx_StartReceived { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Save start trigger from the system
+      sx_AutomaticActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Automatic active
+   END_VAR
+   VAR 
+      sx_PEC_EoSFiltered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  End of section photo eye filtered
+      sx_PEC_ChuteFiltered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Divert chute eye filtered
+      sx_PEC_UpstreamFiltered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Upstream PEC filtered signal
+   END_VAR
+   VAR RETAIN
+      sx_PreStartManual { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Pre conditions to run conveyor in manual mode
+      sx_Switch1To3 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Auxiliary bit when switch from mode 1 to 3
+      sx_Switch3To1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Auxiliary bit when switch from mode 3 to 1
+      sx_Zone1_Divert { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Static variable to active divert zone 1
+      sx_Zone2_Divert { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Static variable to active divert zone 2
+      sx_EnableDiverts { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  When is true the diverts activation is enable
+   END_VAR
+   VAR 
+      sx_EnergySaveActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   Active energy save mode
+   END_VAR
+
+   VAR_TEMP 
+      tx_AuxBaseTimeDivert1 : Bool;   //  Temp variable to activate diverts zone 1
+      tx_AuxBaseTimeDivert2 : Bool;   //  Temp variable to activate diverts zone 2
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	//2019      | 1.0       | C.Leite       | first release TIA 15.1
+	24/07/2019  | 2.0       | L.Klar        | 2.0 MHS library release TIA 15.1
+	28/08/2019  | 2.1       | S.Deulkar     | modified fault logic, mode logic, reset logic
+	                                        | And deleted sub region
+	03/10/2019  | 2.2       | S.Deulkar     | Added comments       
+	03/10/2019  | 2.3       | S.Deulkar     | Updated UDT interface
+	10/10/2019  | 2.4       | S. Deulkar    | Modified coulor status logic
+	10/10/2019  | 2.5       | S. Deulkar    | Reverse logic is removed
+	04/11/2019  | 2.6       | L.Klar        | 1 second pulse and frost scan changed from memory bit to DB variable
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	20/12/2019  | 3.1       | S. Deulkar    | Added configuration error in make ready status
+	11/01/2021  | 3.2       | L.Klar        | Input safety ok added to stop conveyor condition
+	12/01/2021  | 3.3       | K. Pokorski   | Reset HMI commands of manual mode when conveyor no ready. Manual mode active to interface.
+	12/01/2021  | 3.4       | S. Nikodem    | Added energy save mode
+	04/02/2021  | 3.5       | K. Pokorski   | Status update fix
+	17/02/2021  | 3.6       | K. Pokorski   | Internal error PEC handling
+	02/03/2021  | 3.7       | K. Pokorski   | Halted status only if automatic on
+	15/03/2021  | 3.8       | K. Pokorski   | Energy save corrected
+	16/03/2021  | 3.9       | K. Pokorski   | On fly change mode corrected
+	19/03/2021  | 3.10      | K.Pokorski    | Energy save pec eos changed
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 - Initial
+	    
+	    // First PLC cycle
+	    IF "DB_Memory".FirstScan
+	    THEN
+	        #sx_AutomaticActive := FALSE;                            // Automatic active
+	        #iqUDT_HandShakeUp.RTR := False;                        // Reset RTR signal 
+	        #iqUDT_HandShakeUp.CascadeStartUp := FALSE;             // Reset cascade start signal
+	        #iqUDT_FlowSplitterInterface.RunFwd := FALSE;           // Order to run forward to VFD
+	        #iqUDT_FlowSplitterInterface.RunRvs := FALSE;           // Order to run reverse to VFD
+	        
+	    END_IF;
+	    
+	    // Mode selection
+	    #si_Mode := #iqUDT_FlowSplitterCommand.Mode;                                   // Select mode from HMI inputs
+	    
+	    IF (#si_Mode < 1) OR (#si_Mode > 5) OR #ix_HMICommunicationError THEN           // If there is no mode delected from HMI or HMI communication error is active 
+	        #si_Mode := #iUDT_FlowSplitterConfiguration.DefaultMode;                   // Select default mode from configuration
+	    END_IF;
+	    
+	    // Triggers
+	    #sR_TRIG_ManualMode(CLK := #iqUDT_FlowSplitterCommand.ManualMode                // Rising edge trigger manual mode
+	                        OR #iqUDT_EquipmentControl.Command.ManualMode);
+	    
+	    #sF_TRIG_ManualMode(CLK := #iqUDT_FlowSplitterCommand.ManualMode                // Falling edge trigger manual mode
+	                        OR #iqUDT_EquipmentControl.Command.ManualMode);
+	    
+	    #sR_TRIG_Jog(CLK := #iqUDT_FlowSplitterCommand.ManualJog);                      // Rising edge trigger manual mode jog
+	    
+	    #sF_TRIG_Jog(CLK := #iqUDT_FlowSplitterCommand.ManualJog);                      // Falling edge trigger manual mode jog
+	    
+	    #sR_TRIG_RunManual(CLK := #iqUDT_FlowSplitterCommand.ManualStartStop);          // Rising edge trigger to start in manual mode
+	    
+	    #sF_TRIG_RunManual(CLK := #iqUDT_FlowSplitterCommand.ManualStartStop);          // Falling edge trigger run in manual mode
+	    
+	    #sR_TRIG_FlowSplitterUpTime(CLK := #sx_AutomaticActive AND #sx_Ready);           // Rising edge conveyor up
+	    
+	    #sR_TRIG_PECJam(CLK := #sUDT_HMIStatus.Specific.PEC_EoSJam);                           // Rising edge PE Jam
+	    
+	    #sR_TRIG_PECDivertChuteJam(CLK := #sUDT_HMIStatus.Specific.PEC_DivertChuteJam);        // Rising edge PE Jam
+	    
+	    #sR_TRIG_FlowSplitterDownTime(CLK := #sx_AutomaticActive AND NOT #sx_Ready);     // Rising edge conveyor conveyor down
+	    
+	    #sR_TRIG_AirPressureError(CLK := NOT #ix_AirPressureOk);                         // Rising edge air pressure error
+	    
+	    #sR_TRIG_DebrisDetected(CLK := #ix_DebrisSensor);                                // Rising edge debris detection
+	    
+	    #sR_TRIG_EnconderError(CLK := #ix_FlowSplitterEncoderError);                    // Rising edge encoder error
+	    
+	    #sR_TRIG_Mode1(CLK := (#si_Mode = 1));                                          // Rising edge Mode 1
+	    
+	    #sR_TRIG_Mode2(CLK := (#si_Mode = 2));                                          // Rising edge Mode 2
+	    
+	    #sR_TRIG_Mode3(CLK := (#si_Mode = 3));                                          // Rising edge Mode 3
+	    
+	    #sR_TRIG_Mode4(CLK := (#si_Mode = 4));                                          // Rising edge Mode 4
+	    
+	    #sR_TRIG_Mode5(CLK := (#si_Mode = 5));                                          // Rising edge Mode 5
+	    
+	    #sR_TRIG_EnergySave(CLK := #sUDT_CommonStatus.EnergySave);                     // Rising edge trigger Energy save mode.
+	    
+	    // Timers
+	    
+	    #PEC_TimerOnOffDelay(iudi_OnDelayTime := #iUDT_FlowSplitterConfiguration.PEC_EoSTimeOnDelay,                       // Off delay time to filter PEC signal
+	                         iudi_OffDelayTime := #iUDT_FlowSplitterConfiguration.PEC_EoSTimeOffDelay,                     // On delay time to filter PEC signal
+	                         ix_SignalToDelay := #ix_PECEos,                                                               // PEC input signal
+	                         ix_Enable := #iUDT_FlowSplitterConfiguration.PEC_Present,                                     // PEC present bit is true if the flow splitter is equiped with PEC 
+	                         qx_DelayedSignal => #sx_PEC_EoSFiltered);                                                      // PEC signal filtered
+	    
+	    #PEC_ChuteTimerOnOffDelay(iudi_OnDelayTime := #iUDT_FlowSplitterConfiguration.PEC_FilterChuteTimeOnDelay,          // Off delay time to filter chute PEC signal
+	                              iudi_OffDelayTime := #iUDT_FlowSplitterConfiguration.PEC_FilterChuteTimeOffDelay,        // On delay time to filter chute PEC signal
+	                              ix_SignalToDelay := #ix_PECDivertChute,                                                  // PEC chute signal
+	                              ix_Enable := TRUE,                                                                        // Enable function
+	                              qx_DelayedSignal => #sx_PEC_ChuteFiltered);                                               // PEC chute siganl filtered
+	    
+	    #PEC_UpstreamTimerOnOffDelay(iudi_OnDelayTime := #iUDT_FlowSplitterConfiguration.PEC_FilterUpstreamTimeOnDelay,    // On delay time to filter upstream PEC
+	                                 iudi_OffDelayTime := #iUDT_FlowSplitterConfiguration.PEC_FilterUpstreamTimeOffDelay,  // Off delay time to filter upstream PEC
+	                                 ix_SignalToDelay := #ix_PECUpstream,                                                  // Signal to filter upstream PEC
+	                                 ix_Enable := TRUE,                                                                     // Function enable
+	                                 qx_DelayedSignal => #sx_PEC_UpstreamFiltered);                                         // Upstream PEC signal filtered
+	    
+	    #sFB_DivertsActivationTimer(iudi_OnDelayTime := 0,
+	                                iudi_OffDelayTime := #iUDT_FlowSplitterConfiguration.DivertsTimeActivation,                // Off delay to pop-up diverts
+	                                ix_SignalToDelay := NOT #sx_PEC_UpstreamFiltered,                                           // Upstream signal filtered,
+	                                ix_Enable := TRUE,
+	                                qx_DelayedSignal => #sx_EnableDiverts);                                                     // Enabling diverts pop-up
+	    
+	END_REGION
+	
+	REGION 2 - Reset faults
+	    
+	    // Send reset request TO interface UDT
+	    #iqUDT_FlowSplitterInterface.InternalErrorReset := #iqUDT_EquipmentControl.Command.Reset;
+	    #iqUDT_FlowSplitterInterface.ResetStatistics := #iqUDT_EquipmentControl.Command.ResetData;
+	    
+	    // Reset errors
+	    // Reset PEC Jam if PEC is clear and reset command is received.
+	    IF #iqUDT_EquipmentControl.Command.Reset THEN                      // Reset bit from control block
+	        
+	        IF #ix_PECEos = TRUE THEN
+	            #sUDT_HMIStatus.Specific.PEC_EoSJam := FALSE;                     // PEC jam reset
+	        END_IF;
+	        
+	        IF #ix_DebrisSensor = TRUE THEN
+	            #sUDT_HMIStatus.Specific.Debris := FALSE;                         // Debris fault reset
+	        END_IF;
+	        
+	        IF #ix_PECDivertChute = TRUE THEN
+	            #sUDT_HMIStatus.Specific.PEC_DivertChuteJam := FALSE;             // Divert chute jam reset
+	        END_IF;
+	        
+	        IF #ix_AirPressureOk = TRUE THEN
+	            #sUDT_HMIStatus.Specific.AirPressure := FALSE;                    // Air pressure error reset
+	        END_IF;
+	        
+	        IF #ix_FlowSplitterEncoderError = FALSE THEN
+	            #sUDT_HMIStatus.Specific.EncoderError := FALSE;                   // Encoder error reset
+	        END_IF;
+	        
+	    END_IF;
+	    
+	    // Error
+	    #sUDT_CommonStatus.Error := NOT #ix_SafetyOk                               // safety error status
+	    OR #sUDT_HMIStatus.Specific.EncoderError                                   // Enconder error status
+	    OR #sUDT_HMIStatus.Specific.PEC_EoSJam                                     // PEC blockage error status
+	    OR #sUDT_HMIStatus.Specific.PEC_DivertChuteJam                             // PEC divert chute blockage error status
+	    OR #sUDT_HMIStatus.Specific.Debris                                         // Debris detected error status
+	    OR #sUDT_HMIStatus.Specific.DivertsActivationError                         // Diverts position error status
+	    OR #iqUDT_FlowSplitterInterface.InternalErrorVFD                           // Internal VFD error status
+	    OR NOT #ix_Connected                                                        // Isolator switch error status
+	    OR #iqUDT_FlowSplitterInterface.InternalErrorPEC;                          // External PEC fault
+	    // Warning
+	    #sUDT_CommonStatus.Warning := #sUDT_HMIStatus.Specific.AirPressure;       // Air pressure status;                         
+	    
+	    // Ready
+	    #sx_Ready := NOT #sUDT_CommonStatus.Error                                  // Ready bit is set true when common error status its false
+	    AND #ix_24vOk                                                               // 24V is okay 
+	    AND #ix_400vOk                                                              // 400V is okay
+	    AND NOT #iqUDT_FlowSplitterInterface.ConfigurationError;                   // not configuration error
+	    
+	END_REGION
+	
+	REGION 3 - Stop conveyor
+	    
+	    // Conditions to stop conveyor
+	    IF ((#sF_TRIG_RunManual.Q OR #sF_TRIG_Jog.Q) AND #sx_ManualModeActive)                        // If in manula mode and Rising or falling edge for jog occur
+	        OR (NOT #iqUDT_EquipmentControl.Command.AutomaticOn AND NOT #sx_ManualModeActive)      // or Not automatic ON and Not in manual mode
+	        OR (NOT #sx_Ready AND NOT #sx_ManualModeActive)                                         // Or not ready and not in automatic mode
+	        OR (#sR_TRIG_ManualMode.Q OR #sF_TRIG_ManualMode.Q)                                       // or Rising edge or falling edge of manual mode active command occur
+	        OR NOT #ix_SafetyOk                                                                     // or safety not ok    
+	        
+	    THEN
+	        //  Order to stop VFD
+	        #iqUDT_FlowSplitterInterface.RunFwd := FALSE;                  // Reset order to VFD run in forward direction
+	        #iqUDT_FlowSplitterInterface.RunRvs := FALSE;                  // Reset order to VFD run in reverse direction
+	        #iqUDT_HandShakeUp.RTR := FALSE;                               // Reset the bit ready to receive
+	        #iqUDT_HandShakeUp.CascadeStartUp := FALSE;                    // Reset cascade start up bit
+	        
+	        #sx_AutomaticActive := FALSE;                                   // Automatic mode is disable
+	        #sx_StartReceived := FALSE;                                     // Clear start receive bit 
+	        
+	        #sx_Zone1_Divert := FALSE;                                      // Reset diverts from zone 1
+	        #sx_Zone2_Divert := FALSE;                                      // Reset diverts from zone 2
+	        
+	        #sx_Switch1To3 := FALSE;                                        // Reset switch from mode 1 to mode 3 auxiliary bit
+	        #sx_Switch3To1 := FALSE;                                        // Reset switch from mode 3 to mode 1 auxiliary bit
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 4 - Start   
+	    // Save Start bit request
+	    IF NOT #sx_ManualModeActive                                         // If Manual mode iis not active
+	        AND #sx_Ready                                                   // and Flow splitter is ready
+	        AND #iqUDT_EquipmentControl.Command.Start                      // Start command from control block received
+	        AND #iqUDT_EquipmentControl.Command.AutomaticOn                // Automatic on signal from control block is active
+	    THEN                                                                // then
+	        #sx_StartReceived := TRUE;                                      // Set start received bit
+	    END_IF;
+	    
+	    // Cascade mode
+	    
+	    CASE #si_Mode OF
+	        1:  // Statement section case 1 (Flow splitter in straight direction)
+	            IF #sx_StartReceived                                                 // If Start received memory bit is active
+	                AND (#iqUDT_HandShakeStraight.CascadeStartUp                    // And Cascade start bit from downstream straight conveyor handshake is active
+	                OR #iUDT_FlowSplitterConfiguration.FirstConveyorToStart)        // Or flow splitter conveyor is the first conveyor to start
+	            THEN                                                                 // then
+	                #sx_AutomaticActive := TRUE;                                     // Automatic active is set true
+	                #sx_StartReceived := FALSE;                                      // and reset start received memory bit
+	            END_IF;
+	            ;
+	        3:  // Statement section case 3 (Flow splitter in divert direction)
+	            IF #sx_StartReceived                                                 // If Start received memory bit is active
+	                AND (#iqUDT_HandShakeDivert.CascadeStartUp                      // And Cascade start bit from downstream divert conveyor handshake is avtive
+	                OR #iUDT_FlowSplitterConfiguration.FirstConveyorToStart)        // Or flow splitter conveyor is the first conveyor to start
+	            THEN                                                                 // Then
+	                #sx_AutomaticActive := TRUE;                                     //  Automatic active is set true
+	                #sx_StartReceived := FALSE;                                      //and reset start received memory bit
+	            END_IF;
+	            ;
+	        ELSE  // Statement section ELSE
+	            IF #sx_StartReceived                                                 // If Start received memory bit is activ
+	                AND (#iqUDT_HandShakeStraight.CascadeStartUp                    // And Cascade start bit from downstream straight conveyor handshake is active
+	                AND #iqUDT_HandShakeDivert.CascadeStartUp                       // And Cascade start bit from downstream divert conveyor handshake is active
+	                OR #iUDT_FlowSplitterConfiguration.FirstConveyorToStart)        // Or flow splitter conveyor is the first conveyor to start
+	            THEN                                                                 // Then
+	                #sx_AutomaticActive := TRUE;                                     // Automatic active is set true
+	                #sx_StartReceived := FALSE;                                      // and reset start received memory bit
+	            END_IF;
+	            ;
+	    END_CASE;
+	    
+	    //Timer to cascade mode
+	    
+	    #sFB_CascadeModeTimer(iudi_OnDelayTime := #iUDT_FlowSplitterConfiguration.CascadeTimeOnDelay,      // Cascade mode timer
+	                          ix_SignalToDelay := #sx_AutomaticActive,                                      // Signal to activate the timer
+	                          ix_Enable := #sx_Ready,                                                       // Bit ready to enable cascade mode
+	                          qx_DelayedSignal => #iqUDT_HandShakeUp.CascadeStartUp);                      // Cascade mode signal to upstream
+	    
+	END_REGION
+	
+	REGION 5 - Manual mode
+	    
+	    // Manual mode activation 
+	    #sx_ManualModeActive := #iqUDT_FlowSplitterCommand.ManualMode                                  // Manual mode is active if the bits that activate manual mode is active from hmi or from control block  
+	    OR #iqUDT_EquipmentControl.Command.ManualMode;
+	    
+	    //Send manual mode active to PEC/VFD blocks to supress errors
+	    #iqUDT_FlowSplitterInterface.ManualModeActive := #sx_ManualModeActive;
+	    
+	    //When the system is not any more in manual mode or when fatal error occurs the HMI commands should be reset
+	    
+	    IF NOT #ix_SafetyOk
+	        OR NOT #ix_24vOk                                                        // 24V error status
+	        OR NOT #ix_400vOk                                                       // 400V error status
+	        OR NOT #ix_HardwareOk                                                   // Profinet error status
+	        OR #iqUDT_FlowSplitterInterface.ConfigurationError                          // No configuration err
+	        OR #iqUDT_FlowSplitterInterface.InternalErrorVFD
+	        OR #iqUDT_FlowSplitterInterface.Disconnected
+	        OR NOT #sx_ManualModeActive
+	    THEN
+	        #iqUDT_FlowSplitterCommand.ManualStartStop := FALSE;
+	        #iqUDT_FlowSplitterCommand.ManualFullSpeed := FALSE;
+	        #iqUDT_FlowSplitterCommand.ManualJog := FALSE;
+	    END_IF;
+	    
+	    // Manual mode force disable
+	    IF #iqUDT_EquipmentControl.Command.DisableManualMode THEN
+	        #iqUDT_FlowSplitterCommand.ManualMode := False;
+	        #iqUDT_FlowSplitterCommand.ManualFullSpeed := False;
+	        #iqUDT_FlowSplitterCommand.ManualJog := False;
+	        #iqUDT_FlowSplitterCommand.ManualStartStop := False;
+	    END_IF;
+	    
+	    // Start/Stop in manual mode
+	    IF #sx_ManualModeActive THEN                                            // If Manual mode is active then check prestart status for manual mode
+	        #sx_PreStartManual := #ix_SafetyOk                                  // If Safety is Okay
+	        AND #ix_Connected                                                   // And Isolator switch is connected
+	        AND #ix_HardwareOk                                                  // And Profinet connection is okay 
+	        AND NOT #iqUDT_FlowSplitterInterface.InternalErrorVFD;             // Add no error on VFD // Then conveyor is allowed to run in manual mode.
+	        
+	        IF (#sx_PreStartManual                                                              // If Pre start conditions to run in manual mode is okay
+	            AND (#sR_TRIG_RunManual.Q AND NOT #iqUDT_FlowSplitterCommand.ManualJog)         // and rising edge to run in manual mode is detected and it is not running in jogging mode
+	            OR (#sR_TRIG_Jog.Q AND NOT #iqUDT_FlowSplitterCommand.ManualStartStop))         // Or rising edge to start jogging is detected and it is not running in manual mode
+	        THEN
+	            #iqUDT_EquipmentControl.Request.SignalingRequest := TRUE;                      //then Request signaling to control block before conveyor run in manual mode
+	        END_IF;
+	        
+	        // To Run conveyor forward in manual mode 
+	        #iqUDT_FlowSplitterInterface.RunFwd := #sx_PreStartManual          // Prestart conditions to run in manual mode is active
+	        AND NOT #iqUDT_EquipmentControl.Request.SignalingRequest           // And Signaling request done
+	        AND (#iqUDT_FlowSplitterCommand.ManualStartStop                    // And Command to manual Run or manual jog is active
+	        OR #iqUDT_FlowSplitterCommand.ManualJog);                          // Then run motor in forward direction
+	        
+	        // Flow splitter belt should not run in reverse direction
+	        #iqUDT_FlowSplitterInterface.RunRvs := FALSE;
+	        
+	        // Pop up diverts in manual mode
+	        #sx_Zone1_Divert := #sx_PreStartManual AND #iqUDT_FlowSplitterCommand.Zone1DivertActivation;          // Output bit to active zone 1 diverts
+	        #sx_Zone2_Divert := #sx_PreStartManual AND #iqUDT_FlowSplitterCommand.Zone2DivertActivation;          // Output bit to active zone 2 diverts
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 6 - Automatic mode active
+	    
+	    IF NOT #sx_ManualModeActive THEN                                        // Manual mode is not active
+	        IF #sx_AutomaticActive AND #sx_Ready THEN                           // Automatic mode active AND ready
+	            
+	            #iqUDT_HandShakeUp.RTR := #iqUDT_FlowSplitterInterface.VFDatSpeed;            // Ready to receive handshake to upstream if VFD is at speed
+	            
+	            CASE #si_Mode OF                                                // Operation mode case selection
+	                    
+	                1:  // 100% straight
+	                    
+	                    // Order to VFD to run
+	                    #iqUDT_FlowSplitterInterface.RunFwd := NOT #ix_ExternalRequestHold             // Halt request is not active
+	                    AND #iqUDT_HandShakeStraight.RTR                                               // Ready to receive active
+	                    AND NOT #sx_EnergySaveActive;                                                   // Energy save is not active
+	                    
+	                    #sx_Zone2_Divert := FALSE;                                                      // Output bit to active zone 2 diverts
+	                    #sx_Zone1_Divert := #sx_Switch3To1;                                             // Output bit to active zone 1 diverts
+	                    
+	                    IF #sx_Switch3To1 THEN                                                          // Memory bit switch from mode 3 to mode 1
+	                        IF "DB_Memory".OS_1sec THEN                                                 // Memory bit 1 second trigger
+	                            #si_SwitchDelay += 1;                                                   // Memory integer to count time to delay switch
+	                        END_IF;
+	                        
+	                        IF #si_SwitchDelay >= #iUDT_FlowSplitterConfiguration.DivertSwitchDelay THEN    // Comparation between memory integer switch delay and configuration divert switch delay
+	                            #si_SwitchDelay := 0;                                                   // Reset memory integer switch delay counter
+	                            #sx_Switch3To1 := FALSE;                                                // Reset switch from mode 3 to mode 1 memory bit
+	                        END_IF;
+	                    END_IF;
+	                    
+	                    #sx_Switch1To3 := TRUE;                                                         // Set memory bit switch from mode 1 to mode 3
+	                    ;
+	                    
+	                2:  // 50% straight - 50% divert 
+	                    
+	                    #iqUDT_FlowSplitterInterface.RunFwd := ((#iqUDT_HandShakeStraight.RTR         // Ready to receive downstream straight
+	                    AND #iqUDT_HandShakeDivert.RTR)                                                // Ready to receive downstream divert chute
+	                    OR (#iUDT_FlowSplitterConfiguration.OnFlyChangeOfMode                          // On fly change mode
+	                    AND (#iqUDT_HandShakeStraight.RTR                                              // Ready to receive downstream straight
+	                    OR (#iqUDT_HandShakeDivert.RTR AND NOT #sUDT_HMIStatus.Specific.AirPressure))))// Ready to receive downstream divert chute
+	                    //   AND (NOT #i_UDT_FlowSplitterConfiguration.OnFlyChangeOfMode
+	                    //   AND NOT #s_UDT_HMIStatus.Specific.AirPressure)
+	                    AND NOT #ix_ExternalRequestHold                                                // External requesto to halt
+	                    AND NOT #sx_EnergySaveActive;                                                   // Energy save is not active
+	                    
+	                    #sx_Zone1_Divert := (#iqUDT_HandShakeDivert.RTR                                // Ready to receive downstream divert chute
+	                    OR NOT #iqUDT_HandShakeStraight.RTR                                            // Ready to receive downstream straight
+	                    OR NOT #iUDT_FlowSplitterConfiguration.OnFlyChangeOfMode)                      // On fly change mode
+	                    AND NOT #sUDT_HMIStatus.Specific.AirPressure;                                         // And Air pressure is OK 
+	                    
+	                    #sx_Zone2_Divert := (#iUDT_FlowSplitterConfiguration.OnFlyChangeOfMode         // On fly change mode
+	                    AND NOT #iqUDT_HandShakeStraight.RTR                                           // Ready to receive downstream straight
+	                    AND #iqUDT_HandShakeDivert.RTR)
+	                    AND NOT #sUDT_HMIStatus.Specific.AirPressure;                                         // Ready to receive downstream divert chute
+	                    
+	                    #sx_Switch1To3 := FALSE;                                                        // Switch from mode 1 to mode 3
+	                    #sx_Switch3To1 := FALSE;                                                        // Switch from mode 3 to mode 1
+	                    ;
+	                    
+	                3:  // 0% straight - 100% divert 
+	                    
+	                    // Order to VFD to run
+	                    #iqUDT_FlowSplitterInterface.RunFwd := NOT #ix_ExternalRequestHold             // Halt request is not active
+	                    AND #iqUDT_HandShakeDivert.RTR                                                 // Handshake Ready to receive from downstream divert conveyor
+	                    AND NOT #sUDT_HMIStatus.Specific.AirPressure
+	                    AND NOT #sx_EnergySaveActive;                                                   // Energy save is not active
+	                    
+	                    #sx_Zone1_Divert := NOT #sUDT_HMIStatus.Specific.AirPressure;                         // Output bit to active zone 1 diverts
+	                    #sx_Zone2_Divert := NOT #sx_Switch1To3 AND NOT #sUDT_HMIStatus.Specific.AirPressure;  // Output bit to active zone 2 diverts
+	                    
+	                    IF #sx_Switch1To3 THEN                                                          // Memory bit switch mode 1 to mode 3
+	                        IF "DB_Memory".OS_1sec THEN                                                 // Memory bit 1 second trigger
+	                            #si_SwitchDelay += 1;                                                   // Memory integer to count time to delay switch
+	                        END_IF;
+	                        
+	                        IF #si_SwitchDelay > #iUDT_FlowSplitterConfiguration.DivertSwitchDelay     // Comparation between memory integer switch delay and configuration divert switch delay
+	                        THEN
+	                            #si_SwitchDelay := 0;                                                   // Reset memory integer switch delay counter
+	                            #sx_Switch1To3 := FALSE;                                                // Reset switch from mode 1 to mode 3 memory bit
+	                        END_IF;
+	                    END_IF;
+	                    #sx_Switch3To1 := TRUE;                                                         // Set memory bit switch from mode 3 to mode 1
+	                    ;
+	                    
+	                4:  // Based on time 
+	                    
+	                    #iqUDT_FlowSplitterInterface.RunFwd := ((#iqUDT_HandShakeStraight.RTR         // Ready to receive downstream straight
+	                    AND #iqUDT_HandShakeDivert.RTR)                                                // Ready to receive downstream divert chute
+	                    OR (#iUDT_FlowSplitterConfiguration.OnFlyChangeOfMode                          // On fly change mode
+	                    AND (#iqUDT_HandShakeStraight.RTR                                              // Ready to receive downstream straight
+	                    OR (#iqUDT_HandShakeDivert.RTR AND NOT #sUDT_HMIStatus.Specific.AirPressure))))      // Ready to receive downstream divert chute
+	                    //  AND (NOT #i_UDT_FlowSplitterConfiguration.OnFlyChangeOfMode
+	                    //  AND NOT #s_UDT_HMIStatus.Specific.AirPressure)
+	                    AND NOT #ix_ExternalRequestHold                                                 // External requesto to halt 
+	                    AND NOT #sx_EnergySaveActive;                                                   // Energy save is not active
+	                    
+	                    #sx_Switch1To3 := FALSE;                                                        // Reset switch from mode 1 to mode 3 memory bit
+	                    #sx_Switch3To1 := FALSE;                                                        // Reset switch from mode 3 to mode 1 memory bit
+	                    
+	                    #si_Mode4DivertTime := REAL_TO_INT(#iqUDT_FlowSplitterCommand.PercentageSplit * #iUDT_FlowSplitterConfiguration.TimeBasedSplit) / 100;      // Memory integer to calculate time base
+	                    
+	                    IF "DB_Memory".OS_1sec AND #iqUDT_HandShakeDivert.RTR THEN                     // Memory bit 1 second trigger and Handshake bit ready to receive to upstream
+	                        #si_Mode4AuxTimer += 1;                                                     // Increment counter to time base mode
+	                    END_IF;
+	                    
+	                    #tx_AuxBaseTimeDivert1 := FALSE;                                                // Auxiliary base time divert zone 1
+	                    #tx_AuxBaseTimeDivert2 := FALSE;                                                // Auxiliary base time divert zone 2
+	                    
+	                    IF (#si_Mode4AuxTimer <= #si_Mode4DivertTime)                                   // If the counter time is lower than calculated time from configuration
+	                    THEN
+	                        #tx_AuxBaseTimeDivert1 := TRUE;                                             // Auxiliary base time divert zone 1
+	                        #tx_AuxBaseTimeDivert2 := TRUE;                                             // Auxiliary base time divert zone 2
+	                    END_IF;
+	                    
+	                    IF (#si_Mode4AuxTimer > #si_Mode4DivertTime)                                    // If the counter time is bigger than calculated time from configuration 
+	                        AND (#si_Mode4AuxTimer < #iUDT_FlowSplitterConfiguration.TimeBasedSplit)   // If the counter time is lower than time based split configured
+	                    THEN
+	                        #tx_AuxBaseTimeDivert1 := FALSE;                                            // Auxiliary base time divert zone 1
+	                        #tx_AuxBaseTimeDivert2 := FALSE;                                            // Auxiliary base time divert zone 2
+	                    END_IF;
+	                    
+	                    IF (#si_Mode4AuxTimer >= #iUDT_FlowSplitterConfiguration.TimeBasedSplit) THEN  // If the counter time is bigger or equal than time based split configured
+	                        #si_Mode4AuxTimer := 0;                                                     // Reset counter time
+	                    END_IF;
+	                    
+	                    IF (#iqUDT_HandShakeDivert.RTR                                                 // Ready to receive downstream divert chute
+	                        AND ((#tx_AuxBaseTimeDivert1 AND #tx_AuxBaseTimeDivert2)
+	                        OR (NOT #iqUDT_HandShakeStraight.RTR AND #iUDT_FlowSplitterConfiguration.OnFlyChangeOfMode)))
+	                        AND NOT #sUDT_HMIStatus.Specific.AirPressure
+	                    THEN
+	                        #sx_Zone1_Divert := TRUE;
+	                        #sx_Zone2_Divert := TRUE;
+	                        
+	                    ELSIF #iqUDT_HandShakeStraight.RTR
+	                        AND ((NOT #tx_AuxBaseTimeDivert1 AND NOT #tx_AuxBaseTimeDivert2)
+	                        OR (NOT #iqUDT_HandShakeDivert.RTR AND #iUDT_FlowSplitterConfiguration.OnFlyChangeOfMode))
+	                        OR #sUDT_HMIStatus.Specific.AirPressure
+	                    THEN
+	                        #sx_Zone1_Divert := FALSE;
+	                        #sx_Zone2_Divert := FALSE;
+	                    END_IF
+	                    ;
+	                    
+	                5:  // Semi automatic mode
+	                    
+	                    #iqUDT_FlowSplitterInterface.RunFwd := NOT #ix_ExternalRequestHold     // External requesto to halt
+	                    AND NOT #sx_EnergySaveActive                                            // Energy save is not active
+	                    AND ((#iqUDT_HandShakeStraight.RTR                                     // Ready to receive downstream straight
+	                    AND NOT #iqUDT_FlowSplitterCommand.Zone1DivertActivation               // Command divert activation zone 1
+	                    AND NOT #iqUDT_FlowSplitterCommand.Zone2DivertActivation)              // Command divert activation zone 2
+	                    OR (#iqUDT_HandShakeDivert.RTR                                         // Ready to receive downstream divert chute
+	                    AND #iqUDT_FlowSplitterCommand.Zone1DivertActivation                   // Command divert activation zone 1
+	                    AND #iqUDT_FlowSplitterCommand.Zone2DivertActivation                   // Command divert activation zone 2
+	                    AND NOT #sUDT_HMIStatus.Specific.AirPressure)                                 // Air preassure is OK
+	                    OR (#iqUDT_HandShakeStraight.RTR                                       // Ready to receive downstream straight
+	                    AND #iqUDT_HandShakeDivert.RTR                                         // Ready to receive downstream divert chute
+	                    AND #iqUDT_FlowSplitterCommand.Zone1DivertActivation                   // Command divert activation zone 1
+	                    AND NOT #iqUDT_FlowSplitterCommand.Zone2DivertActivation               // Command divert activation zone 2
+	                    AND NOT #sUDT_HMIStatus.Specific.AirPressure));
+	                    
+	                    #sx_Zone1_Divert := #iqUDT_FlowSplitterCommand.Zone1DivertActivation   // Command divert activation zone 1
+	                    AND NOT #sUDT_HMIStatus.Specific.AirPressure;
+	                    
+	                    #sx_Zone2_Divert := #iqUDT_FlowSplitterCommand.Zone2DivertActivation   // Command divert activation zone 2
+	                    AND NOT #sUDT_HMIStatus.Specific.AirPressure;
+	                    
+	                    #sx_Switch1To3 := FALSE;                                                // Reset switch from mode 1 to mode 3 memory bit
+	                    #sx_Switch3To1 := FALSE;                                                // Reset switch from mode 3 to mode 1 memory bit
+	                    ;
+	            END_CASE;
+	            
+	            // Flow splitter end OF section PEC jam
+	            
+	            IF #iUDT_FlowSplitterConfiguration.PEC_Present THEN
+	                
+	                IF NOT #sx_PEC_EoSFiltered AND #ix_HardwareOk THEN                                      // Photo eye blocked
+	                    #si_AuxJamDisplacement += #iqUDT_FlowSplitterInterface.Displacement;               // Increases displacement values in auxiliary variable
+	                ELSE
+	                    #si_AuxJamDisplacement := 0;                                                        // Reset jam auxiliary counter variable
+	                END_IF;
+	                
+	                IF #si_AuxJamDisplacement > #iUDT_FlowSplitterConfiguration.JamDisplacementLimit THEN  // Compare jam auxiliary counter with displacement jam configured
+	                    #sUDT_HMIStatus.Specific.PEC_EoSJam := TRUE;                                              // PEC jam status set true
+	                END_IF;
+	                
+	            END_IF;
+	            
+	            // Chute PEC jam
+	            
+	            IF #iUDT_FlowSplitterConfiguration.PEC_ChutePesent THEN
+	                IF NOT #sx_PEC_ChuteFiltered AND #ix_HardwareOk THEN
+	                    #si_AuxJamDivertChuteDisplacement += #iqUDT_FlowSplitterInterface.Displacement;
+	                ELSE
+	                    #si_AuxJamDivertChuteDisplacement := 0;
+	                END_IF;
+	                
+	                IF #si_AuxJamDivertChuteDisplacement > #iUDT_FlowSplitterConfiguration.DivertChuteJamDisplacLimit THEN     // Compare jam auxiliary counter with displacement jam configured
+	                    #sUDT_HMIStatus.Specific.PEC_DivertChuteJam := TRUE;                                                          // PEC jam status set true
+	                END_IF;
+	                
+	            END_IF;
+	            
+	            // Debris detection
+	            #sFB_DebrisTimer(iudi_OnDelayTime := #iUDT_FlowSplitterConfiguration.DebrisTimeFilter,      // Debris filtering time configuration
+	                             iudi_OffDelayTime := 0,
+	                             ix_SignalToDelay := NOT #ix_DebrisSensor AND #ix_HardwareOk,                // Debris sensor signal input
+	                             ix_Enable := TRUE,                                                          // Enable timer
+	                             qx_DelayedSignal => #sx_DebrisSignalFiltered);                              // Debris sensor signal filtered
+	            
+	            #sUDT_HMIStatus.Specific.Debris := #sx_DebrisSignalFiltered;                                              // Debris error status
+	            
+	            // Energy save
+	            #iqUDT_HandShakeStraight.ResetEnergySave := NOT #ix_PECUpstream;
+	            #iqUDT_HandShakeDivert.ResetEnergySave := NOT #ix_PECUpstream AND #sx_EnableDiverts;
+	            
+	        ELSE
+	            // If conveyor is not in manual mode and not ready
+	            #iqUDT_FlowSplitterInterface.RunFwd := FALSE;                                                      // Order to VFD stop conveyor
+	            #iqUDT_HandShakeUp.RTR := FALSE;                                                                   // Set ready to receive false
+	            
+	        END_IF;
+	    END_IF;
+	    
+	    // Air pressure error
+	    IF NOT #ix_AirPressureOk AND #ix_HardwareOk THEN
+	        #sUDT_HMIStatus.Specific.AirPressure := TRUE;
+	    END_IF;
+	    
+	    // Encoder error
+	    IF #ix_FlowSplitterEncoderError AND #ix_HardwareOk THEN
+	        #sUDT_HMIStatus.Specific.EncoderError := TRUE;
+	    END_IF;
+	    
+	    // Diverts output control
+	    #qx_Zone1Divert := #sx_Zone1_Divert AND (#sx_EnableDiverts OR NOT #iUDT_FlowSplitterConfiguration.DivertsTimeSave);
+	    #qx_Zone2Divert := #sx_Zone2_Divert AND (#sx_EnableDiverts OR NOT #iUDT_FlowSplitterConfiguration.DivertsTimeSave);
+	    
+	    // Divert activation error is true when the diverts from zone 2 is active and the diverts from zone 1 is not pop up.
+	    #sUDT_HMIStatus.Specific.DivertsActivationError := NOT #qx_Zone1Divert AND #qx_Zone2Divert;
+	    
+	    // Update mode status for HMI, IF not in manual mode update selected mode otherwise write 0   
+	    IF NOT #sx_ManualModeActive THEN
+	        #sUDT_HMIStatus.Specific.Mode := #si_Mode;
+	    ELSE
+	        #sUDT_HMIStatus.Specific.Mode := 0;
+	    END_IF;
+	    
+	    //Update actual direction status of divert for HMI
+	    #sUDT_HMIStatus.Specific.Zone1Divert := #qx_Zone1Divert;
+	    #sUDT_HMIStatus.Specific.Zone2Divert := #qx_Zone2Divert;
+	    
+	END_REGION
+	
+	REGION 7 - Energy save
+	    
+	    IF #iUDT_FlowSplitterConfiguration.Energy THEN
+	        
+	        // Set Energy save active.
+	        IF #si_AuxEnergySave >= #iUDT_FlowSplitterConfiguration.EnergySaveLength
+	        THEN
+	            #sx_EnergySaveActive := TRUE;
+	        END_IF;
+	        
+	        IF ((NOT #sx_PEC_EoSFiltered AND #iUDT_FlowSplitterConfiguration.PEC_Present)
+	            OR #iqUDT_HandShakeUp.RTS
+	            OR #iqUDT_HandShakeUp.ResetEnergySave
+	            OR #ix_ResetEnergySave
+	            OR #sx_ManualModeActive)
+	        THEN
+	            #si_AuxEnergySave := 0;
+	            #sx_EnergySaveActive := FALSE;
+	        ELSE
+	            #si_AuxEnergySave += #iqUDT_FlowSplitterInterface.Displacement;
+	        END_IF;
+	        
+	    ELSE
+	        
+	        #si_AuxEnergySave := 0;
+	        #sx_EnergySaveActive := FALSE;
+	        
+	    END_IF;
+	    
+	    
+	    
+	END_REGION
+	
+	REGION 8 - Speed control   
+	    (*In manual mode, conveyor runs with low speed by default. If "ManualFullSpeed" is set true, conveyor runs with high speed in manual mode.
+	      In automatic mode, conveyor runs with full speed if external is zero. If external speed is bigger than zero, conveyor will run with that speed. *)
+	    
+	    IF #sx_ManualModeActive                                                                                 // Manual mode active
+	    THEN
+	        IF #iqUDT_FlowSplitterCommand.ManualFullSpeed                                                      // Full speed in manual mode
+	            AND #iqUDT_FlowSplitterCommand.ManualStartStop                                                 // Start/stop conveyor in manual mode
+	        THEN
+	            #iqUDT_FlowSplitterInterface.SpeedSetpoint := #iUDT_FlowSplitterConfiguration.SpeedSetpointNominal;   // Move nominal setpoint to the VDF
+	        ELSE
+	            #iqUDT_FlowSplitterInterface.SpeedSetpoint := #iUDT_FlowSplitterConfiguration.SpeedSetpointLow;       // Move low speed setpoint to VFD
+	        END_IF;
+	        
+	    ELSE
+	        
+	        IF #iui_ExternalSpeed > 0                                                                           // If external speed bigger than zero
+	        THEN
+	            #iqUDT_FlowSplitterInterface.SpeedSetpoint := #iui_ExternalSpeed;                                      // Move external speed to VFD
+	        ELSE
+	            #iqUDT_FlowSplitterInterface.SpeedSetpoint := #iUDT_FlowSplitterConfiguration.SpeedSetpointNominal;   // Move nominal setpoint to VFD
+	        END_IF;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 9 - Statistics
+	    
+	    // Flow splitter up Time
+	    IF #sx_AutomaticActive AND #sx_Ready OR #iqUDT_EquipmentControl.Command.ResetData THEN                 // Automatic active
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,                             // Reset statistics input
+	                        ix_Activate := #sx_AutomaticActive                                                  // Activate statistics functions input
+	                        AND #sx_Ready,
+	                        ix_RTrigActivate := #sR_TRIG_FlowSplitterUpTime.Q,                                   // Statistics active trigger
+	                        iqUDT_Statistics := #iqUDT_Statistics.FlowSplitterUpTime);                        // Statistics values output
+	    END_IF;
+	    
+	    // 9.2 - Flow splitter down Time
+	    IF #sx_AutomaticActive AND NOT #sx_Ready OR #iqUDT_EquipmentControl.Command.ResetData THEN             // Automatic active
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,                             // Reset statistics input
+	                        ix_Activate := #sx_AutomaticActive                                                  // Activate statistics functions input
+	                        AND NOT #sx_Ready,
+	                        ix_RTrigActivate := #sR_TRIG_FlowSplitterDownTime.Q,                                 // Statistics active trigger
+	                        iqUDT_Statistics := #iqUDT_Statistics.FlowSplitterDownTime);                      // Statistics values output
+	    END_IF;
+	    
+	    // Chute PEC Blockage error
+	    IF #sUDT_HMIStatus.Specific.PEC_DivertChuteJam OR #iqUDT_EquipmentControl.Command.ResetData THEN             // PEC jam error active
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,                             // Reset statistics input
+	                        ix_Activate := #sUDT_HMIStatus.Specific.PEC_DivertChuteJam,                               // Activate statistics functions input
+	                        ix_RTrigActivate := #sR_TRIG_PECDivertChuteJam.Q,                                    // Statistics active trigger
+	                        iqUDT_Statistics := #iqUDT_Statistics.PECChuteDivertJam);                         // Statistics values output
+	    END_IF;
+	    
+	    // PEC Blockage error
+	    IF (#sUDT_HMIStatus.Specific.PEC_EoSJam OR #iqUDT_EquipmentControl.Command.ResetData) THEN                   // PEC jam error active
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,                             // Reset statistics input
+	                        ix_Activate := #sUDT_HMIStatus.Specific.PEC_EoSJam,                                       // Activate statistics functions input
+	                        ix_RTrigActivate := #sR_TRIG_PECJam.Q,                                               // Statistics active trigger
+	                        iqUDT_Statistics := #iqUDT_Statistics.PEC_EoSJam);                                // Statistics values output
+	    END_IF;
+	    
+	    // Air pressure error
+	    IF #sUDT_HMIStatus.Specific.AirPressure OR #iqUDT_EquipmentControl.Command.ResetData THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #sUDT_HMIStatus.Specific.AirPressure,
+	                        ix_RTrigActivate := #sR_TRIG_AirPressureError.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.AirPressure);
+	    END_IF;
+	    
+	    // Debris detecting
+	    IF #sUDT_HMIStatus.Specific.Debris OR #iqUDT_EquipmentControl.Command.ResetData THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #sUDT_HMIStatus.Specific.Debris,
+	                        ix_RTrigActivate := #sR_TRIG_DebrisDetected.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.DebrisSensor);
+	    END_IF;
+	    
+	    // Encoder error
+	    IF #ix_FlowSplitterEncoderError OR #iqUDT_EquipmentControl.Command.ResetData THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #ix_FlowSplitterEncoderError,
+	                        ix_RTrigActivate := #sR_TRIG_EnconderError.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.EncoderError);
+	    END_IF;
+	    
+	    // Mode 1
+	    IF (#si_Mode = 1 AND NOT #sx_ManualModeActive) OR #iqUDT_EquipmentControl.Command.ResetData THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := (#si_Mode = 1)
+	                        AND #iqUDT_FlowSplitterInterface.VFDRunning,
+	                        ix_RTrigActivate := #sR_TRIG_Mode1.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.Mode100Divert);
+	    END_IF;
+	    
+	    // Mode 2
+	    IF (#si_Mode = 2 AND NOT #sx_ManualModeActive) OR #iqUDT_EquipmentControl.Command.ResetData THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := (#si_Mode = 2)
+	                        AND #iqUDT_FlowSplitterInterface.VFDRunning,
+	                        ix_RTrigActivate := #sR_TRIG_Mode2.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics."Mode50/50");
+	    END_IF;
+	    
+	    // Mode 3
+	    IF (#si_Mode = 3 AND NOT #sx_ManualModeActive) OR #iqUDT_EquipmentControl.Command.ResetData THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := (#si_Mode = 3)
+	                        AND #iqUDT_FlowSplitterInterface.VFDRunning,
+	                        ix_RTrigActivate := #sR_TRIG_Mode3.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.Mode100Divert);
+	    END_IF;
+	    
+	    // Mode 4
+	    IF (#si_Mode = 4 AND NOT #sx_ManualModeActive) OR #iqUDT_EquipmentControl.Command.ResetData THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := (#si_Mode = 4)
+	                        AND #iqUDT_FlowSplitterInterface.VFDRunning,
+	                        ix_RTrigActivate := #sR_TRIG_Mode4.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.ModeTimeBasedSplit);
+	    END_IF;
+	    
+	    // Mode 5
+	    IF (#si_Mode = 5 AND NOT #sx_ManualModeActive) OR #iqUDT_EquipmentControl.Command.ResetData THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := (#si_Mode = 5)
+	                        AND #iqUDT_FlowSplitterInterface.VFDRunning,
+	                        ix_RTrigActivate := #sR_TRIG_Mode5.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.ModeSemiAutomatic);
+	    END_IF;
+	    
+	    // Enegry save mode
+	    IF #sx_EnergySaveActive
+	        OR #iqUDT_EquipmentControl.Command.ResetData
+	    THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #sUDT_CommonStatus.EnergySave,
+	                        ix_RTrigActivate := #sR_TRIG_EnergySave.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.EnergySave);
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 10 - Status
+	    
+	    #sUDT_CommonStatus.Stopped := #sx_Ready AND NOT #sx_AutomaticActive;               // stopped
+	    
+	    #sUDT_CommonStatus.Running := #iqUDT_FlowSplitterInterface.RunFwd
+	    OR #iqUDT_FlowSplitterInterface.RunRvs;                                            // Running
+	    
+	    #sUDT_CommonStatus.Halted := #ix_ExternalRequestHold AND #sx_Ready AND #sx_AutomaticActive;   // Halted
+	    
+	    #sUDT_CommonStatus.Dieback := #sx_Ready AND #sx_AutomaticActive
+	    AND NOT #sUDT_CommonStatus.EnergySave
+	    AND NOT #sUDT_CommonStatus.Running;                                                // Die back
+	    
+	    #sUDT_CommonStatus.Manual := #sx_ManualModeActive;                                 // Manual
+	    
+	    #sUDT_CommonStatus.ManualRun := #sx_ManualModeActive AND #sUDT_CommonStatus.Running;     // Manual Running
+	    
+	    #sUDT_CommonStatus.EnergySave := #sx_EnergySaveActive;                             // Energy save active
+	    
+	    #sUDT_CommonStatus.SafetyStop := NOT #ix_SafetyOk;                                 // Safety not ok
+	    
+	    #sUDT_CommonStatus.Warning := #sUDT_HMIStatus.Specific.AirPressure;
+	    
+	    IF #sUDT_CommonStatusOld <> #sUDT_CommonStatus THEN                               // update on change
+	        
+	        // Set status to status number
+	        
+	        #sUDT_HMIStatus.Status := 0;                                                   // Initialise status number              
+	        
+	        IF #sUDT_CommonStatus.EnergySave                                               // Energy save
+	        THEN
+	            
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".EnergySave;
+	            
+	        END_IF;
+	        
+	        IF #sUDT_CommonStatus.Running                                                  // Running
+	        THEN
+	            
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Running;
+	            
+	        END_IF;
+	        
+	        IF #sUDT_CommonStatus.Stopped                                                  // Stopped
+	        THEN
+	            
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Stopped;
+	            
+	        END_IF;
+	        
+	        IF #sUDT_CommonStatus.Dieback                                                  // Dieback
+	        THEN
+	            
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Dieback;
+	            
+	        END_IF;
+	        
+	        IF #sUDT_CommonStatus.Halted                                                   // Halted
+	        THEN
+	            
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Halted;
+	            
+	        END_IF;
+	        
+	        IF #sUDT_CommonStatus.Manual                                                    // Manual
+	        THEN
+	            
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Manual;
+	            
+	        END_IF;
+	        
+	        IF #sUDT_CommonStatus.ManualRun                                                // Running in manual mode
+	        THEN
+	            
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".ManualRun;
+	            
+	        END_IF;
+	        
+	        IF #sUDT_HMIStatus.Specific.DivertsActivationError                             // Divert activation error
+	        THEN
+	            
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".OperationalError;
+	            
+	        END_IF;
+	        
+	        IF #sUDT_HMIStatus.Specific.EncoderError                                       // Encoder error
+	        THEN
+	            
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".EncoderError;
+	            
+	        END_IF;
+	        
+	        IF #sUDT_HMIStatus.Specific.PEC_EoSJam                                          // IF EOS PEC jam or
+	            OR #sUDT_HMIStatus.Specific.PEC_DivertChuteJam                              // Divert chute PEC jam
+	            OR #iqUDT_FlowSplitterInterface.InternalErrorPEC                           // Error pec outside of flowsplitter block
+	        THEN
+	            
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".PECJam;
+	            
+	        END_IF;
+	        
+	        IF #iqUDT_FlowSplitterInterface.InternalErrorVFD                               // VFD error
+	        THEN
+	            
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".VFDError;
+	            
+	        END_IF;
+	        
+	        IF #sUDT_HMIStatus.Specific.Debris                                             // Debris sensor error
+	        THEN
+	            
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Error;
+	            
+	        END_IF;
+	        
+	        IF #sUDT_HMIStatus.Specific.AirPressure                                         // Air pressure error
+	        THEN
+	            
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Error;
+	            
+	        END_IF;
+	        
+	        IF #sUDT_CommonStatus.SafetyStop                                                // Safety stop 
+	        THEN
+	            
+	            #sUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".SafetyStop;
+	            
+	        END_IF;
+	        
+	        
+	        #sUDT_CommonStatusOld := #sUDT_CommonStatus;                                  // Copy status to memory
+	        #qUDT_Status := #sUDT_CommonStatus;                                           // Copy status to output
+	        
+	    END_IF;
+	    
+	    #qUDT_HMIStatus := #sUDT_HMIStatus;                                           // Copy HMI status to output
+	    
+	END_REGION
+	
+	REGION 11 - Report to control block
+	    "FC_EquipmentReport"(iUDT_Status := #sUDT_CommonStatus,                              // Function to manage report between control block and conveyor block
+	                         iqUDT_Control := #iqUDT_EquipmentControl);
+	END_REGION
+	
+	REGION 12 - Internal errors and warnings reset
+	    IF #iqUDT_EquipmentControl.Command.Reset
+	    THEN
+	        #iqUDT_FlowSplitterInterface.InternalErrorPEC := FALSE;
+	        #iqUDT_FlowSplitterInterface.InternalWarningTracking := FALSE;
+	        #iqUDT_FlowSplitterInterface.InternalErrorTracking := FALSE;
+	        #iqUDT_FlowSplitterInterface.InternalWarningVFD := FALSE;
+	        #iqUDT_FlowSplitterInterface.InternalErrorVFD := FALSE;
+	        #iqUDT_FlowSplitterInterface.ConfigurationError := FALSE;
+	        
+	    END_IF;
+	END_REGION
+	
+	
+END_FUNCTION_BLOCK
+

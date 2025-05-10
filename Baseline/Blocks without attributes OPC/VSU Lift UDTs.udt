@@ -1,0 +1,64 @@
+﻿TYPE "UDT_VSULiftConfiguration"
+TITLE = UDT_VSUConfig
+VERSION : 0.1
+//User-defined structure of VSU parameters.
+   STRUCT
+      PEC_GapBeginOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Photo eye gap begin check time on delay [ms]
+      PEC_GapBeginOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Photo eye  gap begin  check time off delay [ms]
+      PEC_GapEndOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Photo eye gap end check time on delay [ms]
+      PEC_GapEndOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Photo eye  gap end check time off delay [ms]
+      JogNoHornTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt := 1000;   // Time within jog buttons can be pressed without new startup indication
+      SwitchingTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UInt := 950;   // Time it takes to go from one position to the next [ms]
+      DefaultPosition { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int := 2;   // Default position number (2= up or 1= down) , If left 0 the block will go to 1
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_VSULiftStatistics"
+TITLE = UDT_VSUStatistics
+VERSION : 0.1
+//User-defined structure of FB_VerticalSwitch function block statistics.
+   STRUCT
+      UpTime { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_EventStatistic";   // VSU up time
+      DownTime { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_EventStatistic";   // VSU down time
+      ExitGapErr { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Error statistics for VSU
+      EntryGapErr { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Error statistics for VSU
+      BeltTear1Err { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Error statistics for VSU
+      BeltTear2Err { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Error statistics for VSU
+      MaintSupport1Err { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Error statistics for VSU
+      MaintSupport2Err { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Error statistics for VSU
+      UpperPositionErr { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Error statistics for VSU
+      LowerPositionErr { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Error statistics for VSU
+      SafetyDoorErr { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Error statistics for VSU
+      Direction_Error { ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Error statistics for VSU
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_VSULiftStatus"
+TITLE = UDT_VSUStatus
+VERSION : 0.1
+//User-defined structure of FB_VerticalSwitch function block status.
+   STRUCT
+      Status { ExternalWritable := 'False'} : Int;   // Status number
+      Specific { ExternalWritable := 'False'} : Struct   // Equipment specific warnings and errors
+         ReferencedErr { ExternalWritable := 'False'} : Bool;   // VFD is not referenced
+         ExitGapErr { ExternalWritable := 'False'} : Bool;   // Exit gap check was activated when moving
+         EntryGapErr { ExternalWritable := 'False'} : Bool;   // Entrance gap check was activated when moving
+         BeltTear1Err { ExternalWritable := 'False'} : Bool;   // Belt tear detected - Sensor 1
+         BeltTear2Err { ExternalWritable := 'False'} : Bool;   // Belt tear detected - Sensor 2
+         MaintSupport1Err { ExternalWritable := 'False'} : Bool;   // Maintenace support 1 extracted in automatic mode
+         MaintSupport2Err { ExternalWritable := 'False'} : Bool;   // Maintenace support 2 extracted in automatic mode
+         UpperPositionErr { ExternalWritable := 'False'} : Bool;   // Upper position overrun
+         LowerPositionErr { ExternalWritable := 'False'} : Bool;   // Lower position overrun
+         DirectionErr { ExternalWritable := 'False'} : Bool;   // Item in the wrong position
+         KeyswitchWrn { ExternalWritable := 'False'} : Bool;   // Keyswitch is in '0' position
+         SafetyDoorDownErr { ExternalWritable := 'False'} : Bool;   // Safety door down diagnostic fault
+         SafetyDoorUpErr { ExternalWritable := 'False'} : Bool;   // Safety door up diagnostic fault
+         LiftKeySwitchStop { ExternalWritable := 'False'} : Bool;   // Lift key switch turned to Stop
+         MaintenanceSwitchUp { ExternalWritable := 'False'} : Bool;
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+

@@ -1,0 +1,117 @@
+﻿FUNCTION_BLOCK "FB_SpeedControl"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 228
+// END_ATTRIBUTES
+   VAR_INPUT 
+      ir_FactorHighRange { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Factor when downstream speed is 500-800
+      ir_FactorMediumRange { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Factor when downstream speed is 200-500
+      ir_FactorLowRange { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Factor when downstream speed is 000-200
+      iudi_DelayOn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Delay time to go to downstream speed [ms]
+      iudi_DelayOff { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Delay time to go to nominal speed [ms]
+      ii_DownstreamSpeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Speed of the downstream conveyor [mm/s]
+      ii_NominalSpeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Nominal speed of the conveyor [mm/s]
+      ii_MinimalSpeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Reference speed to limit the belt to run on low frequency [mm/s]
+      ix_PEC { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when the end of section photoeye is not blocked
+   END_VAR
+
+   VAR_OUTPUT 
+      qi_Speed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Speed for the conveyor [mm/s]
+      qx_ReqDieback { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when request to put conveyor into dieback
+   END_VAR
+
+   VAR 
+      sFB_SpeedSwitchTimer { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // Function block to generate on/off signal delay.
+      sr_factor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Calculation factor
+      sx_SpeedSwitch { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Speed switch (TRUE = downstream speed, FALSE = Nominal speed)
+   END_VAR
+
+   VAR CONSTANT 
+      ci_SpeedHigh : Int := 500;   // Speed over this value is considered high
+      ci_SpeedLow : Int := 200;   // Speed over this value is considered low
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	05/12/2019  | 3.0       | M. Kurpiers   | first release MHSE TIA 15.1
+	15/01/2020  | 3.1       | F.Baten       | Renamed qx_ReqHalt to qx_ReqDieback 
+	10/03/2021  | 3.2       | S.Theocharis  | Add factors of following speed 
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 – First PLC cycle
+	    
+	    //Set nominal speed in the first scan of the PLC
+	    IF ("DB_Memory".FirstScan)
+	    THEN
+	        
+	        #qi_Speed := #ii_NominalSpeed;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 2 – Timer to speed switch
+	    
+	    // Delay of switching between speeds depending on the PEC signal 
+	    #sFB_SpeedSwitchTimer(iudi_OnDelayTime := #iudi_DelayOn,
+	                          iudi_OffDelayTime := #iudi_DelayOff,
+	                          ix_SignalToDelay := NOT #ix_PEC,
+	                          qx_DelayedSignal => #sx_SpeedSwitch);
+	    
+	END_REGION
+	
+	REGION 3 - Determine factor
+	    
+	    IF #ii_DownstreamSpeed >= #ci_SpeedHigh THEN
+	        
+	        #sr_factor := #ir_FactorHighRange;
+	        
+	    ELSIF #ci_SpeedLow < #ii_DownstreamSpeed AND #ii_DownstreamSpeed < #ci_SpeedHigh THEN
+	        
+	        #sr_factor := #ir_FactorMediumRange;
+	        
+	    ELSIF #ii_DownstreamSpeed <= #ci_SpeedLow THEN
+	        #sr_factor := #ir_FactorLowRange;
+	    END_IF;
+	    
+	    
+	END_REGION
+	
+	REGION 4 – Conveyor speed selection
+	    
+	    IF (#sx_SpeedSwitch)
+	    THEN
+	        
+	        // Set speed of downstream conveyor
+	        #qi_Speed := REAL_TO_INT(#sr_factor * INT_TO_REAL(#ii_DownstreamSpeed));
+	        
+	        IF #qi_Speed > #ii_NominalSpeed THEN
+	            #qi_Speed := #ii_NominalSpeed;
+	        END_IF;
+	        
+	    ELSE
+	        
+	        // Set nominal speed
+	        #qi_Speed := #ii_NominalSpeed;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 5 – Stop conveyor
+	    
+	    // Halt the conveyor when the downstream speed is lower than minimal speed
+	    #qx_ReqDieback := (#ii_DownstreamSpeed < #ii_MinimalSpeed);
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

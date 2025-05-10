@@ -1,0 +1,118 @@
+﻿FUNCTION "FC_UPSMsgId" : Void
+TITLE = FC_MSGID
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : UPS_SpecificCommunication
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 34
+// END_ATTRIBUTES
+//Function to create the UPS message ID.
+   VAR_INPUT 
+      is_ActualDateTime : String;   // Actual date and time
+      is_ModuleName : String;   // Module type
+      is_DeviceNumber : String;   // Device number
+   END_VAR
+
+   VAR_IN_OUT 
+      iqs_MSGID : String;   // MSGID character string
+      iqdi_UniqueMsgID : DInt;   // Unique message ID integer value
+   END_VAR
+
+   VAR_TEMP 
+      ts_Timestamp : String;   // Timestamp
+      ts_UniqueMsgID : String[11];   // Unique message ID character sting
+      ti_UniqueMsgIDLen : Int;   // Unique message ID length
+      ti_i : Int;   // Loop counter
+   END_VAR
+
+   VAR CONSTANT 
+      cc_Dash : Char := '-';   // Dash sign
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	24/05/2019  | 0.1       | L.Klar        | first release MHS TIA 15.1
+	24/07/2019  | 2.0       | L.Klar        | 2.0 MHS library release TIA 15.1
+	23/08/2019  | 2.1       | K.Pokorski    | Comments simplified
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 – Initialization
+	    
+	    #ts_Timestamp := '';
+	    #ti_UniqueMsgIDLen := 0;
+	    #ti_i := 0;
+	    
+	END_REGION
+	
+	REGION 2 – Timestamp preparation
+	    
+	    #ts_Timestamp := RIGHT(IN := #is_ActualDateTime, L := 12);
+	    
+	END_REGION
+	
+	REGION 3 – Unique message ID preparation
+	    
+	    // Unique message ID incrementation
+	    IF (#iqdi_UniqueMsgID < 2147483647)     // Unique message ID is lower than 2147483647                              
+	    THEN
+	        
+	        #iqdi_UniqueMsgID += 1;
+	        
+	    ELSE
+	        
+	        #iqdi_UniqueMsgID := 0;
+	        
+	    END_IF;
+	    
+	    // Unique message ID character string clearing
+	    #ts_UniqueMsgID := '';
+	    
+	    // Unique message ID integer conversion to a character string
+	    VAL_STRG(IN := #iqdi_UniqueMsgID,
+	             SIZE := 0,
+	             PREC := 0,
+	             FORMAT := 0,
+	             P := 1,
+	             OUT => #ts_UniqueMsgID);
+	    
+	    // Length of the unique message ID character string
+	    #ti_UniqueMsgIDLen := LEN(#ts_UniqueMsgID);
+	    
+	    // Unique message ID character string leading zeros addition
+	    IF (#ti_UniqueMsgIDLen < 11)        // Unique message ID length lower than 11
+	    THEN
+	        
+	        FOR #ti_i := 1 TO 11 - #ti_UniqueMsgIDLen DO
+	            
+	            #ts_UniqueMsgID := CONCAT(IN1 := '0',
+	                                      IN2 := #ts_UniqueMsgID);
+	            
+	        END_FOR;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 4 – MSGID preparation
+	    
+	    #iqs_MSGID := CONCAT(IN1 := #is_ModuleName,      // Module name 
+	                         IN2 := #cc_Dash,            // Dash sign - "-"
+	                         IN3 := #is_DeviceNumber,    // Device number
+	                         IN4 := #cc_Dash,            // Dash sign - "-"
+	                         IN5 := #ts_Timestamp,       // Timestamp 
+	                         IN6 := #cc_Dash,            // Dash sign - "-"
+	                         IN7 := #ts_UniqueMsgID);    // Unique message ID 
+	    
+	END_REGION
+END_FUNCTION
+

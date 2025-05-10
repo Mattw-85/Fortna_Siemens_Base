@@ -1,0 +1,206 @@
+﻿FUNCTION_BLOCK "FB_Chute1PEC"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 203
+// END_ATTRIBUTES
+   VAR_INPUT 
+      iUDT_ChuteConfiguration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_Chute1PECConfiguration";   // Chute Configuration structure
+      iUDT_UpstreamConveyorStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_CommonStatus";   // Upstream conveyor status
+      ix_PECFull { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when Chute Full photoeye is not blocked
+      ix_Disabled { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when chute is disabled
+      ix_HardwareOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when chute hardware is Ok
+      iudi_DelayHardwareOK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Time to delay for hardware ok signal
+   END_VAR
+
+   VAR_OUTPUT 
+      qx_Lamp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Output Chute Lamp full
+      qUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_Chute1PECStatus";   // HMI status structure
+      qUDT_Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_CommonStatus";   // Common status structure
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_EquipmentControl : "UDT_EquipmentControl";   // Equipment control structure
+      iqUDT_UpstreamConveyorHandshake : "UDT_ConveyorHandshake";   // Upstream handshake structure
+      iqUDT_Statistics : "UDT_Chute1PECStatistics";   // Statistics structure
+   END_VAR
+
+   VAR 
+      s_UDT_CommonStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   // Common status structure
+      s_UDT_CommonStatus_1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";
+      s_UDT_CommonStatus_2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";
+      s_UDT_CommonStatus_3 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";
+      s_UDT_CommonStatus_4 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";
+      s_UDT_CommonStatus_5 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";
+      s_UDT_CommonStatus_6 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";
+      s_UDT_CommonStatus_7 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";
+      s_UDT_CommonStatus_8 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";
+      s_UDT_CommonStatus_9 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";
+      s_UDT_CommonStatus_10 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";
+      s_UDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_Chute1PECStatus";   // HMI status structure
+      s_UDT_CommonStatusOld { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   // Auxiliary status structure
+      s_FB_HardwareOK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // Timer on/off delay for hardware ok signal
+      s_FB_ChuteFullDetectionDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // Timer on/off delay for chute full detection
+      s_R_TRIG_ChuteFull {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge trigger on chute full signal
+      s_R_TRIG_Disabled {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge trigger on chute disabled signal
+      s_F_TRIG_UpdateStatus {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   // Falling edge trigger on status change
+      sx_Full { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Full status
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                      
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	13/10/2021  | 0.1       | J. Krawczuk   | first release TIA 16.0
+	29/10/2021  | 0.1       | M. Piela      | Design change, comments corrections
+	14/01/2022  | 0.2       | G. Vlooswijk  | Fixed statistics reset
+	25/07/2022  | 0.3       | M. Kurpiers   | HMI Initilization added
+	30/07/2022  | 0.3       | G. Vlooswijk  | Removed running and energy save status for FedEx Scada
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	12/03/2024  | 4.1       | S. Nieswiec   | Updated variable names to current standard
+	 *)
+	
+	REGION 1 - Timers
+	    
+	    // Full detection timer
+	    #s_FB_ChuteFullDetectionDelay(iudi_OnDelayTime := #iUDT_ChuteConfiguration.FullDetectionTime,
+	                                  iudi_OffDelayTime := #iUDT_ChuteConfiguration.FullReleaseTime,
+	                                  ix_SignalToDelay := NOT #ix_PECFull,
+	                                  qx_DelayedSignal => #sx_Full);
+	    
+	    // Hardware ok timer 
+	    #s_FB_HardwareOK(iudi_OnDelayTime := #iudi_DelayHardwareOK,
+	                     ix_SignalToDelay := #ix_HardwareOk);
+	    
+	END_REGION
+	
+	REGION 2 - Stop upstream conveyor 
+	    
+	    // Stop upstream conveyor when chute is full or disabled
+	    #iqUDT_UpstreamConveyorHandshake.RTR := NOT #sx_Full AND NOT #ix_Disabled AND #s_FB_HardwareOK.qx_DelayedSignal;
+	    
+	END_REGION
+	
+	REGION 3 - Update output
+	    
+	    // Update the outputs
+	    #qx_Lamp := #sx_Full;
+	    
+	END_REGION
+	
+	REGION 4 - Status
+	    
+	    // HMI status initialization
+	    #s_UDT_HMIStatus.Status := 0;
+	    
+	    // Update chute full specific status
+	    #s_UDT_HMIStatus.Specific.ChuteFull := #sx_Full AND #s_FB_HardwareOK.qx_DelayedSignal;
+	    
+	    //Update chute disabled specific status
+	    #s_UDT_HMIStatus.Specific.ChuteDisabled := #ix_Disabled AND #s_FB_HardwareOK.qx_DelayedSignal;
+	    
+	    // Update common safety stop
+	    #s_UDT_CommonStatus.SafetyStop := #iUDT_UpstreamConveyorStatus.SafetyStop;
+	    
+	    // Update common automatic on 
+	    #s_UDT_CommonStatus.AutoON := #iUDT_UpstreamConveyorStatus.AutoON;
+	    
+	    // Update common stopped
+	    #s_UDT_CommonStatus.Stopped := #iUDT_UpstreamConveyorStatus.Stopped;
+	    
+	    // Update HMI status number for chute disabled
+	    IF #s_UDT_HMIStatus.Specific.ChuteDisabled AND NOT #s_UDT_CommonStatus.SafetyStop
+	    THEN
+	        #s_UDT_HMIStatus.Status := "DB_HMIStatusConfiguration".DisableByManagement;
+	        
+	    END_IF;
+	    
+	    // Update HMI status number for chute full
+	    IF #s_UDT_HMIStatus.Specific.ChuteFull AND NOT #s_UDT_CommonStatus.SafetyStop
+	    THEN
+	        #s_UDT_HMIStatus.Status := "DB_HMIStatusConfiguration".ChuteFull;
+	        
+	    END_IF;
+	    
+	    // Collecting F_TRIG on chute full or chute disabled status to update common status 
+	    #s_F_TRIG_UpdateStatus(CLK := #s_UDT_HMIStatus.Specific.ChuteFull OR #s_UDT_HMIStatus.Specific.ChuteDisabled);
+	    
+	    // HMI status number calculation
+	    IF #s_UDT_CommonStatusOld <> #s_UDT_CommonStatus OR #s_F_TRIG_UpdateStatus.Q
+	    THEN
+	        
+	        // Update auto on status number
+	        IF #s_UDT_CommonStatus.AutoON
+	        THEN
+	            #s_UDT_HMIStatus.Status := "DB_HMIStatusConfiguration".AutoON;
+	            
+	        END_IF;
+	        
+	        IF #s_UDT_CommonStatus.Stopped
+	        THEN
+	            #s_UDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Stopped;
+	            
+	        END_IF;
+	        
+	        IF #s_UDT_CommonStatus.SafetyStop
+	        THEN
+	            #s_UDT_HMIStatus.Status := "DB_HMIStatusConfiguration".SafetyStop;
+	            
+	        END_IF;
+	        
+	        // Copy common status structure to the old common status structure
+	        #s_UDT_CommonStatusOld := #s_UDT_CommonStatus;
+	        #qUDT_Status := #s_UDT_CommonStatus;
+	        
+	    END_IF;
+	    
+	    #qUDT_HMIStatus := #s_UDT_HMIStatus;
+	    
+	    
+	END_REGION
+	
+	REGION 5 - Statistics
+	    
+	    // Chute full R_TRIG for statistics purpose
+	    #s_R_TRIG_ChuteFull(CLK := #s_UDT_HMIStatus.Specific.ChuteFull);
+	    
+	    // Chute full statistics
+	    IF #s_UDT_HMIStatus.Specific.ChuteFull
+	        OR #iqUDT_EquipmentControl.Command.ResetData
+	    THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #s_UDT_HMIStatus.Specific.ChuteFull,
+	                        ix_RTrigActivate := #s_R_TRIG_ChuteFull.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.ChuteFull);
+	        
+	    END_IF;
+	    
+	    // Chute disabled R_TRIG for statistics purpose 
+	    #s_R_TRIG_Disabled(CLK := #s_UDT_HMIStatus.Specific.ChuteDisabled);
+	    
+	    // Chute disabled statistics
+	    IF #s_UDT_HMIStatus.Specific.ChuteDisabled
+	        OR #iqUDT_EquipmentControl.Command.ResetData
+	    THEN
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := #s_UDT_HMIStatus.Specific.ChuteDisabled,
+	                        ix_RTrigActivate := #s_R_TRIG_Disabled.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.ChuteDisabled);
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 6 - Equipment Report
+	    
+	    "FC_EquipmentReport"(iUDT_Status := #s_UDT_CommonStatus,
+	                         iqUDT_Control := #iqUDT_EquipmentControl);
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

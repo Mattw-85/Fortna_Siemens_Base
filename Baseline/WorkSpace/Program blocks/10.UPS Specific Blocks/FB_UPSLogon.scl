@@ -1,0 +1,394 @@
+﻿FUNCTION_BLOCK "FB_UPSLogon"
+TITLE = FB_Logon
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : UPS_SpecificCommunication
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 57
+// END_ATTRIBUTES
+//Function block to prepare and send UPS LOGON and FILTER messages.
+   VAR_INPUT 
+      iUDT_Connection { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_Connection";   // Connection parameters
+      iUDT_MsgHeader { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_UPSMessageHeader";   // UPS message header
+      ia_MsgType { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[0..34] of String;   // UPS message types
+      ix_ConEstablished { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TCPIP Connection established
+   END_VAR
+
+   VAR_OUTPUT 
+      qx_LogonOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // FILTER and LOGON messages sent
+   END_VAR
+
+   VAR 
+      sFB_TSEND {InstructionName := 'TSEND'; LibVersion := '4.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : TSEND;   // Siemens "TSEND" block - to send the data over TCPIP socket
+      sR_TRIG_ConEstablished {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Siemens "R_Trig" - to prepare the rising edge trigger on "ix_ConEstablished" signal
+      sR_TRIG_SendTrigFilter {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Siemens "R_Trig" - to prepare the Filter send trigger
+      sR_TRIG_SendTrigLogon {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Siemens "R_Trig" - to prepare the LOGON send trigger
+      sa_TSEND { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // TSEND block parameter structure
+         Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Word;
+         Req { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+         Busy { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+         Done { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+         Error { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      END_STRUCT;
+      sa_FilterMsg { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[0..699] of Char;   // FILTER message character array
+      sa_LogonMsg { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[0..34] of Char;   // LOGON message character array
+      ss_Logon { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;   // LOGON message character string
+      ss_Header { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;   // Message header character string
+      ss_Filter_1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;   // FILTER message part 1 character string
+      ss_Filter_2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;   // FILTER message part 2 character string
+      ss_Footer { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;   // FILTER message footer character string
+      sui_ArrayOffset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UInt;   // Offset for writing in the array
+      sui_FilterArrayElNr { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UInt;   // Number of written FILTER characters
+      sui_LogonArrayElNr { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UInt;   // Number of written LOGON characters
+      si_MaxNrOfMsgTypes { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Maximum number of message types
+      si_MaxFilterLen { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Maximum number of FILTER message characters
+      si_MaxLogonLen { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Maximum number of LOGON message characters
+      si_i { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Loop counter
+      sx_LogProc { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Logon procedure
+      sx_FilterSent { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // FILTER message sent
+      sx_LogonSent { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // LOGON message sent
+   END_VAR
+
+   VAR CONSTANT 
+      cc_DL : Char := ',';   // Comma sign
+      cs_Filter : String := 'FILTER';   // Message type
+      cs_Logon : String := 'LOGON';   // Message type
+      cs_Pipe : String := ',|,';   // FILTER message element - ,|,
+      cs_MT : String := 'MT,$'';   // FILTER message element - MT,'
+      cs_Q : String := '$',=';   // FILTER message element - ',=
+      cs_CRLF : String := '$R$L';   // Termination signs
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	24/05/2019  | 0.1       | L.Klar        | first release MHS TIA 15.1
+	24/07/2019  | 2.0       | L.Klar        | 2.0 MHS library release TIA 15.1
+	23/08/2019  | 2.1       | K.Pokorski    | Comments simplified
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	22/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 – Connection check   
+	    
+	    // TCIPI connection established rising edge
+	    #sR_TRIG_ConEstablished(CLK := #ix_ConEstablished);
+	    
+	    // Logon process start
+	    IF (#sR_TRIG_ConEstablished.Q)                             // Connection established rising edge
+	    THEN
+	        
+	        #sx_LogProc := TRUE;
+	        
+	    END_IF;
+	    
+	    // Message send confirmation bits reset in case of connection lost
+	    IF (NOT #ix_ConEstablished)                                 // Connection terminated 
+	    THEN
+	        
+	        #sx_FilterSent := FALSE;
+	        #sx_LogonSent := FALSE;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 2 – Assembly FILTER message
+	    
+	    IF (#sx_LogProc)                                            // Logon procedure
+	    THEN
+	        
+	        // Resetting all components of the "Filter" message
+	        REGION 2.1 – Initialization
+	            
+	            #si_i := 0;
+	            #sui_ArrayOffset := 0;
+	            #sui_FilterArrayElNr := 0;
+	            #ss_Header := '';
+	            #ss_Filter_1 := '';
+	            #ss_Filter_2 := '';
+	            #ss_Footer := '';
+	            
+	        END_REGION
+	        
+	        REGION 2.2 – Maximum number of the message types array elements
+	            
+	            #si_MaxNrOfMsgTypes := "FC_GetNrOfArrayEl"(iv_Array := #ia_MsgType);
+	            
+	        END_REGION
+	        
+	        REGION 2.3 – Maximum number of the FILTER message array elements
+	            
+	            #si_MaxFilterLen := "FC_GetNrOfArrayEl"(iv_Array := #sa_FilterMsg);
+	            
+	        END_REGION
+	        
+	        // Combining all components of the FILTER message header into one character string
+	        REGION 2.4 – Assembly FILTER message header
+	            
+	            #ss_Header := CONCAT(IN1 := #iUDT_MsgHeader.SCN,       // Sender IP address 
+	                                 IN2 := #cc_DL,                     // Comma sign - ","
+	                                 IN3 := #iUDT_MsgHeader.SCT,       // Sender Name   
+	                                 IN4 := #cc_DL,                     // Comma sign - ","
+	                                 IN5 := #cc_DL,                     // Comma sign - ","
+	                                 IN6 := #cc_DL,                     // Comma sign - ","
+	                                 IN7 := #cs_Filter,                 // Message type - "FILTER"
+	                                 IN8 := #cc_DL);                    // Comma sign - ","
+	            
+	        END_REGION
+	        
+	        
+	        REGION 2.5 – Assembly FILTER message 
+	            
+	            // Combining all components of the FILTER message into one character string
+	            FOR #si_i := 0 TO #si_MaxNrOfMsgTypes - 1 DO
+	                
+	                IF (#ia_MsgType[#si_i] <> '')       // Message type isn't empty
+	                THEN
+	                    
+	                    //  Message charater string conversion to a message array characters
+	                    IF (#si_i = 0)                                                          // Loop counter equal to 0
+	                    THEN
+	                        
+	                        #ss_Filter_1 := CONCAT(IN1 := #cs_MT,                               // FILTER message constant - "MT,'"
+	                                               IN2 := #ia_MsgType[#si_i],                   // Used message type
+	                                               IN3 := #cs_Q,                                // FILTER message constant - "',="
+	                                               IN4 := #cc_DL);                              // Comma sign - ","
+	                        
+	                        // Message header character string into the character array conversion
+	                        Strg_TO_Chars(Strg := #ss_Header,
+	                                      pChars := 0,
+	                                      Cnt => #sui_ArrayOffset,
+	                                      Chars := #sa_FilterMsg);
+	                        
+	                        // FILTER message part 1 character string into the character array conversion
+	                        Strg_TO_Chars(Strg := #ss_Filter_1,
+	                                      pChars := #sui_ArrayOffset,
+	                                      Cnt => #sui_FilterArrayElNr,
+	                                      Chars := #sa_FilterMsg);
+	                        
+	                        // Handled message types addition to a filter message 
+	                    ELSIF (#si_i > 0)                                                       // Loop counter is greater than 0
+	                    THEN
+	                        
+	                        #ss_Filter_2 := CONCAT(IN1 := #cs_MT,                               // FILTER message constant - "MT,'"
+	                                               IN2 := #ia_MsgType[#si_i],                   // Used message type
+	                                               IN3 := #cs_Q,                                // FILTER message constant - "',="
+	                                               IN4 := #cs_Pipe);                            // FILTER message constant - ",|,"
+	                        
+	                        // Array offset update
+	                        #sui_ArrayOffset += #sui_FilterArrayElNr;
+	                        
+	                        // FILTER message part 2 character string into the character array conversion
+	                        Strg_TO_Chars(Strg := #ss_Filter_2,
+	                                      pChars := #sui_ArrayOffset,
+	                                      Cnt => #sui_FilterArrayElNr,
+	                                      Chars := #sa_FilterMsg);
+	                        
+	                    END_IF;
+	                    
+	                    // The message type array element is empty    
+	                ELSE
+	                    
+	                    EXIT;
+	                    
+	                END_IF;
+	                
+	            END_FOR;
+	            
+	        END_REGION
+	        
+	        REGION 2.6 – Assembly FILTER message footer
+	            
+	            // FILTER footer creation
+	            #ss_Footer := #cs_CRLF;
+	            
+	            // Array offset update
+	            #sui_ArrayOffset += #sui_FilterArrayElNr;
+	            
+	            // FILTER footer character string into the character array conversion
+	            Strg_TO_Chars(Strg := #ss_Footer,
+	                          pChars := #sui_ArrayOffset,
+	                          Cnt => #sui_FilterArrayElNr,
+	                          Chars := #sa_FilterMsg);
+	            
+	        END_REGION
+	        
+	        REGION 2.7 – Clearing remaining characters in the message character array
+	            
+	            // Filling up not used FILTER character array elements with '$00' (ASCII - 16#00)
+	            FILL_BLK(IN := '$00',
+	                     COUNT := UINT_TO_ULINT(INT_TO_UINT(#si_MaxFilterLen) -
+	                                            #sui_FilterArrayElNr -
+	                                            #sui_ArrayOffset),
+	                     OUT => #sa_FilterMsg[#sui_ArrayOffset + #sui_FilterArrayElNr]);
+	            
+	        END_REGION
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 3 – Assembly LOGON message
+	    
+	    IF (#sx_LogProc)        // Logon procedure
+	    THEN
+	        
+	        REGION 3.1 – Initialization
+	            
+	            #ss_Logon := '';
+	            
+	        END_REGION
+	        
+	        REGION 3.2 – Maximum number of the LOGON message array elements
+	            
+	            #si_MaxLogonLen := "FC_GetNrOfArrayEl"(iv_Array := #sa_LogonMsg);
+	            
+	        END_REGION
+	        
+	        REGION 3.3 – Assembly LOGON message 
+	            
+	            #ss_Logon := CONCAT(IN1 := #iUDT_MsgHeader.SCN,        // Sender IP address      
+	                                IN2 := #cc_DL,                      // Comma sign - ","
+	                                IN3 := #iUDT_MsgHeader.SCT,        // Sender Name
+	                                IN4 := #cc_DL,                      // Comma sign - ","
+	                                IN5 := #cc_DL,                      // Comma sign - ","
+	                                IN6 := #cc_DL,                      // Comma sign - ","
+	                                IN7 := #cs_Logon,                   // Message type - "LOGON"
+	                                IN8 := #cs_CRLF);                   // Termination signs - "$R$L"
+	            
+	            // LOGON message character string into the character array conversion
+	            Strg_TO_Chars(Strg := #ss_Logon,
+	                          pChars := 0,
+	                          Cnt => #sui_LogonArrayElNr,
+	                          Chars := #sa_LogonMsg);
+	            
+	        END_REGION
+	        
+	        REGION 3.4 – Clearing remaining characters in the message character array
+	            
+	            // Filling up not used LOGON character array elements with '$00' (ASCII - 16#00)
+	            FILL_BLK(IN := '$00',
+	                     COUNT := UINT_TO_ULINT(INT_TO_UINT(#si_MaxLogonLen) -
+	                                            #sui_LogonArrayElNr),
+	                     OUT => #sa_LogonMsg[#sui_LogonArrayElNr]);
+	            
+	        END_REGION
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 4 – Send FILTER message
+	    
+	    REGION 4.1 – Send trigger preparation
+	        
+	        #sR_TRIG_SendTrigFilter(CLK := NOT #sa_TSEND.#Busy
+	                                AND #ix_ConEstablished
+	                                AND #sx_LogProc
+	                                AND NOT #sx_FilterSent
+	                                AND NOT #sx_LogonSent,
+	                                Q => #sa_TSEND.#Req);
+	        
+	    END_REGION
+	    
+	    REGION 4.2 – Send message
+	        
+	        IF (NOT #sx_FilterSent               // FILTER message not sent
+	            AND NOT #sx_LogonSent)           // LOGON message not sent    
+	        THEN
+	            
+	            // FILTER message send
+	            #sFB_TSEND(REQ := #sa_TSEND.#Req,
+	                       ID := #iUDT_Connection.ID,
+	                       LEN := #sui_ArrayOffset + #sui_FilterArrayElNr,
+	                       DONE => #sa_TSEND.Done,
+	                       BUSY => #sa_TSEND.Busy,
+	                       ERROR => #sa_TSEND.Error,
+	                       STATUS => #sa_TSEND.Status,
+	                       DATA := #sa_FilterMsg);
+	            
+	            // FILTER sent
+	            IF (#sa_TSEND.#Done)        // Operation is done
+	            THEN
+	                
+	                #sx_FilterSent := TRUE;
+	                
+	            END_IF;
+	            
+	        END_IF;
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 5 – LOGON message send
+	    
+	    REGION 5.1 – Send trigger preparation
+	        
+	        #sR_TRIG_SendTrigLogon(CLK := NOT #sa_TSEND.Busy       // TSEND block not busy
+	                               AND #ix_ConEstablished          // Connection established
+	                               AND #sx_LogProc                 // Logon procedure 
+	                               AND #sx_FilterSent              // FILTER message is sent
+	                               AND NOT #sx_LogonSent,          // LOGON message is not sent
+	                               Q => #sa_TSEND.Req);
+	        
+	    END_REGION
+	    
+	    REGION 5.2 – Send message
+	        
+	        IF (#sx_FilterSent              // FILTER mseesge is sent         
+	            AND NOT #sx_LogonSent)      // LOGON message is not sent              
+	        THEN
+	            // LOGON message send
+	            #sFB_TSEND(REQ := #sa_TSEND.#Req,
+	                       ID := #iUDT_Connection.ID,
+	                       LEN := #sui_LogonArrayElNr,
+	                       DONE => #sa_TSEND.#Done,
+	                       BUSY => #sa_TSEND.#Busy,
+	                       ERROR => #sa_TSEND.#Error,
+	                       STATUS => #sa_TSEND.#Status,
+	                       DATA := #sa_LogonMsg);
+	            
+	            // LOGON sent
+	            IF (#sa_TSEND.#Done)        // Operation is done
+	            THEN
+	                
+	                #sx_LogonSent := TRUE;
+	                
+	            END_IF;
+	            
+	        END_IF;
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 6 – Reset Logon procedure
+	    
+	    IF (#sx_FilterSent               // FILTER message sent
+	        AND #sx_LogonSent)           // LOGON message sent    
+	    THEN
+	        
+	        #sx_LogProc := FALSE;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 7 – Write outputs
+	    
+	    #qx_LogonOk :=
+	    #sx_FilterSent            // FILTER message sent 
+	    AND #sx_LogonSent;        // LOGON message sent
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

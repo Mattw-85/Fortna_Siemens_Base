@@ -1,0 +1,348 @@
+﻿FUNCTION_BLOCK "FB_UPSIdFwd"
+TITLE = FB_IDFWD
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : UPS_SpecificCommunication
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 56
+// END_ATTRIBUTES
+//Function block to prepare and send the UPS IDFWD message. 
+   VAR_INPUT 
+      iUDT_MsgHeader { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_UPSMessageHeader";   // UPS message header
+      is_ActualDateTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[23];   // Actual date and time
+      is_ModuleName { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[2] := 'AB';   // Module type
+      is_DeviceNumber { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[4] := 'abcd';   // Device number
+      is_PLCID_TRAYID { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[2] := '00';   // PLC ID or TRAY ID
+      ii_GIN { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // GIN
+      ii_DesSys { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Designated system: 1- Weight scale ; 2 - X-Ray; 3 - Camera system; 4 - Label applicator; 5 - Sorter; 6 - Other
+      ii_Delay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Message delay time [ms]
+      ix_DestinationRequest { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when message send as a destinations request
+   END_VAR
+
+   VAR_OUTPUT 
+      qx_Error { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Collective error output
+      qx_Warning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Collective warning output
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_FifoHeader : "UDT_FifoHeader";   // FIFO header
+      iqa_FifoData : Array[*] of "UDT_Message";   // FIFO data
+      iqdi_UniqueMsgID { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Unique message ID counter
+   END_VAR
+
+   VAR 
+      s_UDT_MessageArray { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_Message";   // Message character array
+      ss_Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Status structure
+         FIFOStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_FifoStatus";   //  FIFO Status structure
+         FIFOError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Bool;   //  FIFO error
+         FIFOWarning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Bool;   //  FIFO warning
+         InvalidDesSysPar { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Invalid designated system parameter input
+         InvalidGIN { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Invalid GIN
+         InvalidPLCID_TRAYID { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Invalid PLCID/TRAYID
+         InvalidDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Invalid delay time
+         InvalidMsgArraySize { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Invalid message array size
+      END_STRUCT;
+      ss_PLCIDTRAYID { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[6];   // PLCID
+      ss_Delay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[4];   // Message delay
+      ss_Message { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;   // Message character string
+      ss_MSGID { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;   // Timestamp
+      ss_DesSys { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;   // Designated system character string
+      sui_MsgArrayElNr { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UInt;   // Number of written message characters
+      si_MaxMsgLen { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Maximum message length
+      si_MsgLen { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // String character message length
+      si_PLCIDLen { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // PLCID length
+      si_DelayLen { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Message delay length
+      si_i { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Loop counter
+   END_VAR
+   VAR RETAIN
+      si_OldGIN { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Old GIN
+   END_VAR
+
+   VAR CONSTANT 
+      cc_NULL : Char := '$00';   // NULL sign
+      cc_DL : Char := ',';   // Comma sign
+      cs_IDFWD : String := 'IDFWD';   // Message type
+      cs_WeightScale : String := 'WT_SCALE';   // Designated system - Weight scale
+      cs_XRay : String := 'X_RAY   ';   // Designated system - X-Ray system
+      cs_CameraSys : String := 'CAMERA  ';   // Designated system - Camera system
+      cs_LabelApplicator : String := 'LBL_APP ';   // Designated system - Label applicator
+      cs_Sorter : String := 'SORTER  ';   // Designated system - Sorter
+      cs_Other : String := 'OTHER   ';   // Designated system - Other
+      cs_CRLF : String := '$R$L';   // Termination signs
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	24/05/2019  | 0.1       | L.Klar        | first release MHS TIA 15.1
+	13/06/2019  | 0.2       | A.Nowak       | Replacement of instruction if for direct write into variable - Region 3 and 4.6 
+	25/06/2019  | 0.3       | A.Nowak       | Add delay "ss_Delay" clearing ( 4.2 )
+	28/06/2019  | 0.4       | A.Nowak       | Changing conditions for error occuring and status update
+	17/07/2019  | 0.5       | L.Klar        | Status handling changed
+	24/07/2019  | 2.0       | L.Klar        | 2.0 MHS library release TIA 15.1
+	23/08/2019  | 2.1       | L.Klar        | PLC ID input changed to integer, PLC ID conversion int to string added, logic to add leading zeros to PLCID added, comments simplified
+	10/09/2019  | 2.2       | A.Nowak       | Move region 3 and 4 to 2, delete subregions from region 3, write comment to "ii_DesSys" variable
+	20/09/2019  | 2.3       | A.Nowak       | Change data type of Status from "UDT_Status" to Struct
+	01/10/2019  | 2.4       | A.Nowak       | Implementation of the new FIFO block
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	08/01/2020  | 3.1       | L.Klar        | ii_PLCID change to is_PLCID_TRAYID and ii_GIN, invalid GIN status added, destination send request input added
+	13/10/2020  | 3.2       | L.Klar        | Designated system constants format changed from leading spaces to trailing
+	                                        | Message trigger based on new GIN detection
+	22/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 – IDFWD
+	    
+	    IF #ii_GIN > 0 AND #ii_GIN <> #si_OldGIN
+	    THEN
+	        
+	        #si_OldGIN := #ii_GIN;
+	        
+	        REGION 1.1 – FIFO header status update
+	            
+	            // Mode 'S' - FIFO register status update
+	            "FC_Fifo"(ic_Mode := 'S',
+	                      qUDT_Status => #ss_Status.FIFOStatus,
+	                      qx_Error => #ss_Status.FIFOError,
+	                      qx_Warning => #ss_Status.FIFOWarning,
+	                      iqv_Data := #s_UDT_MessageArray,
+	                      iqUDT_FifoHeader := #iqUDT_FifoHeader,
+	                      iqv_DataBuffer := #iqa_FifoData);
+	            
+	        END_REGION
+	        
+	        REGION 1.2 – Configuration check and creating error
+	            
+	            #ss_Status.InvalidDesSysPar := FALSE;
+	            
+	            // Designated system assignment
+	            CASE #ii_DesSys OF
+	                1:
+	                    #ss_DesSys := #cs_WeightScale;                              // WeightScale - "WT_SCALE"
+	                2:
+	                    #ss_DesSys := #cs_XRay;                                     // X-ray - "X_RAY   "
+	                3:
+	                    #ss_DesSys := #cs_CameraSys;                                // Camera system - "CAMERA  "   
+	                4:
+	                    #ss_DesSys := #cs_LabelApplicator;                          // Label applicator - "LBL_APP "
+	                5:
+	                    #ss_DesSys := #cs_Sorter;                                   // Sorter - "  SORTER"
+	                6:
+	                    #ss_DesSys := #cs_Other;                                    // Other system - "OTHER   "
+	                    
+	                    // In case of designated system parameter out of range clear designated system variable and set the error bit  
+	                ELSE
+	                    
+	                    #ss_DesSys := '';
+	                    #ss_Status.InvalidDesSysPar := TRUE;
+	                    
+	            END_CASE;
+	            
+	            // GIN validation
+	            #ss_Status.InvalidGIN :=
+	            #ii_GIN < 1
+	            OR #ii_GIN > 9999;
+	            
+	            // PLCID/TRAYID validation
+	            #ss_Status.InvalidPLCID_TRAYID :=
+	            #is_PLCID_TRAYID <> '00'
+	            AND #is_PLCID_TRAYID <> '99'
+	            AND #is_PLCID_TRAYID <> 'TR'
+	            AND #is_PLCID_TRAYID <> '1R'
+	            AND #is_PLCID_TRAYID <> '2R'
+	            AND #is_PLCID_TRAYID <> '3R'
+	            AND #is_PLCID_TRAYID <> '4R';
+	            
+	            // Delay time validation
+	            #ss_Status.InvalidDelay :=
+	            #ii_Delay < 0
+	            OR #ii_Delay > 9999;
+	            
+	        END_REGION
+	        
+	        REGION 1.3 – IDFWD message preparation
+	            
+	            IF (NOT #ss_Status.FIFOError
+	                AND NOT #ss_Status.InvalidDesSysPar
+	                AND NOT #ss_Status.InvalidGIN
+	                AND NOT #ss_Status.InvalidDelay
+	                AND NOT #ss_Status.InvalidPLCID_TRAYID)
+	            THEN
+	                
+	                IF (NOT #iqUDT_FifoHeader.Status.Full)
+	                THEN
+	                    
+	                    // Unique MSGID
+	                    "FC_UPSMsgId"(is_ActualDateTime := #is_ActualDateTime,
+	                                  is_ModuleName := #is_ModuleName,
+	                                  is_DeviceNumber := #is_DeviceNumber,
+	                                  iqs_MSGID := #ss_MSGID,
+	                                  iqdi_UniqueMsgID := #iqdi_UniqueMsgID);
+	                    
+	                    // PLCID/TRAYID preparation
+	                    #ss_PLCIDTRAYID := '';
+	                    
+	                    // PLC ID integer input conversion to a character string
+	                    VAL_STRG(IN := #ii_GIN,
+	                             SIZE := 0,
+	                             PREC := 0,
+	                             FORMAT := 0,
+	                             P := 1,
+	                             OUT => #ss_PLCIDTRAYID);
+	                    
+	                    // Length of the PLCID/TRAYID character string 
+	                    #si_PLCIDLen := LEN(#ss_PLCIDTRAYID);
+	                    
+	                    // PLCID/TRAYID character string leading zeros addition
+	                    IF (#si_PLCIDLen < 4)       // PLCID length lower than 4
+	                    THEN
+	                        
+	                        FOR #si_i := 1 TO 4 - #si_PLCIDLen DO
+	                            
+	                            #ss_PLCIDTRAYID := CONCAT(IN1 := '0',
+	                                                      IN2 := #ss_PLCIDTRAYID);
+	                            
+	                        END_FOR;
+	                        
+	                    END_IF;
+	                    
+	                    // PLCID/TRAYID addition
+	                    #ss_PLCIDTRAYID := INSERT(IN1 := #ss_PLCIDTRAYID, IN2 := #is_PLCID_TRAYID, P := 0);
+	                    
+	                    // Delay preparation
+	                    #ss_Delay := '';
+	                    
+	                    // Delay integer input conversion to a character string
+	                    VAL_STRG(IN := #ii_Delay,
+	                             SIZE := 0,
+	                             PREC := 0,
+	                             FORMAT := 0,
+	                             P := 1,
+	                             OUT => #ss_Delay);
+	                    
+	                    // Length of the delay character string 
+	                    #si_DelayLen := LEN(#ss_Delay);
+	                    
+	                    // Delay character string leading zeros addition
+	                    IF (#si_DelayLen < 4)
+	                    THEN
+	                        
+	                        FOR #si_i := 1 TO 4 - #si_DelayLen DO
+	                            
+	                            #ss_Delay := CONCAT(IN1 := '0',
+	                                                IN2 := #ss_Delay);
+	                            
+	                        END_FOR;
+	                        
+	                    END_IF;
+	                    
+	                    // Message preparation
+	                    
+	                    // IDFWD message composing according to the structure: SCN,SCT,RCN,RCT,MT,MSGID,PLCID,DESSYS,DELAY{CRLF}
+	                    #ss_Message := CONCAT(IN1 := #iUDT_MsgHeader.SCN,          // Sender IP address  
+	                                          IN2 := #cc_DL,                        // Comma sign - ","
+	                                          IN3 := #iUDT_MsgHeader.SCT,          // Sender Name   
+	                                          IN4 := #cc_DL,                        // Comma sign - ","
+	                                          IN5 := #iUDT_MsgHeader.RCN,          // Receiver IP address
+	                                          IN6 := #cc_DL,                        // Comma sign - ","
+	                                          IN7 := #iUDT_MsgHeader.RCT,          // Receiver Name  
+	                                          IN8 := #cc_DL,                        // Comma sign - ","
+	                                          IN9 := #cs_IDFWD,                     // Message type - "IDFWD"
+	                                          IN10 := #cc_DL,                       // Comma sign - ","
+	                                          IN11 := #ss_MSGID,                    // MSGID
+	                                          IN12 := #cc_DL,                       // Comma sign - ","                                 
+	                                          IN13 := #ss_PLCIDTRAYID,             // PLCID
+	                                          IN14 := #cc_DL,                       // Comma sign - ","
+	                                          IN15 := #ss_DesSys,                   // Designated system         
+	                                          IN16 := #cc_DL,                       // Comma sign - ","
+	                                          IN17 := #ss_Delay,                    // Delay time
+	                                          IN18 := #cs_CRLF);                    // Termination signs - "$R$L"
+	                    
+	                    // Maximum number of the message characters
+	                    #si_MaxMsgLen := "FC_GetNrOfArrayEl"(iv_Array := #s_UDT_MessageArray.Character);
+	                    
+	                    // Length of the complete message
+	                    #si_MsgLen := LEN(#ss_Message);
+	                    
+	                    // Message array size validation
+	                    #ss_Status.InvalidMsgArraySize := #si_MsgLen > #si_MaxMsgLen;
+	                    
+	                    // Message character String conversion into the message array of characters
+	                    IF (NOT #ss_Status.InvalidMsgArraySize)
+	                    THEN
+	                        
+	                        Strg_TO_Chars(Strg := #ss_Message,
+	                                      pChars := 0,
+	                                      Cnt => #sui_MsgArrayElNr,
+	                                      Chars := #s_UDT_MessageArray.Character);
+	                        
+	                    END_IF;
+	                    
+	                    // Clearing remaining characters in the message character array
+	                    IF (NOT #ss_Status.InvalidMsgArraySize)
+	                    THEN
+	                        
+	                        // Filling up not used message character array elements with '$00' (ASCII - 16#00)
+	                        FILL_BLK(IN := #cc_NULL,
+	                                 COUNT := UINT_TO_ULINT(INT_TO_UINT(#si_MaxMsgLen) - #sui_MsgArrayElNr),
+	                                 OUT => #s_UDT_MessageArray.Character[#sui_MsgArrayElNr]);
+	                        
+	                    END_IF;
+	                    
+	                    // Message write into a FIFO register
+	                    IF (NOT #ss_Status.InvalidMsgArraySize)
+	                    THEN
+	                        
+	                        // Mode 'W' - Write FIFO record
+	                        "FC_Fifo"(ic_Mode := 'W',
+	                                  qUDT_Status => #ss_Status.FIFOStatus,
+	                                  qx_Error => #ss_Status.FIFOError,
+	                                  qx_Warning => #ss_Status.FIFOWarning,
+	                                  iqv_Data := #s_UDT_MessageArray,
+	                                  iqUDT_FifoHeader := #iqUDT_FifoHeader,
+	                                  iqv_DataBuffer := #iqa_FifoData);
+	                        
+	                        // Message sent as a destination request 
+	                        "DB_GIN".GIN[#ii_GIN].General.DestReqSend := #ix_DestinationRequest;
+	                        
+	                    END_IF;
+	                    
+	                    // In case of FIFO full, the FIFO full error bit and FIFO collective error bit are set
+	                ELSE
+	                    
+	                    #ss_Status.FIFOError := TRUE;
+	                    #ss_Status.FIFOStatus.FifoFull := TRUE;
+	                    
+	                END_IF;
+	                
+	            END_IF;
+	            
+	        END_REGION
+	        
+	        REGION 1.4 – Status
+	            
+	            // Parametrization collective error output
+	            #qx_Error :=
+	            #ss_Status.InvalidDesSysPar
+	            OR #ss_Status.InvalidDelay
+	            OR #ss_Status.InvalidGIN
+	            OR #ss_Status.InvalidMsgArraySize
+	            OR #ss_Status.FIFOError;
+	            
+	            // Parametrization collective warning output
+	            #qx_Warning := #ss_Status.FIFOWarning;
+	            
+	        END_REGION
+	        
+	    END_IF;
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

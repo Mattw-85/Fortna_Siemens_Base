@@ -1,0 +1,252 @@
+﻿FUNCTION_BLOCK "FB_Tracking"
+TITLE = FB_Tracking
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 33
+// END_ATTRIBUTES
+//Function block to shift data in the tracking array.
+   VAR_INPUT 
+      iUDT_ConveyorCommonConfiguration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_ConveyorCommonConfiguration";   // Conveyor common configuration
+   END_VAR
+
+   VAR_IN_OUT 
+      iqa_TrackingData : Array[*] of Int;   // Tracking array
+      iqUDT_ConveyorInterface : "UDT_ConveyorInterface";   // Conveyor interface
+      iqUDT_HandshakeUp : "UDT_ConveyorHandshake";   // Upstream conveyor handshake
+      iqUDT_Handshake : "UDT_ConveyorHandshake";   // Conveyor handshake
+   END_VAR
+
+   VAR 
+      si_TrackingArrayLen { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Tracking array length
+      si_TrackingArrayLowBound { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Tracking array lower bound
+      sdi_TotalConvLength { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Number of tracking entries is equal to the conveyor length in cm
+      si_Displacement { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Displacement
+      si_ShiftDestination { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Pointer to the entry to start writing the tracking data
+      si_ShiftOffset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Number of entries to be shifted and its direction
+      sdi_GINInsertPosition { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Position where GIN form upstream conveyor will be inserted
+      sdi_GINExtractPosition { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Position from which GIN will be moved to the downstream conveyor
+      sx_InvalidTrackArraySize { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Invalid tracking array size
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	|                                                                                      |
+	|  Copyright  2019             MHS                                                     |
+	|  All Rights Reserved         Larenweg 90                                             |
+	|                              5234 KC 's-Hertogenbosch,                               |
+	|                              Netherlands                                             |
+	|                                                                                      |     
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author       | Remark
+	----------------------------------------------------------------------------------------
+	24/05/2019  | 0.1       | L. Klar      | first release MHS TIA 15.1
+	14/06/2019  | 0.2       | A.Nowak      | Replacement of instruction if for direct write into variable - Region 3 
+	19/07/2019  | 0.5       | L.Klar       | Status handling changed
+	24/07/2019  | 2.0       | L.Klar       | 2.0 MHS library release TIA 15.1
+	23/08/2019  | 2.1       | L.Klar       | "UDT_ConveyorConfiguration" changed to "UDT_ConveyorCommonConfiguration", internal tracking error set instead of coil assigment. 
+	10/09/2019  | 2.2       | L.Klar       | Comments changed, block optimized
+	21/10/2019  | 2.3       | L.Klar       | Configuration UDT chanaged to input
+	12/11/2019  | 3.0       | P.Majka      | 3.0 MHS library release TIA 15.1
+	20/12/2019  | 3.1       | S. Deulkar   | Used configureation error bit to report to conveyor block 
+	15/01/2020  | 3.2       | L.Klar       | Block adjusted to allow to transfer negative GIN numbers
+	*)
+	
+	REGION 1 – Get the required number of entries
+	    
+	    // Number of entries is a conveyor length in cm
+	    #sdi_TotalConvLength := (#iUDT_ConveyorCommonConfiguration.Length + #iUDT_ConveyorCommonConfiguration.LengthCorrection) / 10;
+	    
+	END_REGION
+	
+	REGION 2 – Number of tracking records validation
+	    
+	    // Tracking array dimensions
+	    #si_TrackingArrayLen := "FC_GetNrOfArrayEl"(#iqa_TrackingData);
+	    #si_TrackingArrayLowBound := DINT_TO_INT(LOWER_BOUND(ARR := #iqa_TrackingData, DIM := 1));
+	    
+	    // Check if the number of entries is exceeding the tracking array size
+	    #sx_InvalidTrackArraySize := #si_TrackingArrayLen < #sdi_TotalConvLength + 2
+	    OR #si_TrackingArrayLowBound <> 0;
+	    
+	END_REGION
+	
+	REGION 3 – Read the displacement
+	    
+	    #si_Displacement := #iqUDT_ConveyorInterface.Displacement;
+	    
+	END_REGION
+	
+	REGION 4 – Prepare tracking array pointers
+	    
+	    // A conveyor can run in forward and reverse direction
+	    // Data will be shifted into tracking entry position 1 for both cases.
+	    #si_ShiftDestination := 1;
+	    
+	    // If the direction is forward (positive displacement), entry 2 is taken as offset (shifts conveyor length from pos 2 in pos 1)
+	    IF #si_Displacement > 0
+	    THEN
+	        
+	        #si_ShiftOffset := 2;
+	        #sdi_GINInsertPosition := #sdi_TotalConvLength + 1;
+	        #sdi_GINExtractPosition := 1;
+	        
+	        // If the direction is reverse (negative displacement), entry 0 is taken as offset (shifts conveyor length from pos 0 in pos 1)
+	    ELSE
+	        
+	        #si_ShiftOffset := 0;
+	        #sdi_GINInsertPosition := 0;
+	        #sdi_GINExtractPosition := #sdi_TotalConvLength;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 5 – Shift data
+	    
+	    // Data is shifted only if the conveyor is running (positive or negtive displacement)
+	    WHILE #si_Displacement <> 0 DO
+	        
+	        // Conveyor running forward
+	        IF (#si_Displacement > 0)
+	        THEN
+	            
+	            // GIN is moved into the tracking array on GIN insert position if the number of positions in upstream conveyor handshake is available
+	            // The number of positions to be shifted will be decremented
+	            IF (#iqUDT_HandshakeUp.GIN <> 0
+	                AND #iqUDT_HandshakeUp.NrOfPosToShift > 0)
+	            THEN
+	                
+	                #iqa_TrackingData[#sdi_GINInsertPosition] := #iqUDT_HandshakeUp.GIN;
+	                #iqUDT_HandshakeUp.NrOfPosToShift -= 1;
+	                
+	            ELSIF (#iqUDT_HandshakeUp.GIN <> 0
+	                AND #iqUDT_HandshakeUp.NrOfPosToShift = 0)
+	            THEN
+	                
+	                #iqa_TrackingData[#sdi_GINInsertPosition] := #iqUDT_HandshakeUp.GIN;
+	                
+	            END_IF;
+	            
+	            // Clear the downsteam handshake GIN if the number of positions to be shifted is 0
+	            IF (#iqUDT_Handshake.GIN <> 0 AND #iqUDT_Handshake.NrOfPosToShift = 0)
+	            THEN
+	                
+	                #iqUDT_Handshake.GIN := 0;
+	                
+	            END_IF;
+	            
+	            // GIN is moved into the handshake structure if the data is available at GIN extract position
+	            // The number of positions will be incremented
+	            IF (#iqa_TrackingData[#sdi_GINExtractPosition] <> 0)
+	            THEN
+	                
+	                IF (#iqUDT_Handshake.GIN = 0)
+	                THEN
+	                    
+	                    #iqUDT_Handshake.GIN := #iqa_TrackingData[#sdi_GINExtractPosition];
+	                    #iqUDT_Handshake.NrOfPosToShift += 1;
+	                    
+	                ELSIF (#iqUDT_Handshake.GIN = #iqa_TrackingData[#sdi_GINExtractPosition])
+	                THEN
+	                    
+	                    #iqUDT_Handshake.NrOfPosToShift += 1;
+	                    
+	                END_IF;
+	                
+	            END_IF;
+	            
+	            // Update displacement
+	            #si_Displacement -= 1;
+	            
+	            // Conveyor running backward
+	        ELSIF (#si_Displacement < 0)
+	        THEN
+	            
+	            // GIN is moved into the tracking array on GIN insert position if the number of positions in downstream conveyor handshake is available
+	            // The number of positions to be shifted will be decremented
+	            IF (#iqUDT_Handshake.GIN <> 0
+	                AND #iqUDT_Handshake.NrOfPosToShift > 0)
+	            THEN
+	                
+	                #iqa_TrackingData[#sdi_GINInsertPosition] := #iqUDT_Handshake.GIN;
+	                #iqUDT_Handshake.NrOfPosToShift -= 1;
+	                
+	                // In case of displacement greater than 1 and no positions to be shifted the GIN will be written to avoid gaps in data
+	                // Writing will be stopped when GIN 0 is detected
+	            ELSIF (#iqUDT_Handshake.GIN <> 0
+	                AND #iqUDT_Handshake.NrOfPosToShift = 0)
+	            THEN
+	                
+	                #iqa_TrackingData[#sdi_GINInsertPosition] := #iqUDT_Handshake.GIN;
+	                
+	            END_IF;
+	            
+	            // Clear the upstream handshake GIN if the number of positions to be shifted is 0
+	            IF (#iqUDT_HandshakeUp.GIN <> 0 AND #iqUDT_HandshakeUp.NrOfPosToShift = 0)
+	            THEN
+	                
+	                #iqUDT_HandshakeUp.GIN := 0;
+	                
+	            END_IF;
+	            
+	            // GIN is moved into the handshake structure if the data is available at GIN extract position
+	            // The number of positions will be incremented
+	            IF (#iqa_TrackingData[#sdi_GINExtractPosition] <> 0)
+	            THEN
+	                
+	                IF (#iqUDT_HandshakeUp.GIN = 0)
+	                THEN
+	                    
+	                    #iqUDT_HandshakeUp.GIN := #iqa_TrackingData[#sdi_GINExtractPosition];
+	                    #iqUDT_HandshakeUp.NrOfPosToShift += 1;
+	                    
+	                    // In case of displacement greater than 1 and no positions to be shifted the GIN will be written to avoid gaps in data
+	                    // Writing will be stopped when GIN 0 is detected    
+	                ELSIF (#iqUDT_HandshakeUp.GIN = #iqa_TrackingData[#sdi_GINExtractPosition])
+	                THEN
+	                    
+	                    #iqUDT_HandshakeUp.NrOfPosToShift += 1;
+	                    
+	                END_IF;
+	                
+	            END_IF;
+	            
+	            // Update displacement
+	            #si_Displacement += 1;
+	            
+	        END_IF;
+	        
+	        // Shift the total conveyor length (number of tracking array entries) one cm up or down
+	        MOVE_BLK(IN := #iqa_TrackingData[#si_ShiftOffset],
+	                 COUNT := DINT_TO_ULINT(#sdi_TotalConvLength),
+	                 OUT => #iqa_TrackingData[#si_ShiftDestination]);
+	        
+	        // Clear the GIN insert position
+	        #iqa_TrackingData[#sdi_GINInsertPosition] := 0;
+	        
+	    END_WHILE;
+	    
+	END_REGION
+	
+	REGION 6 – Internal tracking error
+	    
+	    // The internal tracking error is set to stop the conveyor
+	    // It is reset in the conveyor block
+	    IF (#sx_InvalidTrackArraySize)
+	    THEN
+	        
+	        #iqUDT_ConveyorInterface.ConfigurationError := TRUE;
+	        
+	    END_IF;
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

@@ -1,0 +1,126 @@
+﻿TYPE "UDT_EventStatistic"
+TITLE = UDT_EventStatistic
+VERSION : 0.1
+//User-defined structure of event statistic data.
+   STRUCT
+      NumberOfTimes : DInt;   // Number of times the event occurred since last reset
+      LastEventSeconds : DInt;   // Number of seconds of the current or last event
+      TotalEventSeconds : DInt;   // Total number of seconds the event occurred since last reset
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_PECStatus"
+VERSION : 0.1
+   STRUCT
+      PEC : Bool;   // Current state of the photo eye
+      Jam : Bool;   // PEC jam error
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_PECStatistics"
+VERSION : 0.1
+   STRUCT
+      Jam : "UDT_EventStatistic";   // Number of times PEC got jammed
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_PECConfiguration"
+VERSION : 0.1
+   STRUCT
+      Distance { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Distance between photo eye and the end of conveyor [mm]
+      JamDisplacementLimit { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Limit displacement with PEC blocked o detect jam [cm]
+      TimeOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Photo eye time on delay [ms]
+      TimeOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Photo eye time off delay [ms]
+      ResetWithPECBlocked { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // When 'True' Allow reset system after jam with PEC blocked
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_UnloaderStatus"
+TITLE = UDT_UnloaderStatus
+VERSION : 0.1
+//User-defined structure of FB_Unloader function block status.
+   STRUCT
+      Status : Int;   // Status number
+      Specific : Struct   // Equipment specific warnings and errors
+         PEC_EoS : "UDT_PECStatus";   // PEC status structure
+         Disabled : Bool;   // Unloader is disabled by HMI
+         TooLongParcel : Bool;   // Unloader detected a too long parcel
+         VFDError : Bool;   // Unloader has an VFD error
+         NotHealthy : Bool;   // Unloader is not healthy
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_UnloaderStatistics"
+TITLE = UDT_UnloaderStatistics
+VERSION : 0.1
+//User-defined structure of FB_Unloader function block statistics.
+   STRUCT
+      EnergySave : "UDT_EventStatistic";   // Number of times that save energy mode occurs
+      ExtendableUpTime : "UDT_EventStatistic";   // Conveyor up time
+      ExtendableDownTime : "UDT_EventStatistic";   // Conveyor down time
+      VFDError : "UDT_EventStatistic";   // VFD Error
+      NotHealthy : "UDT_EventStatistic";   // Extendable not healthy
+      TooLongParcel : "UDT_EventStatistic";   // Too long parcels
+      PEC_EOS : "UDT_PECStatistics";   // PEC error
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_UnloaderPO"
+VERSION : 0.1
+   STRUCT
+      "Release Unload" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // If true, release unloader to run conveyor.
+      Reset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True if reset is activated on the MHS conveyor system. (HMI)
+      Spare_1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      Spare_2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      Spare_3 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      EStopReset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // EStop reset
+      "Speed select" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Word;   // If applicable. Selection of speed to run the conveyor.0 = slow, 1 = normal and 2 = fast.
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_UnloaderPI"
+VERSION : 0.1
+   STRUCT
+      "Ready Unload" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True when the unloader is started local in automatic mode and ready
+      Running { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True when the unloader conveyor is running.
+      TooLongParcel { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True when the unloader Has detected a too long parcel
+      "VFD Error" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True when there is an VFD error.
+      Healthy { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True when no errors present.
+      "PEC EoS" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Photoelectric cell End of section, true when not occupied.
+      Manual { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True when the unloader is local controlled in manual mode.
+      "Selected speed" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Word;   // If applicable. Selected speed to run the conveyor.
+      Mode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Word;   // If applicable. The mode the unloader is selected local to run in.0 = slow, 1 = normal and 2 = fast.
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_UnloaderConfiguration"
+TITLE = UDT_UnloaderConfiguration
+VERSION : 0.1
+//User-defined structure of unloader parameters.
+   STRUCT
+      PEC_EOS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_PECConfiguration";   // Photo eye time on delay
+      Speedsetpoint { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Speedsetpoint: 0=Low, 1=Nom, 2=High
+      EnergySaveLength { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Distance conveyor travelled before energy save activate [cm]
+      FirstConveyorToStart { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // First conveyor to start cascade mode
+      Energy { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Energy save mode enable
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_UnloaderCommand"
+VERSION : 0.1
+   STRUCT
+      Disable : Bool;   // Disable unloader
+   END_STRUCT;
+
+END_TYPE
+

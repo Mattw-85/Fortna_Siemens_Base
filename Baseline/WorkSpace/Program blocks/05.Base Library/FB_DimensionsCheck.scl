@@ -1,0 +1,372 @@
+﻿FUNCTION_BLOCK "FB_DimensionsCheck"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 208
+// END_ATTRIBUTES
+   VAR_INPUT 
+      iUDT_DimensionsCheckConfiguration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_DimensionsCheckConfiguration";   //    Dimensions check configuration structure
+      ix_LenghtPEC1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    Length 1  PEC
+      ix_LenghtPEC2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    Length 2 PEC
+      ix_HeightPEC { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    Height PEC
+      ix_WidthPEC { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    Width  PEC
+      ix_Reset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   TRUE when reset errors or reset energy save required
+      ix_ReverseRun { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   TRUE when run conveyor in reverse direction is required
+      ix_ResetStatistics { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //   TRUE when reset statistics required
+      ix_ConveyorEsaveStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Conveyor Energy save Status: In Esave
+      ix_HardwareOK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when 24V on RIO with DMC signals is OK
+   END_VAR
+
+   VAR_OUTPUT 
+      qUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_DimensionsCheckStatus";   //    Dimensions check status error structure
+      qx_Lamp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    TRUE when lamp requested
+      qx_ButtonLamp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Button lamp
+      qx_Halt { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    TRUE when conveyor halt
+      qx_WakeUp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    TRUE when reset enery save mode requested
+      qx_RunReverse { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    TRUE when conveyor run in reverse direction
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_DimensionsCheckStatistics : "UDT_DimensionsCheckStatistics";   //    Dimensions check statistics
+      iqUDT_EquipmentControl : "UDT_EquipmentControl";   //  Equipment control structure
+      iqUDT_ConveyorInterface : "UDT_ConveyorInterface";   // Conveyor interface structure
+   END_VAR
+
+   VAR 
+      sFB_HardwareOKSignalDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";
+      sFB_FirstLengthPECTimerOnOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   //    Length PEC 1 filter
+      sFB_SecLengthPECTimerOnOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   //    Length PEC 2 filter
+      sFB_HeightPECTimerOnOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   //    Heigh PEC filter
+      sFB_Width1PECTimerOnOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   //    Width PEC 1 filter
+      sFB_Width2PECTimerOnOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   //    Width PEC 2 filter
+      sR_TRIG_ParcelTooLong {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //    Rising edge trigger of parcel too long error
+      sR_TRIG_ParcelTooHigh {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //    Rising edge trigger of parcel too long error
+      sR_TRIG_ParcelTooWide {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //    Rising edge trigger of parcel too wide trigger
+      sR_TRIG_WidthPEC {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   //    Detect parcel on the Width 1 PEC
+      sUDT_Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_DimensionsCheckStatus";   //    Dimension check status structure
+      sui_ActualParcelLenght { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   //    Actual parcel lenght
+      sui_LengthPEC2Displacement { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // displacement of the parcel after length pec trigger
+      sui_widthPECDisplacement { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // displacement of the parcel after width pec trigger
+      si_1stPackageDistance { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //    Distance traveled by the first package after hitting the first Width PEC
+      si_2ndPackageDistance { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //    Distance traveled by the second package after hitting the first Width PEC
+      si_SickDistance1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //  Distance from the SICK1 [cm]
+      si_SickDistance2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   //  Distance from the SICK2 [cm]
+      si_ParcelTooWideDisplacement { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Displacement of the parcel
+      sx_ConfigurationError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    Configuration error
+      sx_FirstLengthPEC_Filtered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    Filtered signal of Length 1 PEC
+      sx_SecLengthPEC_Filtered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    Filtered signal of Length 2 PEC
+      sx_HeightPEC_Filtered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    Filtered signal of Heigth PEC
+      sx_Width1PEC_Filtered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    Filtered signal of Width 1 PEC
+      sx_Width2PEC_Filtered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    Filtered signal of Width 2 PEC
+      sx_Halt { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    Static variable for halt conveyor
+      sx_Lamp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    Static variable for lamp control
+      sx_WakeUp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    Static variable for wake up from energy save signal
+      sx_RunReverse { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    Run reverse request
+      sx_Count1stDistance { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    Request to count distance traveled by parcel after hitting width 1 PEC
+      sx_Count2ndDistance { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //    Request to count distance traveled by parcel after hitting width 1 PEC in case where there is already another package between PECs
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	23/10/2019  | 3.0       | J.Krawczuk    | Initial version
+	13/03/2020  | 3.1       | A.Nowak       | Change the too long width detection and variables
+	16/03/2020  | 3.2       | M.Kurpiers    | Adapting reviews
+	27/08/2020  | 3.3       | A.Nowak       | Add status number creating
+	31/08/2020  | 3.4       | A.Nowak       | Change reset of the too wide parcel status
+	09/09/2021  | 3.5       | N.Kadam       | Change for Fedex Milano
+	01/02/2022  | 3.6       | M.Piela       | Change signaling lamp into solid light when the parcel is too long 
+	16/03/2022  | 3.7       | M.Piela       | Width check fix
+	16/05/2022  | 3.8       | M.Kurpiers    | ABS added to package length calculation
+	17/06/2022  | 3.9       | M.Kurpiers    | HMI status initialization added
+	19/07/2022  | 3.10      | M.Kurpiers    | Check if downstream conveyor is not running reverse during too wide check
+	29/07/2022  | 3.10      | M.Piela       | Check heigth pec only when conveyor is running
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 - Triggers
+	    
+	    // Preparing triggers for statistics.
+	    #sR_TRIG_ParcelTooLong(CLK := #sUDT_Status.Specific.ParcelTooLong);
+	    #sR_TRIG_ParcelTooHigh(CLK := #sUDT_Status.Specific.ParcelTooHigh);
+	    #sR_TRIG_ParcelTooWide(CLK := #sUDT_Status.Specific.ParcelTooWide);
+	    
+	END_REGION
+	
+	REGION 2 - 24v OK signal delay
+	    
+	    #sFB_HardwareOKSignalDelay(iudi_OnDelayTime := 5000,
+	                               ix_SignalToDelay := #ix_HardwareOK);
+	    
+	END_REGION
+	
+	REGION 2 - Photo eye's filters
+	    
+	    // First length check photo eye filter. 
+	    #sFB_FirstLengthPECTimerOnOffDelay(iudi_OffDelayTime := #iUDT_DimensionsCheckConfiguration.PECLength1OnTime,
+	                                       iudi_OnDelayTime := #iUDT_DimensionsCheckConfiguration.PECLength1OffTime,
+	                                       ix_Enable := TRUE,
+	                                       ix_SignalToDelay := NOT #ix_LenghtPEC1,
+	                                       qx_DelayedSignal => #sx_FirstLengthPEC_Filtered);
+	    // Second length check photo eye filter.
+	    #sFB_SecLengthPECTimerOnOffDelay(iudi_OnDelayTime := #iUDT_DimensionsCheckConfiguration.PECLength2OnTime,
+	                                     iudi_OffDelayTime := #iUDT_DimensionsCheckConfiguration.PECLength2OffTime,
+	                                     ix_SignalToDelay := NOT #ix_LenghtPEC2,
+	                                     ix_Enable := TRUE,
+	                                     qx_DelayedSignal => #sx_SecLengthPEC_Filtered);
+	    // High check photo eye filter.
+	    #sFB_HeightPECTimerOnOffDelay(iudi_OnDelayTime := #iUDT_DimensionsCheckConfiguration.PECHeightTimeOn,
+	                                  iudi_OffDelayTime := #iUDT_DimensionsCheckConfiguration.PECHeightTimeOff,
+	                                  ix_SignalToDelay := NOT #ix_HeightPEC,
+	                                  ix_Enable := TRUE,
+	                                  qx_DelayedSignal => #sx_HeightPEC_Filtered);
+	    // Width 1 check photo eye filter.
+	    #sFB_Width1PECTimerOnOffDelay(iudi_OnDelayTime := #iUDT_DimensionsCheckConfiguration.PECWidthOnTime,
+	                                  iudi_OffDelayTime := #iUDT_DimensionsCheckConfiguration.PECWidthOffTime,
+	                                  ix_SignalToDelay := NOT #ix_WidthPEC,
+	                                  ix_Enable := TRUE,
+	                                  qx_DelayedSignal => #sx_Width1PEC_Filtered);
+	    
+	END_REGION
+	
+	REGION 3 - Error reset
+	    
+	    // Reseting errors.
+	    IF #ix_Reset
+	    THEN
+	        #sUDT_Status.Specific.ParcelTooHigh := FALSE;
+	        #sUDT_Status.Specific.ParcelTooLong := FALSE;
+	        
+	        IF NOT #sx_Width1PEC_Filtered
+	        THEN
+	            #sUDT_Status.Specific.ParcelTooWide := FALSE;
+	        END_IF;
+	    END_IF;
+	    
+	    // Reseting conveyor energy save mode. 
+	    #sx_WakeUp := #ix_Reset;
+	    
+	END_REGION
+	
+	REGION 4 - Configuration check
+	    
+	    #sx_ConfigurationError :=
+	    #iUDT_DimensionsCheckConfiguration.DistanceBetweenLenghtPECs <= 0
+	    OR #iUDT_DimensionsCheckConfiguration.PECWidthCheckLimit <= 0;
+	    
+	END_REGION
+	
+	REGION 5 - Package length calculation
+	    
+	    // When first lenght check PEC is active displacement is added to actual parcel lenght. 
+	    IF #sx_FirstLengthPEC_Filtered
+	    THEN
+	        #sui_ActualParcelLenght += ABS(#iqUDT_ConveyorInterface.Displacement);
+	        // When parcel leaves the first PEC then actual parcel lenght is reset.    
+	    ELSE
+	        #sui_ActualParcelLenght := 0;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 6 - Length check PEC long parcel detection 
+	    
+	    // If Length 2 PEC  is triggered for more than configured distance then set too long parcel error
+	    
+	    IF #sx_SecLengthPEC_Filtered
+	        AND #iqUDT_ConveyorInterface.RunFwd
+	    THEN
+	        #sui_LengthPEC2Displacement += ABS(#iqUDT_ConveyorInterface.Displacement);
+	    ELSE
+	        #sui_LengthPEC2Displacement := 0;
+	    END_IF;
+	    
+	    IF #sui_LengthPEC2Displacement > #iUDT_DimensionsCheckConfiguration.PECLength2CheckLimit
+	    THEN
+	        #sUDT_Status.Specific.ParcelTooLong := TRUE;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 6 - Too long parcel detection
+	    
+	    // Too long parcel error is set only when two length check PECs are covered by parcel and actual parcel lenght is greater than the distance between the Length PECs.
+	    // If configured distance between two PECs is 0 then length check is disabled.
+	    IF #iUDT_DimensionsCheckConfiguration.DistanceBetweenLenghtPECs > 0
+	        AND #sx_SecLengthPEC_Filtered
+	        AND #sx_FirstLengthPEC_Filtered
+	        AND #sui_ActualParcelLenght > (#iUDT_DimensionsCheckConfiguration.DistanceBetweenLenghtPECs - #iUDT_DimensionsCheckConfiguration.ParcelLengthAllowedDeviation)
+	        AND #sFB_HardwareOKSignalDelay.qx_DelayedSignal
+	    THEN
+	        #sUDT_Status.Specific.ParcelTooLong := TRUE;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 7 - Too high parcel detection 
+	    
+	    IF #sx_HeightPEC_Filtered
+	        AND #sFB_HardwareOKSignalDelay.qx_DelayedSignal
+	        AND #iqUDT_ConveyorInterface.RunFwd
+	    THEN
+	        #sUDT_Status.Specific.ParcelTooHigh := TRUE;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 8 - Too wide parcel detection
+	    
+	    // When width detection check PEC is active then displacement is added to actual parcel lenght. 
+	    IF #sx_Width1PEC_Filtered AND NOT #iqUDT_ConveyorInterface.RunRvs
+	    THEN
+	        #sui_widthPECDisplacement += ABS(#iqUDT_ConveyorInterface.Displacement);
+	        // When parcel leaves the PEC then actual parcel lenght is reset.    
+	    ELSE
+	        #sui_widthPECDisplacement := 0;
+	    END_IF;
+	    
+	    IF #sui_widthPECDisplacement > #iUDT_DimensionsCheckConfiguration.PECWidthCheckLimit
+	    THEN
+	        #sUDT_Status.Specific.ParcelTooWide := TRUE;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 9 - Halt request and lamp handling
+	    
+	    IF #sUDT_Status.Specific.ParcelTooHigh
+	        OR #sUDT_Status.Specific.ParcelTooWide
+	        OR #sUDT_Status.Specific.ParcelTooLong
+	    THEN
+	        #sx_RunReverse := #ix_ReverseRun;
+	        #sx_Halt := NOT #sx_RunReverse;
+	        #sx_Lamp := TRUE;
+	    END_IF;
+	    
+	    IF NOT #sUDT_Status.Specific.ParcelTooHigh
+	        AND NOT #sUDT_Status.Specific.ParcelTooLong
+	        AND NOT #sUDT_Status.Specific.ParcelTooWide
+	    THEN
+	        #sx_Halt := FALSE;
+	        #sx_Lamp := FALSE;
+	        #sx_RunReverse := FALSE;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 10 - Statistics
+	    
+	    REGION 10.1 - Too long parcels statistics
+	        
+	        IF #sUDT_Status.Specific.ParcelTooLong
+	            OR #ix_ResetStatistics
+	        THEN
+	            "FC_Statistics"(ix_Reset := #ix_ResetStatistics,
+	                            ix_Activate := #sUDT_Status.Specific.ParcelTooLong,
+	                            ix_RTrigActivate := #sR_TRIG_ParcelTooLong.Q,
+	                            iqUDT_Statistics := #iqUDT_DimensionsCheckStatistics.TooLongParcels);
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 10.2 - Too high parcels statistics 
+	        
+	        IF #sUDT_Status.Specific.ParcelTooHigh
+	            OR #ix_ResetStatistics
+	        THEN
+	            "FC_Statistics"(ix_Reset := #ix_ResetStatistics,
+	                            ix_Activate := #sUDT_Status.Specific.ParcelTooHigh,
+	                            ix_RTrigActivate := #sR_TRIG_ParcelTooHigh.Q,
+	                            iqUDT_Statistics := #iqUDT_DimensionsCheckStatistics.TooHighParcels);
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 10.3 - Too wide parcels statistics 
+	        
+	        IF #sUDT_Status.Specific.ParcelTooWide
+	            OR #ix_ResetStatistics
+	        THEN
+	            "FC_Statistics"(ix_Reset := #ix_ResetStatistics,
+	                            ix_Activate := #sUDT_Status.Specific.ParcelTooWide,
+	                            ix_RTrigActivate := #sR_TRIG_ParcelTooWide.Q,
+	                            iqUDT_Statistics := #iqUDT_DimensionsCheckStatistics.TooWideParcels);
+	        END_IF;
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 11 - Button lamp
+	    
+	    IF #iqUDT_EquipmentControl.Report.Stopped
+	    THEN
+	        #qx_ButtonLamp := FALSE;
+	    END_IF;
+	    
+	    IF (#iqUDT_EquipmentControl.Report.Running
+	        AND NOT #iqUDT_EquipmentControl.Report.EnergySave)
+	        OR (#iqUDT_EquipmentControl.Report.Dieback
+	        OR #iqUDT_EquipmentControl.Report.Error)
+	    THEN
+	        #qx_ButtonLamp := TRUE;
+	    END_IF;
+	    
+	    IF #ix_ConveyorEsaveStatus
+	    THEN
+	        #qx_ButtonLamp := "mx_Clock_0.5Hz";
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 12 - Status 
+	    
+	    // HMI status initialization
+	    #sUDT_Status.Status := 0;
+	    
+	    IF #iqUDT_EquipmentControl.Report.EnergySave
+	    THEN
+	        #sUDT_Status.Status := "DB_HMIStatusConfiguration".EnergySave;
+	    END_IF;
+	    
+	    IF #iqUDT_EquipmentControl.Report.Running
+	    THEN
+	        #sUDT_Status.Status := "DB_HMIStatusConfiguration".Running;
+	    END_IF;
+	    
+	    IF #iqUDT_EquipmentControl.Report.Stopped
+	    THEN
+	        #sUDT_Status.Status := "DB_HMIStatusConfiguration".Stopped;
+	    END_IF;
+	    
+	    IF #sUDT_Status.Specific.ParcelTooHigh
+	        OR #sUDT_Status.Specific.ParcelTooLong
+	        OR #sUDT_Status.Specific.ParcelTooWide
+	    THEN
+	        #sUDT_Status.Status := "DB_HMIStatusConfiguration".DimensionError;
+	    END_IF;
+	    
+	    IF #iqUDT_EquipmentControl.Report.SafetyStop
+	    THEN
+	        #sUDT_Status.Status := "DB_HMIStatusConfiguration".SafetyStop;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 13 - Update outputs
+	    
+	    #qUDT_HMIStatus := #sUDT_Status;
+	    #qx_Halt := #sx_Halt;
+	    #qx_Lamp := #sx_Lamp;
+	    #qx_WakeUp := #sx_WakeUp;
+	    #qx_RunReverse := #sx_RunReverse;
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

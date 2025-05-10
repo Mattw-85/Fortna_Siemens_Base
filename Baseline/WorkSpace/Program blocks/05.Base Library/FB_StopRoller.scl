@@ -1,0 +1,148 @@
+﻿FUNCTION_BLOCK "FB_StopRoller"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 229
+// END_ATTRIBUTES
+   VAR_INPUT 
+      iUDT_StopRollerConfiguration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_StopRollerConfiguration";   // Stop roller configuration structure
+      ix_Pressure { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when pressure buildup starts
+      ix_PECBrake { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when the brake photoye is not blocked
+      ix_PECStop { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when the stop photoye is not blocked
+      ix_DownstreamStopActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when the downstream stop is active
+      ix_SafetyOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when safety is ok
+      ix_BrakePauseLong { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when receiving a delayed signal to increase brake pause
+   END_VAR
+
+   VAR_OUTPUT 
+      qx_Valve { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when valve is activated
+      qx_StopActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when stop is activated to upstream
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_EquipmentControl : "UDT_EquipmentControl";   // Equipment control structure
+   END_VAR
+
+   VAR 
+      s_PECBreakTimerOnOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // Function block to generate on/off signal delay on the brake PEC
+      s_PECStopTimerOnOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // Function block to generate on/off signal delay on the Stop PEC
+      s_PECPressureTimerOnOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // Function block to generate on/off signal delay on the pressure PEC
+      s_StopFunctionTimerOnOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // Function block to generate on/off signal delay on the downstream stop active
+      slr_StepTimer { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : LReal;   // Step timer
+      si_BrakeFunction { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Brake function step
+      sx_PECBrakeFiltered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // PEC filtered signal
+      sx_PECStopFiltered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // PEC filtered signal
+      sx_PECPressureFiltered { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // PEC filtered signal
+      sx_DownstreamStop { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Downstream is stopped
+      sx_StopFunctionActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Stop function is activated
+      sx_StopRoller { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Roller is stop
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                      
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	23/06/2021  | 0.0       | F. Baten      | first release TIA 15.1
+	20/10/2021  | 0.1       | M. Piela      | Activate valve when system is stoped. Stylistic correction
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	 *)
+	
+	REGION 1 - Timers
+	    
+	    // Filtering brake photo eye signal
+	    #s_PECBreakTimerOnOffDelay(iudi_OnDelayTime := #iUDT_StopRollerConfiguration.PECBrakeOnDelay,
+	                               iudi_OffDelayTime := #iUDT_StopRollerConfiguration.PECBrakeOffDelay,
+	                               ix_SignalToDelay := #ix_PECBrake,
+	                               ix_Enable := TRUE,
+	                               qx_DelayedSignal => #sx_PECBrakeFiltered);
+	    
+	    // Filtering stop photo eye signal
+	    #s_PECStopTimerOnOffDelay(iudi_OnDelayTime := #iUDT_StopRollerConfiguration.PECStopOnDelay,
+	                              iudi_OffDelayTime := #iUDT_StopRollerConfiguration.PECStopOffDelay,
+	                              ix_SignalToDelay := #ix_PECStop,
+	                              ix_Enable := TRUE,
+	                              qx_DelayedSignal => #sx_PECStopFiltered);
+	    
+	    // Filtering downstream stop photo eye signal
+	    #s_StopFunctionTimerOnOffDelay(iudi_OnDelayTime := #iUDT_StopRollerConfiguration.StopFunctionOnDelay,
+	                                   iudi_OffDelayTime := #iUDT_StopRollerConfiguration.StopFunctionOffDelay,
+	                                   ix_SignalToDelay := #ix_DownstreamStopActive,
+	                                   ix_Enable := TRUE,
+	                                   qx_DelayedSignal => #sx_DownstreamStop);
+	    // Sequence Timer
+	    IF #slr_StepTimer > 0
+	    THEN
+	        #slr_StepTimer -= "DB_Memory".PrevCycleTime;
+	        IF #slr_StepTimer < 0
+	        THEN
+	            #slr_StepTimer := 0;
+	        END_IF;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 2 - Stop roller
+	    
+	    // Stop roller comes up when outfeed is not active and will fill up until last PEC is occupied.
+	    // Sequence
+	    // UP
+	    IF (#si_BrakeFunction = 0) AND (#slr_StepTimer = 0)
+	    THEN
+	        #sx_StopRoller := True;
+	        #slr_StepTimer := #iUDT_StopRollerConfiguration.BrakePuls;
+	        #si_BrakeFunction := 1;
+	    END_IF;
+	    
+	    // Down
+	    IF (#si_BrakeFunction = 1) AND (#slr_StepTimer = 0) AND #ix_SafetyOk
+	        AND ((#ix_DownstreamStopActive AND #sx_PECStopFiltered AND NOT #sx_PECBrakeFiltered)
+	        OR (NOT #ix_DownstreamStopActive AND NOT #sx_PECBrakeFiltered))
+	        
+	    THEN
+	        #sx_StopRoller := False;
+	        
+	        IF #ix_BrakePauseLong
+	        THEN
+	            #slr_StepTimer := #iUDT_StopRollerConfiguration.BrakePauseLong;
+	        ELSE
+	            #slr_StepTimer := #iUDT_StopRollerConfiguration.BrakePause;
+	        END_IF;
+	        
+	        #si_BrakeFunction := 0;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 3 - Stop roller valve
+	    
+	    IF #sx_StopFunctionActive AND #sx_PECStopFiltered
+	    THEN
+	        #sx_StopFunctionActive := FALSE;
+	    END_IF;
+	    
+	    IF #ix_DownstreamStopActive //#sx_PECBrakeFiltered
+	    THEN
+	        #sx_StopFunctionActive := TRUE;
+	    END_IF;
+	    
+	    IF #iUDT_StopRollerConfiguration.FailSafe
+	    THEN
+	        #qx_Valve := NOT (#sx_StopRoller OR NOT #ix_SafetyOk) OR #iqUDT_EquipmentControl.Command.Stop;
+	    ELSE
+	        #qx_Valve := #sx_StopRoller AND #ix_SafetyOk OR #iqUDT_EquipmentControl.Command.Stop;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 4 - Stop active
+	    
+	    #qx_StopActive := #sx_StopFunctionActive AND NOT #sx_PECStopFiltered AND NOT #sx_PECBrakeFiltered;
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

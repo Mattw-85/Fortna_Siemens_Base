@@ -1,0 +1,360 @@
+﻿FUNCTION_BLOCK "FB_TCPIPConnect"
+TITLE = FB_TCPIPConnect
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : Communication
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 231
+// END_ATTRIBUTES
+//Function block to establish and terminateTCPIP connection.
+   VAR_INPUT 
+      iUDT_Connection { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_Connection";   // Connection parameters
+   END_VAR
+
+   VAR_OUTPUT 
+      qUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_TCPIPConnectStatus";   // HMI status structure
+      qUDT_Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_CommonStatus";   // Common status structure
+      qx_Connected { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Connected status
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_EquipmentControl : "UDT_EquipmentControl";   // Equipment control structure
+      iqUDT_Statistics : "UDT_TCPIPConnectStatistics";   // Statistic structure
+      iqx_Reconnect { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reconnect command
+   END_VAR
+
+   VAR 
+      sUDT_CommonStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   // Common status structure
+      sFB_TCON {InstructionName := 'TCON'; LibVersion := '4.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : TCON;   // Siemens "TCON" block - to establish the connection
+      sFB_TDISCON {InstructionName := 'TDISCON'; LibVersion := '2.1'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : TDISCON;   // Siemens "TDISCON" block - to terminate the connection
+      sFB_DIAG {InstructionName := 'T_DIAG'; LibVersion := '1.2'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : T_DIAG;   // Siemens "T_DIAG" block - to diagnose the connection
+      sFB_TimerConTimeout { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // MHS "FB_TimerOnOffDelay" block - to measure the connection timeout
+      sFB_TimerFilter { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // MHS "FB_TimerOnOffDelay" block - to filter the connection established signal
+      sv_InterfaceData {InstructionName := 'TCON_IP_v4'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : TCON_IP_v4;   // TCON Interface configuration data
+      sR_TRIG_ConnectionLost {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Siemens "R_TRIG" - to prepare rising edge signal on Connection lost signal
+      sR_TRIG_Reset {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Siemens "R_TRIG" - to prepare rising edge signal on reset data signal
+      sa_Connect { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // TCON interface structure
+         Request { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TCON - Request
+         Done { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TCON - Done
+         Busy { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TCON - Busy
+         Error { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TCON - Error
+         Active { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TCON - Active
+         Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Word;   //  TCON - Status
+      END_STRUCT;
+      sa_Disconnect { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // TDISCON interface structure
+         Request { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TDISCON - Request
+         Done { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TDISCON - Done
+         Busy { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TDISCON - Busy
+         Error { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TDISCON - Error
+         Active { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TDISCON - Active
+         Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Word;   //  TDISCON - Status
+      END_STRUCT;
+      sa_Diag { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // T_DIAG block diagnostic variables
+         Request { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TDIAG - Request
+         Done { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TDIAG - Done
+         Busy { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TDIAG - Busy
+         Error { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TDIAG - Error
+         Active { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TDIAG - Active
+         Status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Word;   //  TDIAG - Status
+         Result {InstructionName := 'TDiag_Status'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : TDiag_Status;   //  TDIAG - Result
+      END_STRUCT;
+      sx_Connected { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Connection established memory
+      sx_ConnectedFiltred { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Connection established memory (filtred)
+      sx_CommunicationFault { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Communication fault
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	24/05/2019  | 0.1       | L.Klar        | first release MHS TIA 15.1
+	13/06/2019  | 0.2       | A.Nowak       | Delete writing to variable - S_FB_Timer_ConTimeout
+	24/06/2019  | 0.3       | L.Klar        | Status running added
+	25/06/2019  | 0.5       | L.Klar        | Statistics changed to InOut
+	24/07/2019  | 2.0       | L.Klar        | 2.0 MHS library release TIA 15.1
+	21/08/2019  | 2.1       | K.Pokorski    | Comments adjusted
+	26/09/2019  | 2.2       | A.Nowak       | Delete static status structure and change region 9. Create new static sx_CommunicationFault.
+	09/10/2019  | 2.3       | M.Kurc        | System equipment control added
+	04/11/2019  | 2.4       | L.Klar        | 10 Hz clock and first scan changed from memory bit to DB variable
+	19/11/2019  | 2.5       | L.Klar        | Status outputs corrected
+	20/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 – Initialization
+	    
+	    // Reset connected status bit and reconnect command bit during first PLC scan
+	    IF ("DB_Memory".FirstScan)             // First PLC scan occured
+	    THEN
+	        
+	        #sx_Connected := FALSE;
+	        #iqx_Reconnect := TRUE;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 2 – Connection error reset
+	    
+	    // Reset errors and blocks statuses when no connection state available and communication fault reset received 
+	    #sR_TRIG_Reset(CLK := #iqUDT_EquipmentControl.Command.Reset);
+	    
+	    IF (#sx_CommunicationFault                                      // Communication fault 
+	        AND #sR_TRIG_Reset.Q)                                      // Reset signal trigger
+	    THEN
+	        
+	        #sa_Connect.Status := 16#0;
+	        #sa_Disconnect.Status := 16#0;
+	        #sa_Diag.Status := 16#0;
+	        #sx_CommunicationFault := FALSE;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 3 – Communication Interface preparation
+	    
+	    #sv_InterfaceData.InterfaceId := #iUDT_Connection.Interface_ID;                       // HW-identifier of IE-interface submodule 
+	    #sv_InterfaceData.ID := #iUDT_Connection.ID;                                          // Connection reference / identifier
+	    #sv_InterfaceData.ConnectionType := 16#0B;                                             // Type OF connection: 11=TCP/IP, 19=UDP 17=TCP/IP
+	    #sv_InterfaceData.ActiveEstablished := #iUDT_Connection.ActiveEstablished;            // Active/passive connection establishment
+	    #sv_InterfaceData.RemoteAddress.ADDR[1] := INT_TO_BYTE(#iUDT_Connection.IP[1]);       // Remote IP address (IPv4) - x.0.0.0
+	    #sv_InterfaceData.RemoteAddress.ADDR[2] := INT_TO_BYTE(#iUDT_Connection.IP[2]);       // Remote IP address (IPv4) - 0.x.0.0
+	    #sv_InterfaceData.RemoteAddress.ADDR[3] := INT_TO_BYTE(#iUDT_Connection.IP[3]);       // Remote IP address (IPv4) - 0.0.x.0
+	    #sv_InterfaceData.RemoteAddress.ADDR[4] := INT_TO_BYTE(#iUDT_Connection.IP[4]);       // Remote IP address (IPv4) - 0.0.0.x 
+	    
+	    // Set local or remote port depending on whether the PLC is active or passive device in connection 
+	    IF (#sv_InterfaceData.ActiveEstablished)                                               // Active connection
+	    THEN
+	        
+	        #sv_InterfaceData.LocalPort := 0;
+	        #sv_InterfaceData.RemotePort := #iUDT_Connection."Port";
+	        
+	        // Passive connection
+	    ELSE
+	        
+	        #sv_InterfaceData.LocalPort := #iUDT_Connection."Port";
+	        #sv_InterfaceData.RemotePort := 0;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 4 – Connection establishment and termination
+	    
+	    IF (#iqx_Reconnect)                                                     // Reconnect request          
+	    THEN
+	        
+	        // Terminate a TCPIP connection if reconnect command available and connection established
+	        IF (#sx_Connected)                                                  // Connection established
+	        THEN
+	            
+	            // Disconnect request 
+	            #sa_Disconnect.Request :=
+	            #iqx_Reconnect                                                  // Reconnect command
+	            AND #sa_Disconnect.Status = 16#7000;                            // TDISCON block status is equal to 16#7000 (No job processing active)
+	            
+	            // Terminate a TCPIP connection when request available
+	            #sFB_TDISCON(REQ := #sa_Disconnect.Request,
+	                         ID := #sv_InterfaceData.ID,
+	                         DONE => #sa_Disconnect.Done,
+	                         BUSY => #sa_Disconnect.Busy,
+	                         ERROR => #sa_Disconnect.Error,
+	                         STATUS => #sa_Disconnect.Status);
+	            
+	            // In case of connection broken, connected bit and disconnect block active bit are reset
+	            IF (#sa_Disconnect.Done)                                        // Disconnect was successful
+	            THEN
+	                
+	                #sx_Connected := FALSE;
+	                #sa_Disconnect.Active := FALSE;
+	                
+	                // Connection termination in progress
+	            ELSE
+	                
+	                #sa_Disconnect.Active := TRUE;                              // Set the disconnecting active status bit 
+	                
+	            END_IF;
+	            
+	            // Try to establish connection if reconnect command active and there is no connection
+	        ELSE                                                                // Connection is terminated 
+	            
+	            // Connect request
+	            #sa_Connect.Request := #iqx_Reconnect AND                       // Reconnect command 
+	            #sa_Connect.Status = 16#7000;            // TCON block status is equal to 16#7000 (No job processing active)
+	            
+	            // Establishing a TCPIP connection when request available
+	            #sFB_TCON(REQ := #sa_Connect.Request,
+	                      ID := #sv_InterfaceData.ID,
+	                      DONE => #sa_Connect.Done,
+	                      BUSY => #sa_Connect.Busy,
+	                      ERROR => #sa_Connect.Error,
+	                      STATUS => #sa_Connect.Status,
+	                      CONNECT := #sv_InterfaceData);
+	            
+	            // In case of connection established, connected bit is set, connect block active bit and reconnect command are reset
+	            IF (#sa_Connect.Done)                                           // Connect successful 
+	            THEN
+	                
+	                #sx_Connected := TRUE;
+	                #sa_Connect.Active := FALSE;
+	                #iqx_Reconnect := FALSE;
+	                
+	                // Connection establishing in progress
+	            ELSE
+	                
+	                #sa_Connect.Active := TRUE;                                 // Set the connecting active status
+	                
+	            END_IF;
+	            
+	        END_IF;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 5 – Connection establishment and termination error handling
+	    
+	    // Measure the maximum connect or disconnect time
+	    #sFB_TimerConTimeout(ix_SignalToDelay := #sa_Connect.Active
+	                         OR #sa_Disconnect.Active,
+	                         iudi_OnDelayTime := DINT_TO_UDINT(#iUDT_Connection.ConTimeout),
+	                         iudi_OffDelayTime := 0);
+	    
+	    IF (#sFB_TimerConTimeout.qx_DelayedSignal)                                                 // Connecting / disconnecting time error from connection timeout timer
+	    THEN
+	        
+	        IF (#sa_Connect.Active)                                                                  // Connecting is active
+	        THEN
+	            
+	            // If connection already exist and block try establish connection, connected bit is set, connect block active bit and reconnect command are reset
+	            IF (#sa_Connect.Status = 16#80A3)                                                    // Connecting status equal to 16#80A3 - The connection already exist
+	            THEN
+	                
+	                #sx_Connected := TRUE;
+	                #sa_Connect.Active := FALSE;
+	                #iqx_Reconnect := FALSE;
+	                
+	                // Connection time has expired - error generated
+	            ELSE
+	                
+	                #sx_CommunicationFault := TRUE;
+	                
+	            END_IF;
+	            
+	            // Disconnect operation failed - error generated 
+	        ELSIF (#sa_Disconnect.Active)
+	        THEN
+	            
+	            #sx_CommunicationFault := TRUE;
+	            
+	        END_IF;
+	        
+	    END_IF;
+	    
+	    // The connection terminated by partner - error generated, connected bit reset and reconnect command request set
+	    IF (#sa_Diag.Result.State <> 16#04)                         // The connection terminated by partner                                                    
+	    THEN
+	        
+	        #sx_CommunicationFault := TRUE;
+	        #sx_Connected := FALSE;
+	        #iqx_Reconnect := TRUE;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 6 – Connection diagnostic
+	    
+	    // Check connection condition ten times per second
+	    IF (NOT #sa_Connect.Active AND NOT #sa_Disconnect.Active)        // Connecting and disconnecting procedure are not active
+	    THEN
+	        
+	        #sFB_DIAG(REQ := "DB_Memory".Clock_10Hz,
+	                  ID := #sv_InterfaceData.ID,
+	                  DONE => #sa_Diag.Done,
+	                  BUSY => #sa_Diag.Busy,
+	                  ERROR => #sa_Diag.Error,
+	                  STATUS => #sa_Diag.Status,
+	                  RESULT := #sa_Diag.Result);
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 7 – Connection established filter
+	    
+	    // Connected status bit filtering
+	    #sFB_TimerFilter(ix_SignalToDelay := #sx_Connected,
+	                     iudi_OnDelayTime := 50,
+	                     qx_DelayedSignal => #sx_ConnectedFiltred);
+	    
+	END_REGION
+	
+	REGION 8 – Statistics
+	    
+	    // Prepare rising edge of connected status signal 
+	    #sR_TRIG_ConnectionLost(CLK := NOT #sx_ConnectedFiltred);
+	    
+	    // Conditions to call "FC_Statistics" 
+	    IF (NOT #sx_ConnectedFiltred                                                        // No connection 
+	        OR #iqUDT_EquipmentControl.Command.ResetData)                                  // Reset data
+	    THEN
+	        
+	        "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,
+	                        ix_Activate := NOT #sx_ConnectedFiltred,
+	                        ix_RTrigActivate := #sR_TRIG_ConnectionLost.Q,
+	                        iqUDT_Statistics := #iqUDT_Statistics.ConnectionLost);
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 9 – Status
+	    
+	    #sUDT_CommonStatus.Error := #sx_CommunicationFault;                        // Error
+	    
+	    #sUDT_CommonStatus.AutoON := #sx_ConnectedFiltred;                         // Auto ON
+	    
+	    #qUDT_HMIStatus.Specific.CommunicationFault := #sx_CommunicationFault;     // Communication faults
+	    
+	    #qUDT_HMIStatus.Specific.Connected := #sx_ConnectedFiltred;                // Connected
+	    
+	    IF #sUDT_CommonStatus.AutoON                                               // Auto ON
+	    THEN
+	        
+	        #qUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".AutoON;
+	        
+	    END_IF;
+	    
+	    IF #sUDT_CommonStatus.Error                                                // Error
+	    THEN
+	        
+	        #qUDT_HMIStatus.Status := "DB_HMIStatusConfiguration".Error;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 10 Report to control block
+	    
+	    // Function to manage report between control block and conveyor block
+	    
+	    "FC_EquipmentReport"(iUDT_Status := #sUDT_CommonStatus,
+	                         iqUDT_Control := #iqUDT_EquipmentControl);
+	    
+	END_REGION
+	
+	REGION 11 – Write outputs
+	    
+	    #qx_Connected := #sx_Connected;
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

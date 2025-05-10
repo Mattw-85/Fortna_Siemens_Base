@@ -1,0 +1,92 @@
+﻿FUNCTION_BLOCK "FB_AMBASpiralVeyor"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 255
+// END_ATTRIBUTES
+   VAR_INPUT 
+      ix_HardwareOK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when hardware is ok
+      iudi_DelayHardwareOK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // [ms] Delay time for hardware ok signal
+      ix_ProxSwitchDriveShaft { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Proximity switch signal drive shaft detection
+      ix_ProxSwitchIdlerShaft { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Proximity switch signal idler shaft detection
+      ix_ProxSwitchSlat { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Proximity switch signal slat detection
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_Statistics : "UDT_SpiralVeyorStatistics";
+      iqUDT_Status : "UDT_SpiralVeyorStatus";
+      iqUDT_EquipmentControl : "UDT_EquipmentControl";
+      iqUDT_CommonStatus : "UDT_CommonStatus";
+   END_VAR
+
+   VAR 
+      sFB_HardwareOK { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_TimerOnOffDelay";   // Timer on/off delay for hardware ok signal
+      sFB_SlatCheck { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_AMBASpiralSlatCheck";
+      sFB_ChainCheck { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "FB_AMBASpiralChainCheck";
+   END_VAR
+
+
+BEGIN
+	(*                                                                                      
+	Version history:
+	Date        | Version   | Author              | Remark
+	----------------------------------------------------------------------------------------
+	 14/03/2022 | 1.0       | G.Vlooswijk         | Initial version for FedEx Milano
+	 11/05/2022 | 2.0       | G.Vlooswijk         | Splitted inner and outerlane status
+	 22/09/2022 | 2.1       | G.Vlooswijk         | Removed HMIStatus
+	 03/06/2024 | 2.2       | J.Majer             | Adapted to current library 
+	*)
+	
+	REGION Input preparation
+	    
+	    // Hardware ok timer 
+	    #sFB_HardwareOK(iudi_OnDelayTime := #iudi_DelayHardwareOK,
+	                    ix_SignalToDelay := #ix_HardwareOK);
+	    
+	END_REGION
+	
+	REGION Missing slat dection
+	    
+	    #sFB_SlatCheck(ix_SlatDetection := #ix_ProxSwitchSlat,
+	                   ix_HardwareOk := #sFB_HardwareOK.qx_DelayedSignal,
+	                   iqx_MissingSlatDetected := #iqUDT_Status.MissingSlat,
+	                   iqUDT_Statistics := #iqUDT_Statistics.MissingSlat,
+	                   iqUDT_EquipmentControl := #iqUDT_EquipmentControl);
+	    
+	END_REGION
+	
+	REGION Chain check
+	    
+	    #sFB_ChainCheck(ix_ProxSwitchDriveShaft := #ix_ProxSwitchDriveShaft,
+	                    ix_ProxSwitchIdlerShaft := #ix_ProxSwitchIdlerShaft,
+	                    ix_HardwareOK := #sFB_HardwareOK.qx_DelayedSignal,
+	                    iqx_BrokenChainDetected := #iqUDT_Status.BrokenChain,
+	                    iqx_ChainOverlengthDetected := #iqUDT_Status.ChainOverlength,
+	                    iqUDT_BrokenChainStatistics := #iqUDT_Statistics.BrokenChain,
+	                    iqUDT_ChainOverlengthStatistics := #iqUDT_Statistics.ChainOverlength,
+	                    iqUDT_EquipmentControl := #iqUDT_EquipmentControl);
+	    
+	END_REGION
+	
+	REGION Update common status
+	    
+	    //Set/reset warning state on spiralveyor warnings
+	    IF #iqUDT_Status.ChainOverlength AND NOT #iqUDT_CommonStatus.Warning THEN
+	        #iqUDT_CommonStatus.Warning := TRUE;
+	    ELSIF NOT #iqUDT_Status.ChainOverlength AND #iqUDT_CommonStatus.Warning THEN
+	        #iqUDT_CommonStatus.Warning := FALSE;
+	    END_IF;
+	    
+	    //Set/reset error status on spiralveyor faults
+	    IF (#iqUDT_Status.BrokenChain OR #iqUDT_Status.MissingSlat) AND NOT #iqUDT_CommonStatus.Error THEN
+	        #iqUDT_CommonStatus.Error := TRUE;
+	    ELSIF NOT #iqUDT_Status.BrokenChain AND NOT #iqUDT_Status.MissingSlat AND #iqUDT_CommonStatus.Error THEN
+	        #iqUDT_CommonStatus.Error := FALSE;
+	    END_IF;
+	    
+	END_REGION
+	
+	
+END_FUNCTION_BLOCK
+

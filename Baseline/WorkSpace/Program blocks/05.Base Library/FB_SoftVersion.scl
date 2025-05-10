@@ -1,0 +1,138 @@
+﻿FUNCTION_BLOCK "FB_SoftVersion"
+TITLE = FB_SoftVersion
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 28
+// END_ATTRIBUTES
+//Function block to get the program checksums.
+   VAR_INPUT 
+      is_ActualDateTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;   // Actual date and time
+   END_VAR
+
+   VAR_OUTPUT 
+      qs_SoftVersion { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[8];   // Software version
+      qa_StandardCRC { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[0..7] of Byte;   // Standard program checksum output
+      qa_SafetyCRC { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[0..7] of Byte;   // Safety program checksum output
+   END_VAR
+
+   VAR 
+      sFB_GetChecksum_Safety {InstructionName := 'GetChecksum'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : GetChecksum;   // Safety checksum read block
+      sFB_GetChecksum_Standard {InstructionName := 'GetChecksum'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : GetChecksum;   // Standard checksum read block
+   END_VAR
+   VAR RETAIN
+      sa_StandardCRC { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[0..7] of Byte;   // Standard program checksum
+      sa_SafetyCRC { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[0..7] of Byte;   // Safety program checksum
+   END_VAR
+   VAR 
+      sa_NewStandardCRC { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[0..7] of Byte;   // New standard program checksum
+      sa_NewSafetyCRC { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Array[0..7] of Byte;   // New safety program checksum
+   END_VAR
+   VAR RETAIN
+      ss_Date { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[8];   // Date charater string
+   END_VAR
+
+   VAR_TEMP 
+      ta_StandardCRC : Struct   // GetChecksum
+         tx_Done : Bool;   // GetChecksum - Done
+         tx_Busy : Bool;   // GetChecksum - Busy
+         tx_Error : Bool;   // GetChecksum - Error
+         tw_Status : Word;   // GetChecksum - Status
+      END_STRUCT;
+      ta_SafetyCRC : Struct   // GetChecksum
+         tx_Done : Bool;   // GetChecksum - Done
+         tx_Busy : Bool;   // GetChecksum - Busy
+         tx_Error : Bool;   // GetChecksum - Error
+         tw_Status : Word;   // GetChecksum - Status
+      END_STRUCT;
+      tx_CRCValid : Bool;   // Checksums valid
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	24/05/2019  | 0.1       | K.Pokorski    | first release MHS TIA 15.1
+	14/06/2019  | 0.2       | A.Nowak       | Replacement of instruction if for direct write into variable - Region 2  
+	24/07/2019  | 2.0       | L.Klar        | 2.0 MHS library release TIA 15.1
+	27/08/2019  | 2.2       | K.Pokorski    | Comments adjusted
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 - Standard and safety program checksums
+	    
+	    // Scope - 1 - Standard program CRC
+	    #sFB_GetChecksum_Standard(Scope := 1,
+	                              Done => #ta_StandardCRC.tx_Done,
+	                              Busy => #ta_StandardCRC.tx_Busy,
+	                              Error => #ta_StandardCRC.tx_Error,
+	                              Status => #ta_StandardCRC.tw_Status,
+	                              Checksum := #sa_NewStandardCRC);
+	    
+	    // Scope - 2 - Safety program CRC
+	    #sFB_GetChecksum_Safety(Scope := 2,
+	                            Done => #ta_SafetyCRC.tx_Done,
+	                            Busy => #ta_SafetyCRC.tx_Busy,
+	                            Error => #ta_SafetyCRC.tx_Error,
+	                            Status => #ta_SafetyCRC.tw_Status,
+	                            Checksum := #sa_NewSafetyCRC);
+	    
+	END_REGION
+	
+	REGION 2 - Checksums comparison
+	    
+	    #tx_CRCValid := (#sa_NewStandardCRC = #sa_StandardCRC)
+	    AND (#sa_SafetyCRC = #sa_NewSafetyCRC);
+	    
+	END_REGION
+	
+	REGION 3 - New software version 
+	    
+	    // Separate the year, mounth and day from actual date and time and connect it to one string
+	    IF (NOT #tx_CRCValid)                                           // Checksums not valid
+	    THEN
+	        
+	        #ss_Date := CONCAT(IN1 := MID(IN := #is_ActualDateTime,
+	                                                         L := 4,
+	                                                         P := 1),
+	                           
+	                           IN2 := MID(IN := #is_ActualDateTime,
+	                                      L := 2,
+	                                      P := 6),
+	                           
+	                           IN3 := MID(IN := #is_ActualDateTime,
+	                                      L := 2,
+	                                      P := 9));
+	        
+	        // Standard progrm checksum update
+	        #sa_StandardCRC := #sa_NewStandardCRC;
+	        
+	        // Safety program checksum update
+	        #sa_SafetyCRC := #sa_NewSafetyCRC;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 4 - Write outputs 
+	    
+	    // New program date
+	    #qs_SoftVersion := #ss_Date;
+	    
+	    // Actual standard program checksum
+	    #qa_StandardCRC := #sa_StandardCRC;
+	    
+	    // Actual safety program checksum
+	    #qa_SafetyCRC := #sa_SafetyCRC;
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

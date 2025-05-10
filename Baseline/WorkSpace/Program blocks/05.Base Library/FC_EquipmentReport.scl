@@ -1,0 +1,81 @@
+﻿FUNCTION "FC_EquipmentReport" : Void
+TITLE = FC_Equipment_Report
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 16
+// END_ATTRIBUTES
+//Function to generate equipment report.
+   VAR_INPUT 
+      iUDT_Status : "UDT_CommonStatus";   // Status structure
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_Control : "UDT_EquipmentControl";   // Equipment control
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	24/05/2019  | 0.1       | F.Baten       | first release MHS TIA 15.1
+	17/06/2019  | 0.3       | L.Klar        | Manual mode added to "UDT_EquipmentControl"
+	17/07/2019  | 0.4       | A.Nowak       | Add all statuses and comments
+	24/07/2019  | 2.0       | L.Klar        | 2.0 MHS library release TIA 15.1
+	27/08/2019  | 2.1       | K.Pokorski    | Comments adjusted
+	16/09/2019  | 2.2       | K.Pokorski    | Equipment error free condition added to "Restart required" status
+	06/10/2019  | 2.3       | S. Deukar     | Updated accoring to new UDT equipment report
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	05/02/2024  | 3.1       | L.Klar        | Auto On extention added 
+	13/03/2024  | 4.0       | S. Nieswiec   | Added to baseline
+	*)
+	
+	REGION 1 - Equipment report update
+	    
+	    // Extension of stopped equipment report with the stopped status
+	    #iqUDT_Control.Report.Stopped := #iUDT_Status.Stopped
+	    OR #iqUDT_Control.Report.Stopped;
+	    
+	    // Extension of started equipment report with the started status
+	    #iqUDT_Control.Report.Running := #iUDT_Status.Running
+	    OR #iqUDT_Control.Report.Running;
+	    
+	    // Extension of energy save equipment report with the energy save status
+	    #iqUDT_Control.Report.EnergySave := #iUDT_Status.EnergySave
+	    OR #iqUDT_Control.Report.EnergySave;
+	    
+	    // Extension of warning equipment report with the warning status
+	    #iqUDT_Control.Report.Warning := #iUDT_Status.Warning
+	    OR #iqUDT_Control.Report.Warning;
+	    
+	    // Extension of manual mode equipment report with the manual mode status
+	    #iqUDT_Control.Report.Manual := #iUDT_Status.Manual
+	    OR #iqUDT_Control.Report.Manual;
+	    
+	    // Extension of error equipment report with the error status
+	    #iqUDT_Control.Report.Error := #iUDT_Status.Error
+	    OR #iqUDT_Control.Report.Error;
+	    
+	    // Extension of safety stop equipment report with the safety stop status
+	    #iqUDT_Control.Report.SafetyStop := #iUDT_Status.SafetyStop
+	    OR #iqUDT_Control.Report.SafetyStop;
+	    
+	    // Extension of Auto On equipment report with the Auto On status
+	    #iqUDT_Control.Report.AutoON := #iUDT_Status.AutoON
+	    OR #iqUDT_Control.Report.AutoON;
+	    
+	    // Extension of restart required equipment report with the restart required and no equipment error statuses
+	    #iqUDT_Control.Request.RestartRequired := #iUDT_Status.Stopped
+	    AND NOT #iUDT_Status.Error
+	    OR #iqUDT_Control.Request.RestartRequired;
+	    
+	END_REGION
+END_FUNCTION
+

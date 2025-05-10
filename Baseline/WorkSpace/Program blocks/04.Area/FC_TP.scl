@@ -1,0 +1,32 @@
+﻿FUNCTION "FC_TP" : Void
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 14
+// END_ATTRIBUTES
+   VAR_TEMP 
+      ts_Zone : String;
+      ts_ZoneNumber : String;
+      ts_Section : String;
+      ts_conveyorCode : String;
+      ti_length : Int;
+      ti_index : Int;
+   END_VAR
+
+   VAR CONSTANT 
+      ci_max : Int := 32766;
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	
+	*)
+END_FUNCTION
+

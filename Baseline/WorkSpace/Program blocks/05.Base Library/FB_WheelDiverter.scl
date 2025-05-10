@@ -1,0 +1,649 @@
+﻿FUNCTION_BLOCK "FB_WheelDiverter"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      iUDT_Configuration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_WheelDiverterConfiguration";   // Wheel diverter configuration
+      ix_ExternalManualMode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // External manual mode (conveyor is in manual mode)
+      ix_HardwareOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when  hardware is Ok
+      ix_24vOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when 24VDC is healthy
+      ix_SafetyOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // TRUE when safety is ok
+      ix_AirPressureOk { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Air pressure circuit healthy
+      ix_SideAvailable { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True while diverting to side is possible
+   END_VAR
+
+   VAR_OUTPUT 
+      qUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_WheelDiverterStatus";   // HMI status structure
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_EquipmentControl : "UDT_EquipmentControl";   // Equipment control structure
+      iqUDT_ConveyorInterface : "UDT_ConveyorInterface";   // Conveyor interface structure
+      iqUDT_HMICommands : "UDT_WheelDiverterCommands";   // Wheel Diverter Command structure
+      iqUDT_Statistics : "UDT_WheelDiverterStatistics";   // Statistics structure
+      iqa_TrackingArray : Array[*] of Int;   // Tracking array
+      iqUDT_HandshakeSide : "UDT_ConveyorHandshake";   // Handshake downstream conveyor to the side
+      iqUDT_HandshakeStraight : "UDT_ConveyorHandshake";   // Handshake downstream conveyor to the front
+      iqUDT_HandshakeConveyor : "UDT_ConveyorHandshake";   // Handshake structure
+      iqUDT_Valve01Interface : "UDT_ValveInterface";   // Valve01 interface signals
+      iqUDT_Valve02Interface : "UDT_ValveInterface";   // Valve02 interface signals
+   END_VAR
+
+   VAR 
+      sUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_WheelDiverterStatus";   // HMI status structure
+      sUDT_CommonStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_CommonStatus";   // Common status structure
+      sR_TRIG_ProductDetectedS1 {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge product at first section decision point in tracking array
+      sR_TRIG_ProductDetectedS2 {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge product at second section decision point in tracking array
+      sR_TRIG_ManualMode {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge trigger manual mode
+      sR_TRIG_ManualGoUpS1 {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge manual up command first section
+      sR_TRIG_ManualGoDownS1 {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge manual down command first section
+      sR_TRIG_ManualGoUpS2 {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge manual up command second section
+      sR_TRIG_ManualGoDownS2 {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge manual down command second section
+      sR_TRIG_UpS2 {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge up command second section in automatic mode
+      sR_TRIG_AirPressureFault {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge air pressure fault
+      sF_TRIG_ManualMode {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   // Falling edge trigger manual mode
+      sF_TRIG_UpS2 {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   // Falling edge up command second section in automatic mode
+      si_TransferingS1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Divert distance (length of product +10%)
+      si_TransferingS2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Divert distance (length of product +10%)
+      sx_Ready { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Wheel diverter ready to operate in automatic mode
+      sx_AutomaticActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Running in automatic
+      sx_ManualModeActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Manual mode active
+      sx_PreStartManual { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Pre conditions to run wheel diverter in manual mode
+      sx_ManualRunning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Manual mode active
+      sx_GoUpS1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Automatic control go Up first section
+      sx_GoUpS2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Automatic control go Up second section
+      sx_GoDownS1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Automatic control go down first section
+      sx_GoDownS2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Automatic control go down second section
+      sx_ManUpS1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Auxiliary bit for manual up position first section
+      sx_ManUpS2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Auxiliary bit for manual up position second section
+      sx_ManDownS1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Auxiliary bit for manual down position second section
+      sx_ManDownS2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Auxiliary bit for manual down position second section
+      sx_ManualGoUpS1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Manual control go Up first section
+      sx_ManualGoUpS2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Manual control go Up second section
+      sx_ManualGoDownS1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Manual control go down first section
+      sx_ManualGoDownS2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Manual control go down second section
+      sx_UpS1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // First section up bit
+      sx_UpS2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Second section up bit
+      sx_DownS1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // First section down bit
+      sx_DownS2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Second section down bit
+      sdi_DestinationS1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Product at first section destination
+      sdi_DestinationS2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // Product at second section destination
+      sx_LastDivertStraightS1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // True if last product was diverted to the side
+   END_VAR
+
+   VAR_TEMP 
+      tdi_ArrayLength : DInt;   // Length of tracking array
+      ti_TC : Int;   // Index for tracking array operations
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	12/06/2024  | 1.0       | K.Pokorski    | Initial version
+	16/01/2025  | 1.1       | Z.Kunikowska  | Add valve interface and semi-automatic mode
+	*)
+	
+	REGION 1 - Initial
+	    
+	    REGION 1.1 - Triggers
+	        
+	        // Detection of product at decision point in tracking array
+	        #sR_TRIG_ProductDetectedS1(CLK := #iqa_TrackingArray[#iUDT_Configuration.DecisionPointSection1] <> 0);
+	        
+	        #sR_TRIG_ProductDetectedS2(CLK := #iqa_TrackingArray[#iUDT_Configuration.DecisionPointSection2] <> 0);
+	        
+	        // Falling edge detection of up command in automatic mode
+	        #sF_TRIG_UpS2(CLK := #sx_GoUpS2);
+	        
+	        // Rising edge detection of up command in automatic mode
+	        #sR_TRIG_UpS2(CLK := #sx_GoUpS2);
+	        
+	        // Rising edge trigger manual mode
+	        #sR_TRIG_ManualMode(CLK := #iqUDT_HMICommands.ManualMode
+	                            OR #iqUDT_EquipmentControl.Command.ManualMode);
+	        
+	        // Falling edge trigger manual mode
+	        #sF_TRIG_ManualMode(CLK := #iqUDT_HMICommands.ManualMode
+	                            OR #iqUDT_EquipmentControl.Command.ManualMode);
+	        
+	        // Rising edge detection of manual up command first section
+	        #sR_TRIG_ManualGoUpS1(CLK := #iqUDT_HMICommands.ManualUpS1);
+	        
+	        // Rising edge detection of manual down command first section
+	        #sR_TRIG_ManualGoDownS1(CLK := #iqUDT_HMICommands.ManualDownS1);
+	        
+	        // Rising edge detection of manual up command second section
+	        #sR_TRIG_ManualGoUpS2(CLK := #iqUDT_HMICommands.ManualUpS2);
+	        
+	        // Rising edge detection of manual down command second section
+	        #sR_TRIG_ManualGoDownS2(CLK := #iqUDT_HMICommands.ManualDownS2);
+	        
+	        //Rising edge air pressure error occured
+	        #sR_TRIG_AirPressureFault(CLK := #sUDT_HMIStatus.Specific.AirPressureError);
+	        
+	    END_REGION
+	    
+	    
+	    
+	END_REGION
+	
+	REGION 2 - Error / warning
+	    
+	    REGION 2.1 - Reset errors
+	        
+	        IF #iqUDT_EquipmentControl.Command.Reset                                // Reset command received 
+	        THEN
+	            #sUDT_HMIStatus.Specific.AirPressureError := FALSE;                 // Reset airpressure error
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 2.2 - Set errors
+	        
+	        // Airpressure not ok
+	        IF NOT #ix_AirPressureOk                                                // Airpressure is not signalling              
+	            AND (#sx_GoUpS1 OR #sx_GoUpS2)                                      // If there is request to move up     
+	        THEN
+	            #sUDT_HMIStatus.Specific.AirPressureError := TRUE;                  // Set error airpressure
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 2.3 - Warning
+	        
+	        #sUDT_HMIStatus.Specific.AirPressureWarning := NOT #ix_AirPressureOk;   // Airpressure is not signalling
+	        
+	    END_REGION
+	    
+	    
+	    REGION 2.4 - Common Error
+	        
+	        #sUDT_CommonStatus.Error := #sUDT_HMIStatus.Specific.AirPressureError  // Set error in common structure
+	        OR #iqUDT_Valve01Interface.Error                                        // Valve 01 has an error
+	        OR #iqUDT_Valve02Interface.Error;                                       // Valve 02 has an error
+	        
+	    END_REGION
+	    
+	    REGION 2.5 - Common Warning
+	        
+	        #sUDT_CommonStatus.Warning := #sUDT_HMIStatus.Specific.AirPressureWarning;   // Set warning in common structure 
+	        
+	    END_REGION
+	    
+	    REGION 2.6 - Common Stopped
+	        
+	        #sUDT_CommonStatus.Stopped := NOT #sx_Ready OR NOT #sx_AutomaticActive;       //Device is stopped
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 3 - Check conditions to set Equipment ready
+	    
+	    //Conditions to set bit sx_Ready to operate 
+	    
+	    #sx_Ready := NOT #sUDT_CommonStatus.Error   // Error present
+	    AND #ix_HardwareOk
+	    AND #ix_SafetyOk
+	    AND #ix_24vOk;                              // 24V error status
+	    
+	END_REGION
+	
+	REGION 4 - Stop Equipment
+	    
+	    // Conditions to stop automatic mode
+	    IF (NOT #iqUDT_EquipmentControl.Command.AutomaticOn                // Automatic stop if the bit AutomaticOn from control block is false
+	        AND NOT #sx_ManualModeActive)                                   // Manual mode active bit
+	        
+	        OR (NOT #sx_Ready                                               // Bit conveyor ready to run in automatic mode
+	        AND NOT #sx_ManualModeActive)                                   // Manual mode active
+	        
+	        OR #sR_TRIG_ManualMode.Q                                        // Trigger when manual mode is set on
+	        OR #sF_TRIG_ManualMode.Q                                        // Trigger when manual mode is set off
+	        
+	        OR NOT #ix_SafetyOk                                             // Safety not ok
+	    THEN
+	        
+	        #sx_AutomaticActive := FALSE;                                   // Automatic mode is disable
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 5 - Start
+	    
+	    REGION 5.1 - Set Automatic active
+	        
+	        // The conditions to set the bit "startReceived" are: 
+	        // - Divert not in manual mode.
+	        // - Divert ready to run.
+	        // - Bit AutomaticOn from control block must be on.
+	        // - Bit start form control block on.
+	        
+	        IF #iqUDT_EquipmentControl.Command.Start
+	            AND #iqUDT_EquipmentControl.Command.AutomaticOn
+	            AND NOT #sx_ManualModeActive
+	            AND #sx_Ready
+	        THEN
+	            #sx_AutomaticActive := TRUE;                                // Diverter active automatic mode
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 5.2 - Restart request
+	        
+	        // Manual mode bits inputs can be reset in case of malfunction
+	        #iqUDT_EquipmentControl.Request.RestartRequired := NOT #sx_AutomaticActive
+	        AND NOT #sx_ManualModeActive
+	        AND #sx_Ready;
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	REGION 6 - Manual mode
+	    
+	    REGION 6.1 - Manual mode force disable
+	        
+	        // Manual mode bits inputs can be reset in case of malfunction
+	        IF #iqUDT_EquipmentControl.Command.DisableManualMode
+	        THEN
+	            #iqUDT_HMICommands.ManualMode := FALSE;
+	            #iqUDT_EquipmentControl.Command.ManualMode := False;
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 6.2 - Manual mode activation 
+	        
+	        // Manual mode is active if it is active from hmi or by control block or conveyor is in manual mode
+	        #sx_ManualModeActive := #iqUDT_HMICommands.ManualMode
+	        OR #iqUDT_EquipmentControl.Command.ManualMode
+	        OR #ix_ExternalManualMode;
+	        
+	    END_REGION
+	    
+	    REGION 6.3 - Reset manual commands 
+	        //When the system is not any more in manual mode or when fatal error occurs the HMI commands should be reset
+	        IF NOT #ix_SafetyOk
+	            OR NOT #ix_24vOk                                            // 24V error status
+	            OR NOT #sx_ManualModeActive
+	            OR NOT #ix_HardwareOk                                       // Hardware not ok
+	        THEN
+	            #iqUDT_HMICommands.ManualDownS1 := FALSE;
+	            #iqUDT_HMICommands.ManualUpS1 := FALSE;
+	            
+	        END_IF;
+	        
+	    END_REGION
+	    
+	    REGION 6.4 - Start/Stop
+	        
+	        // Pre start conditions to run in manual mode
+	        #sx_PreStartManual := #sx_ManualModeActive                      // Manual mode active bit
+	        AND #ix_SafetyOk                                                // Safety healthy bit
+	        AND #ix_HardwareOk;                                             // Profinet comunication 
+	        
+	        
+	        // If manual command is active to one side, first button has to be released to accept new
+	        #sx_ManUpS1 := (#sR_TRIG_ManualGoUpS1.Q AND NOT #sx_ManDownS1) OR
+	        (#sx_ManUpS1 AND #iqUDT_HMICommands.ManualUpS1);
+	        
+	        #sx_ManDownS1 := (#sR_TRIG_ManualGoDownS1.Q AND NOT #sx_ManUpS1) OR
+	        (#sx_ManDownS1 AND #iqUDT_HMICommands.ManualDownS1);
+	        
+	        
+	        #sx_ManUpS2 := (#sR_TRIG_ManualGoUpS2.Q AND NOT #sx_ManDownS2) OR
+	        (#sx_ManUpS2 AND #iqUDT_HMICommands.ManualUpS2);
+	        
+	        #sx_ManDownS2 := (#sR_TRIG_ManualGoDownS2.Q AND NOT #sx_ManUpS2) OR
+	        (#sx_ManDownS2 AND #iqUDT_HMICommands.ManualDownS2);
+	        
+	        // Do signal request (horn sounding before movement)
+	        IF #sx_PreStartManual                                           // Pre start conditions to run in manual mode
+	            AND (#sR_TRIG_ManualGoUpS1.Q AND #sx_ManUpS1)               // Trigger when conveyor start running in manual mode
+	            OR (#sR_TRIG_ManualGoDownS1.Q AND #sx_ManDownS1)
+	            OR (#sR_TRIG_ManualGoUpS2.Q AND #sx_ManUpS2)
+	            OR (#sR_TRIG_ManualGoDownS2.Q AND #sx_ManDownS2)
+	        THEN
+	            
+	            #iqUDT_EquipmentControl.Request.SignalingRequest := TRUE;   // Request signaling to control block before conveyor run in manual mode
+	            
+	        END_IF;
+	        
+	        // Go up in manual mode Section 1
+	        #sx_ManualGoUpS1 := #sx_PreStartManual                          // Pre start conditions to run in manual mode
+	        AND (NOT #iqUDT_EquipmentControl.Request.SignalingRequest       // Signaling request done
+	        OR #sx_ManualRunning)
+	        AND #sx_ManUpS1;                                                // Manual mode start to run
+	        
+	        // Go down in manual mode Section 1
+	        #sx_ManualGoDownS1 := #sx_PreStartManual                        // Pre start conditions to run in manual mode
+	        AND (NOT #iqUDT_EquipmentControl.Request.SignalingRequest       // Signaling request done
+	        OR #sx_ManualRunning)
+	        AND #sx_ManDownS1;                                              // Manual mode start to run
+	        
+	        
+	        // Go up in manual mode Section 2
+	        #sx_ManualGoUpS2 := #sx_PreStartManual                          // Pre start conditions to run in manual mode
+	        AND (NOT #iqUDT_EquipmentControl.Request.SignalingRequest       // Signaling request done
+	        OR #sx_ManualRunning)
+	        AND #sx_ManUpS2;                                                // Manual mode start to run
+	        
+	        // Go down in manual mode Section 2
+	        #sx_ManualGoDownS2 := #sx_PreStartManual                        // Pre start conditions to run in manual mode
+	        AND (NOT #iqUDT_EquipmentControl.Request.SignalingRequest       // Signaling request done
+	        OR #sx_ManualRunning)
+	        AND #sx_ManDownS2;                                              // Manual mode start to run
+	        
+	        #sx_ManualRunning := #sx_ManualGoUpS1
+	        OR #sx_ManualGoDownS1
+	        OR #sx_ManualGoUpS2
+	        OR #sx_ManualGoDownS2;
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	
+	REGION 7 - Automatic mode
+	    IF #sx_AutomaticActive THEN
+	        
+	        
+	        REGION 7.1 - Destinations
+	            IF #ix_SideAvailable THEN         //Divert only if it's enabled
+	                IF #sR_TRIG_ProductDetectedS1.Q
+	                THEN
+	                    CASE #iUDT_Configuration.Mode OF
+	                            
+	                        1:                    //Get destination from GIN
+	                            #sdi_DestinationS1 := "DB_GIN".GIN[#iqa_TrackingArray[#iUDT_Configuration.DecisionPointSection1]].General.Destination[0];
+	                        2:                   // Divert equally one parcel to the side, one straight
+	                            IF #sx_LastDivertStraightS1
+	                            THEN
+	                                #sdi_DestinationS1 := #iUDT_Configuration.SideDestination;
+	                                #sx_LastDivertStraightS1 := FALSE;
+	                            ELSE
+	                                #sdi_DestinationS1 := #iUDT_Configuration.StraightDestination;
+	                                #sx_LastDivertStraightS1 := TRUE;
+	                            END_IF;
+	                    END_CASE;
+	                    #si_TransferingS1 := #iUDT_Configuration.DivertDistanceSection1;
+	                END_IF;
+	                
+	                IF #sR_TRIG_ProductDetectedS2.Q    //Copy destinations from first section
+	                THEN
+	                    #sdi_DestinationS2 := #sdi_DestinationS1;
+	                    #si_TransferingS2 := #iUDT_Configuration.DivertDistanceSection2;
+	                END_IF;
+	            ELSE            //Set destination to straight if diverting to side isn't enabled
+	                #sdi_DestinationS1 := #iUDT_Configuration.StraightDestination;
+	                #sdi_DestinationS2 := #iUDT_Configuration.StraightDestination;
+	            END_IF;
+	        END_REGION
+	        
+	        REGION 7.2 - Displacement
+	            
+	            // Checking whether the item has left the section 1
+	            IF #si_TransferingS1 > 0
+	            THEN
+	                #si_TransferingS1 -= #iqUDT_ConveyorInterface.Displacement;
+	                
+	                IF #si_TransferingS1 <= 0
+	                THEN
+	                    #sdi_DestinationS1 := 0;
+	                END_IF;
+	                
+	            END_IF;
+	            
+	            // Checking whether the item has left the section 2
+	            IF #si_TransferingS2 > 0
+	            THEN
+	                #si_TransferingS2 -= #iqUDT_ConveyorInterface.Displacement;
+	                
+	                IF #si_TransferingS2 <= 0
+	                THEN
+	                    #sdi_DestinationS2 := 0;
+	                END_IF;
+	                
+	            END_IF;
+	        END_REGION
+	        
+	        REGION 7.3 - Control first section
+	            
+	            IF #sdi_DestinationS1 = #iUDT_Configuration.StraightDestination             // Items go staight when the destination is straight 
+	                OR (#iqUDT_HMICommands.SemiAutoActivation                               // or is in semi-automatic mode and every object must go straight
+	                AND #iqUDT_HMICommands.SemiAutoStraight)
+	            THEN
+	                #sx_GoUpS1 := FALSE;
+	                #sx_GoDownS1 := TRUE;
+	            ELSIF #sdi_DestinationS1 = #iUDT_Configuration.SideDestination              // Items go sideways when the destination is side 
+	                OR (#iqUDT_HMICommands.SemiAutoActivation                               // or is in semi-automatic mode and every object must go sideways
+	                AND #iqUDT_HMICommands.SemiAutoSide)
+	            THEN
+	                #sx_GoUpS1 := TRUE;
+	                #sx_GoDownS1 := FALSE;
+	            ELSE
+	                IF #iUDT_Configuration.DefaultDestination = 2                           // Items go sideways
+	                THEN
+	                    #sx_GoUpS1 := TRUE;
+	                    #sx_GoDownS1 := FALSE;
+	                ELSE
+	                    #sx_GoUpS1 := FALSE;
+	                    #sx_GoDownS1 := TRUE;
+	                END_IF;
+	            END_IF;
+	        END_REGION
+	        
+	        REGION 7.4 - Control second section
+	            
+	            IF #sdi_DestinationS2 = #iUDT_Configuration.StraightDestination             // Items go staight when the destination is straight 
+	                OR (#iqUDT_HMICommands.SemiAutoActivation                               // or is in semi-automatic mode and every object must go straight
+	                AND #iqUDT_HMICommands.SemiAutoStraight)
+	            THEN
+	                #sx_GoUpS2 := FALSE;
+	                #sx_GoDownS2 := TRUE;
+	            ELSIF #sdi_DestinationS2 = #iUDT_Configuration.SideDestination              // Items go sideways when the destination is side 
+	                OR (#iqUDT_HMICommands.SemiAutoActivation                               // or is in semi-automatic mode and every object must go sideways
+	                AND #iqUDT_HMICommands.SemiAutoSide)
+	            THEN
+	                #sx_GoUpS2 := TRUE;
+	                #sx_GoDownS2 := FALSE;
+	            ELSE
+	                IF #iUDT_Configuration.DefaultDestination = 2                           // Items go sideways
+	                THEN
+	                    #sx_GoUpS2 := TRUE;
+	                    #sx_GoDownS2 := FALSE;
+	                ELSE
+	                    #sx_GoUpS2 := FALSE;
+	                    #sx_GoDownS2 := TRUE;
+	                END_IF;
+	            END_IF;
+	        END_REGION
+	        
+	        REGION 7.5 - Handshake
+	            
+	            IF #sx_GoUpS2
+	            THEN
+	                IF #sR_TRIG_UpS2.Q THEN   //Clear tracking array at up command
+	                    
+	                    #iqUDT_HandshakeStraight.GIN := 0;
+	                    #iqUDT_HandshakeStraight.NrOfPosToShift := 0;
+	                    //   "FC_GetNrOfArrayEl"(#iqa_TrackingArray)
+	                    #tdi_ArrayLength := UPPER_BOUND(ARR := #iqa_TrackingArray, DIM := 1);
+	                    FOR #ti_TC := 1 TO #tdi_ArrayLength DO
+	                        IF #iqa_TrackingArray[#ti_TC] <> #iqUDT_HandshakeConveyor.GIN
+	                        THEN
+	                            EXIT;
+	                        END_IF;
+	                        IF #iqa_TrackingArray[#ti_TC] = #iqUDT_HandshakeConveyor.GIN
+	                        THEN
+	                            #iqa_TrackingArray[#ti_TC] := 0;
+	                        END_IF;
+	                    END_FOR;
+	                    
+	                    #iqUDT_HandshakeConveyor.GIN := 0;
+	                    #iqUDT_HandshakeConveyor.NrOfPosToShift := 0;
+	                    
+	                END_IF;
+	                
+	                // Upstream to downstream
+	                #iqUDT_HandshakeSide.GIN := #iqUDT_HandshakeConveyor.GIN;
+	                #iqUDT_HandshakeSide.NrOfPosToShift += #iqUDT_HandshakeConveyor.NrOfPosToShift;
+	                
+	                #iqUDT_HandshakeSide.RTS := #iqUDT_HandshakeConveyor.RTS;
+	                #iqUDT_HandshakeSide.TIP := #iqUDT_HandshakeConveyor.TIP;
+	                #iqUDT_HandshakeSide.ResetEnergySave := #iqUDT_HandshakeConveyor.ResetEnergySave;
+	                // Downstream to upstream
+	                #iqUDT_HandshakeConveyor.DownstreamDisplacement := #iqUDT_HandshakeSide.DownstreamDisplacement;
+	                #iqUDT_HandshakeConveyor.RTR := #iqUDT_HandshakeSide.RTR;
+	                #iqUDT_HandshakeConveyor.CascadeStartUp := #iqUDT_HandshakeSide.CascadeStartUp;
+	                // #iqUDT_HandshakeConveyor.NrOfPosToShift := 0;
+	                // #iqUDT_HandshakeConveyor.GIN := 0;
+	            ELSE
+	                IF #sF_TRIG_UpS2.Q THEN                //Clear tracking array at up command
+	                    #iqUDT_HandshakeSide.GIN := 0;
+	                    #iqUDT_HandshakeSide.NrOfPosToShift := 0;
+	                    #tdi_ArrayLength := UPPER_BOUND(ARR := #iqa_TrackingArray, DIM := 1);
+	                    FOR #ti_TC := 1 TO #tdi_ArrayLength DO
+	                        IF #iqa_TrackingArray[#ti_TC] <> #iqUDT_HandshakeConveyor.GIN
+	                        THEN
+	                            EXIT;
+	                        END_IF;
+	                        IF #iqa_TrackingArray[#ti_TC] = #iqUDT_HandshakeConveyor.GIN
+	                        THEN
+	                            #iqa_TrackingArray[#ti_TC] := 0;
+	                        END_IF;
+	                    END_FOR;
+	                    
+	                    #iqUDT_HandshakeConveyor.GIN := 0;
+	                    #iqUDT_HandshakeConveyor.NrOfPosToShift := 0;
+	                    
+	                END_IF;
+	                // Copy handshakes
+	                // Upstream to downstream
+	                #iqUDT_HandshakeStraight.GIN := #iqUDT_HandshakeConveyor.GIN;
+	                
+	                #iqUDT_HandshakeStraight.NrOfPosToShift += #iqUDT_HandshakeConveyor.NrOfPosToShift;
+	                
+	                #iqUDT_HandshakeStraight.RTS := #iqUDT_HandshakeConveyor.RTS;
+	                #iqUDT_HandshakeStraight.TIP := #iqUDT_HandshakeConveyor.TIP;
+	                #iqUDT_HandshakeStraight.ResetEnergySave := #iqUDT_HandshakeConveyor.ResetEnergySave;
+	                // Downstream to upstream
+	                #iqUDT_HandshakeConveyor.DownstreamDisplacement := #iqUDT_HandshakeStraight.DownstreamDisplacement;
+	                #iqUDT_HandshakeConveyor.RTR := #iqUDT_HandshakeStraight.RTR;
+	                #iqUDT_HandshakeConveyor.CascadeStartUp := #iqUDT_HandshakeStraight.CascadeStartUp;
+	                // #iqUDT_HandshakeConveyor.NrOfPosToShift := 0;
+	                // #iqUDT_HandshakeConveyor.GIN := 0;
+	            END_IF;
+	            
+	        END_REGION
+	        
+	    END_IF;
+	END_REGION
+	
+	REGION 8 - Control Pop up sections
+	    
+	    // Conditions to move sention 1 down
+	    #sx_DownS1 := (#sx_AutomaticActive
+	    AND
+	    #sx_GoDownS1)
+	    OR (#sx_ManualModeActive AND #sx_ManualGoDownS1);
+	    
+	    // Conditions to move sention 1 up
+	    #sx_UpS1 := (#sx_AutomaticActive
+	    AND
+	    #sx_GoUpS1)
+	    OR (#sx_ManualModeActive AND #sx_ManualGoUpS1);
+	    
+	    // Conditions to move sention 2 down
+	    #sx_DownS2 := (#sx_AutomaticActive
+	    AND
+	    #sx_GoDownS2)
+	    OR (#sx_ManualModeActive AND #sx_ManualGoDownS2);
+	    
+	    // Conditions to move sention 2 up
+	    #sx_UpS2 := (#sx_AutomaticActive
+	    AND
+	    #sx_GoUpS2)
+	    OR (#sx_ManualModeActive AND #sx_ManualGoUpS2);
+	    
+	    // Write valve outputs
+	    IF #sx_UpS1 THEN
+	        #iqUDT_Valve01Interface.Open := TRUE;
+	        #iqUDT_Valve01Interface.Close := FALSE;
+	        
+	    ELSIF #sx_DownS1 THEN
+	        #iqUDT_Valve01Interface.Open := FALSE;
+	        #iqUDT_Valve01Interface.Close := TRUE;
+	    END_IF;
+	    
+	    
+	    IF #sx_UpS2 THEN
+	        #iqUDT_Valve02Interface.Open := TRUE;
+	        #iqUDT_Valve02Interface.Close := FALSE;
+	        
+	    ELSIF #sx_DownS2 THEN
+	        #iqUDT_Valve02Interface.Open := FALSE;
+	        #iqUDT_Valve02Interface.Close := TRUE;
+	    END_IF;
+	    
+	    
+	END_REGION
+	
+	REGION 9 - Status
+	    
+	    //#sUDT_HMIStatus.Status := #tUDT_HMIStatus.Status;
+	    
+	    #sUDT_CommonStatus.SafetyStop := NOT #ix_SafetyOk AND #ix_HardwareOk;
+	    #sUDT_CommonStatus.Stopped := NOT #sx_Ready OR NOT #sx_AutomaticActive;
+	    #sUDT_CommonStatus.AutoON := #sx_Ready AND #sx_AutomaticActive;
+	    #sUDT_CommonStatus.Manual := #sx_ManualModeActive;
+	    #sUDT_CommonStatus.ManualRun := #sx_ManualModeActive AND #sUDT_CommonStatus.Running;
+	    
+	    
+	    // #qUDT_CommonStatus := #sUDT_CommonStatus;
+	    #qUDT_HMIStatus := #sUDT_HMIStatus;
+	    
+	END_REGION
+	
+	
+	REGION 10 - Statistics
+	    
+	    REGION 10.1 - Air pressure fault
+	        
+	        IF #sUDT_HMIStatus.Specific.AirPressureError OR #iqUDT_EquipmentControl.Command.ResetData      // Reset statistics
+	        THEN
+	            
+	            "FC_Statistics"(ix_Reset := #iqUDT_EquipmentControl.Command.ResetData,  // Reset statistics input
+	                            ix_Activate := #sUDT_HMIStatus.Specific.AirPressureError,  // Activate statistics functions input
+	                            ix_RTrigActivate := #sR_TRIG_AirPressureFault.Q,                // Statistics active trigger
+	                            iqUDT_Statistics := #iqUDT_Statistics.AirPressure);             // Statistics values output
+	            
+	        END_IF;
+	        
+	    END_REGION
+	    
+	END_REGION
+	
+	
+	REGION 11 - Report to control block    
+	    // Function to manage report between control block and conveyor block
+	    "FC_EquipmentReport"(iUDT_Status := #sUDT_CommonStatus,
+	                         iqUDT_Control := #iqUDT_EquipmentControl);
+	END_REGION
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+END_FUNCTION_BLOCK
+

@@ -1,0 +1,78 @@
+﻿FUNCTION_BLOCK "FB_EncoderFault"
+TITLE = Block to handle encoder fault , statistics
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 8
+// END_ATTRIBUTES
+   VAR_INPUT 
+      ix_EncoderPulses { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Signal from encoder
+   END_VAR
+
+   VAR_OUTPUT 
+      qUDT_HMIStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : "UDT_EncoderStatus";   // Encoder fault status
+   END_VAR
+
+   VAR_IN_OUT 
+      iqUDT_EquipmentControl : "UDT_EquipmentControl";   // Equipment control structure
+      iqUDT_ConveyorInterface : "UDT_ConveyorInterface";   // Interface structure
+   END_VAR
+
+   VAR 
+      sx_EncoderFault { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // When TRUE encoder fault is active
+      slr_ActualDelayTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : LReal;   // Actual delay time [ms]
+   END_VAR
+
+   VAR CONSTANT 
+      cudi_EncoderFaultDelayTime : UDInt := 5000;   // Time after which the encoder fault is activated
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                      
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	19/07/2022  | 0.1       | M.Kurpiers    | first release MHS TIA 16.0
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 - Reset encoder error
+	    
+	    IF #iqUDT_EquipmentControl.Command.Reset OR #iqUDT_ConveyorInterface.InternalErrorReset THEN
+	        #sx_EncoderFault := FALSE;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 2 - Set encoder error
+	    
+	    IF #iqUDT_ConveyorInterface.ActualSpeed > 0
+	        AND NOT #ix_EncoderPulses
+	        AND NOT #iqUDT_ConveyorInterface.ManualModeActive THEN
+	        
+	        #slr_ActualDelayTime += "DB_Memory".PrevCycleTime;
+	        
+	        IF #slr_ActualDelayTime >= #cudi_EncoderFaultDelayTime THEN
+	            #sx_EncoderFault := TRUE;
+	        END_IF;
+	    ELSE
+	        #slr_ActualDelayTime := 0;
+	    END_IF;
+	    
+	    #iqUDT_ConveyorInterface.InternalErrorEncoder := #sx_EncoderFault;
+	    
+	END_REGION
+	
+	REGION 3 - Status
+	    
+	    #qUDT_HMIStatus.Fault := #sx_EncoderFault;
+	    
+	END_REGION
+	
+	
+END_FUNCTION_BLOCK
+

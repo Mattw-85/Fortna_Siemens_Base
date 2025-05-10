@@ -1,0 +1,154 @@
+﻿FUNCTION_BLOCK "FB_OnOffDevices"
+TITLE = FB_OnOffDevices
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 19
+// END_ATTRIBUTES
+//Function block to enable and disable profinet devices.
+   VAR_INPUT 
+      ix_Simulation { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Simulation on or off
+   END_VAR
+
+   VAR_OUTPUT 
+      qx_Done { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Operation done
+      qx_Error { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Collective error output
+   END_VAR
+
+   VAR_IN_OUT 
+      iqa_ProfinetNetworks : Array[*] of "UDT_ProfinetNetwork";   // Profinet networks structure
+   END_VAR
+
+   VAR 
+      sR_TRIG_StartSim {InstructionName := 'R_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : R_TRIG;   // Rising edge simulation bit
+      sF_TRIG_StartSim {InstructionName := 'F_TRIG'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : F_TRIG;   // Falling edge simulation bit
+      si_ActualStatus { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Status structure
+      si_Mode { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : USInt;   // Simulation mode 1 - simulation off 2 - simulation on
+      sx_OperationReq { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Operation required
+   END_VAR
+
+   VAR_TEMP 
+      ti_LoopCounterDevices : Int;   // Temporary counter of "for" loop
+      ti_LoopCounterNetworks : Int;   // Temporary counter of "for" loop
+      ti_NrOfProfinetDevices : Int;   // Number of profinet devices
+      ti_NrOfNetworks : Int;   // Number of Profinet networks
+      tx_Busy : Bool;   // D_ACT_DP busy
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	24/05/2019  | 0.1       | K.Pokorski    | first release MHS TIA 15.1
+	24/06/2019  | 0.2       | L.Klar        | Status running added
+	19/07/2019  | 0.5       | L.Klar        | Status handling changed, output qx_Done added
+	24/07/2019  | 2.0       | L.Klar        | 2.0 MHS library release TIA 15.1
+	14/08/2019  | 2.1       | K.Pokorski    | Devices HW_ID extract deleted
+	26/08/2019  | 2.2       | K.Pokorski    | Comments adjusted
+	30/09/2019  | 2.3       | K.Pokorski    | Network seach started from 1 instead 0
+	04/11/2019  | 2.4       | L.Klar        | First scan bit changed from memory bit to DB variable
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	REGION 1 – Mode selection
+	    
+	    #sR_TRIG_StartSim(CLK := #ix_Simulation);
+	    
+	    #sF_TRIG_StartSim(CLK := #ix_Simulation);
+	    
+	    // Set operation request and operation mode (2 - devices deactivation) (1 - devices activation) when the simulation input has changed or the first PLC scan occurred
+	    IF (#sR_TRIG_StartSim.Q            // Device activation required
+	        OR #sF_TRIG_StartSim.Q         // Device deactivation required
+	        OR "DB_Memory".FirstScan)       // First PLC scan occured
+	    THEN
+	        
+	        #sx_OperationReq := TRUE;
+	        
+	        IF (NOT #ix_Simulation)                                             // Simulation turned off 
+	        THEN
+	            
+	            #si_Mode := 1;
+	            
+	        END_IF;
+	        
+	        IF (#ix_Simulation)                                                 // Simulation turned on 
+	        THEN
+	            
+	            #si_Mode := 2;
+	            
+	        END_IF;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 2 – Activation or deactivation of devices
+	    
+	    // Change of device state if request is active
+	    IF (#sx_OperationReq)                       // Change the device mode twice
+	    THEN
+	        
+	        // Maximum number of Profinet networks 
+	        #ti_NrOfNetworks := "FC_GetNrOfArrayEl"(iv_Array := #iqa_ProfinetNetworks);
+	        
+	        // Initial operation request reset
+	        #sx_OperationReq := FALSE;
+	        
+	        // Reset summary error output 
+	        #qx_Error := FALSE;
+	        
+	        // A loop operating on Profinet networks
+	        FOR #ti_LoopCounterNetworks := 1 TO #ti_NrOfNetworks DO
+	            
+	            // Maximum number of Profinet devices
+	            #ti_NrOfProfinetDevices := "FC_GetNrOfArrayEl"(#iqa_ProfinetNetworks[#ti_LoopCounterNetworks].DeviceStatus);
+	            
+	            // A loop operating on Profinet devices
+	            FOR #ti_LoopCounterDevices := 1 TO ((#ti_NrOfProfinetDevices) - 1) DO
+	                
+	                // Activation or deactivation device if the device is configured
+	                IF (#iqa_ProfinetNetworks[#ti_LoopCounterNetworks].DeviceStatus[#ti_LoopCounterDevices].DeviceState.Configure)                                         // Device configured
+	                THEN
+	                    // Turning off (mode = 2) or turning on (mode = 1) devices
+	                    #si_ActualStatus := D_ACT_DP(REQ := TRUE,
+	                                                 MODE := #si_Mode,
+	                                                 LADDR := #iqa_ProfinetNetworks[#ti_LoopCounterNetworks].DeviceStatus[#ti_LoopCounterDevices].DeviceState.HW_ID,
+	                                                 BUSY => #tx_Busy);
+	                    
+	                    // Operation still required when function "D_ACT_DP" is busy 
+	                    #sx_OperationReq := #sx_OperationReq OR #tx_Busy;
+	                    
+	                    // Set the output error when D_ACT_DP has an error
+	                    IF (INT_TO_WORD(#si_ActualStatus) > 16#8000)    // Error during disabling the devices 
+	                    THEN
+	                        
+	                        #qx_Error := TRUE;
+	                        
+	                    END_IF;
+	                    
+	                END_IF;
+	                
+	            END_FOR;
+	            
+	        END_FOR;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 3 – Operation done
+	    
+	    // Update simulation done output
+	    #qx_Done := NOT #sx_OperationReq;
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

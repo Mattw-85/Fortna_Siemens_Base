@@ -1,0 +1,96 @@
+﻿FUNCTION_BLOCK "FB_Displacement"
+TITLE = FB_Displacement
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : MHSE
+FAMILY : GeneralSystemFunctions
+VERSION : 3.0
+//Function block to calculate the displacement.
+   VAR_IN_OUT 
+      iqUDT_ConveyorInterface : "UDT_ConveyorInterface";   // Conveyor interface structure Motor
+   END_VAR
+
+   VAR 
+      slr_FormDisplacement { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : LReal;   // Conveyor displacement [cm]
+      slr_Correction { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : LReal;   // Correction [cm]
+      sx_PositionModeActive { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Position Mode is used, Will reset after power change
+   END_VAR
+
+   VAR_TEMP 
+      ti_Displacement : Int;   // Conveyor displacement [cm]
+   END_VAR
+
+   VAR CONSTANT 
+      ci_IntMin : Int := -32768;
+      ci_IntMax : Int := 32767;
+      ci_Threshold : Int := 60;
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	24/05/2019  | 0.1       | L.Klar        | first release MHS TIA 15.1
+	24/07/2019  | 2.0       | L.Klar        | 2.0 MHS library release TIA 15.1
+	12/09/2019  | 2.1       | P.Majka       | Comments updataed
+	04/11/2019  | 2.2       | L.Klar        | Prevoius cycle scan changed from memory to DB variable
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	31/05/2024  | 4.1       | I.Ajram       | Added Displacement from Position feedback
+	21/02/2022  | 4.2       | K.Pokorksi    | Add displacement threshold
+	*)
+	REGION 0 - Mode detection
+	    IF #iqUDT_ConveyorInterface.DeltaPosition <> 0 THEN
+	        #sx_PositionModeActive := true;
+	    END_IF;
+	END_REGION
+	
+	
+	REGION 1 - Displacement From Speed
+	    IF NOT #sx_PositionModeActive THEN
+	        REGION 1.1 Calculate Displacement
+	            // Displacement is calculated using actual conveyor speed and the previous PLC cycle scan time
+	            #slr_FormDisplacement := INT_TO_LREAL(#iqUDT_ConveyorInterface.ActualSpeed) * "DB_Memory".PrevCycleTime / 10000.0;
+	            
+	            // Correction is used to accumulate the rest of the calculated value
+	            #slr_Correction := FRAC(#slr_FormDisplacement) + #slr_Correction;
+	            
+	            // The actual displacement is a sum of complete parts of the displacement and correction variables
+	            #ti_Displacement := DINT_TO_INT(TRUNC(#slr_FormDisplacement) + TRUNC(#slr_Correction));
+	            
+	        END_REGION
+	        
+	        REGION 1.2 - Correction check
+	            
+	            // Correction incrementation or decremantation if it exceeds 1 or -1 in case of negative speed
+	            IF (#slr_Correction >= 1)
+	            THEN
+	                
+	                #slr_Correction -= 1;
+	                
+	            ELSIF (#slr_Correction <= -1)
+	            THEN
+	                
+	                #slr_Correction += 1;
+	                
+	            END_IF;
+	            
+	        END_REGION
+	        
+	        #iqUDT_ConveyorInterface.Displacement := #ti_Displacement;
+	    END_IF;
+	END_REGION
+	
+	REGION 2 - Displacement from Position
+	    // pass position displacement from Servo Feedback
+	    IF #sx_PositionModeActive AND #iqUDT_ConveyorInterface.DeltaPosition < #ci_Threshold THEN
+	        #iqUDT_ConveyorInterface.Displacement := #iqUDT_ConveyorInterface.DeltaPosition;
+	        
+	    END_IF;
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

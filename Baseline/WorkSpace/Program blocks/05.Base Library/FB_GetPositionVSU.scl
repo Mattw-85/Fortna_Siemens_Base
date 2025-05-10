@@ -1,0 +1,109 @@
+﻿FUNCTION_BLOCK "FB_GetPositionVSU"
+TITLE = FB_GetPosition
+{ S7_Optimized_Access := 'TRUE' }
+FAMILY : MHS
+VERSION : 3.0
+// ATTRIBUTES
+// AUTO_NUMBER = True
+// BLOCK_NUMBER = 12
+// END_ATTRIBUTES
+//Function to find the position based on the GIN in the tracking. 
+   VAR_IN_OUT 
+      iqa_DBDestination : Array[*] of "UDT_Destinations";   // Array with destination data for parcel
+      iqUDT_VSUInterface : "UDT_VSUInterface";   // Interface beween VSU and VFD
+      iqa_TrackingData : Array[*] of Int;   // Tracking data
+   END_VAR
+
+   VAR 
+      sdi_RequestedDestination { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DInt;   // The destination for this GIN
+      si_Gin { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;
+      si_PreviousGin { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;
+      si_RequestedPosition { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;
+      si_LoopCounterPositions { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Loopcounter positions
+      si_LoopCounterDestinations { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Loopcounter destinations
+      si_NumberOfPositons { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Number of positions in the search area
+      si_NumberOfDestinations { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Number of destinations per position
+      sx_NewGinFound { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Memory to start searching
+   END_VAR
+
+
+BEGIN
+	(*
+	----------------------------------------------------------------------------------------
+	                                                                                  
+	Version history:
+	Date        | Version   | Author        | Remark
+	----------------------------------------------------------------------------------------
+	10-09-2019  | 2.0       | F.Baten       | Doubled search loop and added comment 
+	12/11/2019  | 3.0       | P.Majka       | 3.0 MHS library release TIA 15.1
+	08/01/2020  | 3.1       | F.Baten       | When no destination is given, also go to default direction
+	15/01/2019  | 3.2       | L.Klar        | GIN record structure updated, parcel destination remapped
+	19/10/2020  | 3.3       | L.Klar        | Double search loop reprogrammed, issue with default position
+	07/12/2020  | 3.4       | L.Klar        | GIN greater than zero condition added to region 2
+	21/02/2023  | 4.0       | F.Baten       | 4.0 Release TIA 17.5
+	*)
+	
+	
+	REGION 1 - Determine size OF search area 
+	    
+	    #si_NumberOfPositons := "FC_GetNrOfArrayEl"(#iqa_DBDestination);
+	    #si_NumberOfDestinations := "FC_GetNrOfArrayEl"(#iqa_DBDestination[1].Destination);
+	    
+	END_REGION
+	
+	REGION 2 - Get GIN from tracking DB  
+	    // There is a value in the tracking data on the decision point which is not '0' or equal to the previous GIN
+	    
+	    IF (#iqa_TrackingData[#iqUDT_VSUInterface.Decisionpoint] <> 0) AND (#iqa_TrackingData[#iqUDT_VSUInterface.Decisionpoint] <> #si_PreviousGin)
+	    THEN
+	        #si_Gin := #iqa_TrackingData[#iqUDT_VSUInterface.Decisionpoint];
+	        #sx_NewGinFound := TRUE;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 2 - Get destination from GIN DB
+	    // If new GIN has been detected, get destination from its GIN record 
+	    
+	    IF #sx_NewGinFound AND #si_Gin > 0
+	    THEN
+	        #sdi_RequestedDestination := "DB_GIN".GIN[#si_Gin].General.Destination[0];
+	        #si_PreviousGin := #si_Gin;
+	        #si_Gin := 0;
+	        #iqUDT_VSUInterface.RequestedPosition := 0;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION 3 - Get requested position when new GIN is found 
+	    IF #sx_NewGinFound
+	    THEN
+	        // If destination is different than 0, find a position in destination arrays. Otherwise, requested position is set to default.
+	        IF #sdi_RequestedDestination <> 0 THEN
+	            FOR #si_LoopCounterPositions := 1 TO #si_NumberOfPositons BY 1 DO
+	                FOR #si_LoopCounterDestinations := 0 TO (#si_NumberOfDestinations - 1) BY 1 DO
+	                    IF #iqa_DBDestination[#si_LoopCounterPositions].Destination[#si_LoopCounterDestinations] = #sdi_RequestedDestination
+	                    THEN
+	                        #si_RequestedPosition := #si_LoopCounterPositions;
+	                        EXIT;
+	                    END_IF;
+	                END_FOR;
+	                // Position found
+	                IF #si_RequestedPosition <> 0
+	                THEN
+	                    #iqUDT_VSUInterface.RequestedPosition := #si_RequestedPosition;
+	                    #sx_NewGinFound := FALSE;
+	                    #si_RequestedPosition := 0;
+	                    EXIT;
+	                END_IF;
+	            END_FOR;
+	        ELSE
+	            // Default position
+	            #sx_NewGinFound := FALSE;
+	            #iqUDT_VSUInterface.RequestedPosition := 99;
+	            #si_RequestedPosition := 0;
+	        END_IF;
+	    END_IF;
+	END_REGION
+END_FUNCTION_BLOCK
+

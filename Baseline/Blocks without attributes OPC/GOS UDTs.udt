@@ -1,0 +1,132 @@
+﻿TYPE "UDT_EventStatistic"
+TITLE = UDT_EventStatistic
+VERSION : 0.1
+//User-defined structure of event statistic data.
+   STRUCT
+      NumberOfTimes : DInt;   // Number of times the event occurred since last reset
+      LastEventSeconds : DInt;   // Number of seconds of the current or last event
+      TotalEventSeconds : DInt;   // Total number of seconds the event occurred since last reset
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_RIOStatus"
+VERSION : 0.1
+   STRUCT
+      Status : Int;   // Status number
+      Specific : Struct   // Specific structure
+         PNSlaveNotOnline { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet slave is not online
+         PNSlaveError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet slave is in error
+         ET200sp_ErrorModule : Array[0..31] of Bool;   // Module error
+         PNSlaveWarning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet slave has a warning
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_PNNodeStatus"
+VERSION : 0.1
+   STRUCT
+      Status : Int;   // Status number
+      Specific : Struct   // Specific structure
+         PNSlaveNotOnline { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet slave is not online
+         PNSlaveError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet slave is in error
+         PNSlaveWarning { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Profinet slave has  a warning
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_RIOStatistics"
+TITLE = UDT_RIOStatistics
+VERSION : 0.1
+//User-defined structure of FB_RIO function block statistics.
+   STRUCT
+      PNSlaveNotOnline { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Statistics of  Profinet slave not online
+      PNSlaveError { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Statistics of a Profinet slave error
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_PNNodeStatistics"
+VERSION : 0.1
+   STRUCT
+      PNSlaveError : "UDT_EventStatistic";   // Statistics of a Profinet slave error
+      PNSlaveNotOnline : "UDT_EventStatistic";   // Statistics of  Profinet slave not online
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_GapOptimizationSystemStatus"
+VERSION : 0.1
+   STRUCT
+      Status : Int;   // Status number
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_GapOptimizationSystemInterface"
+VERSION : 0.1
+   STRUCT
+      SpeedConvA { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Setpoint speed of conveyor A (mm/s)
+      SpeedConvB { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Setpoint speed of conveyor B (mm/s)
+      SpeedConvC { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Setpoint speed of conveyor C (mm/s)
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_GapOptimizationSystemConfiguration"
+VERSION : 0.1
+   STRUCT
+      LengthConvA { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // The length of conveyor A (mm)
+      LengthConvB { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // The length of conveyor B (mm)
+      LengthConvC { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // The length of conveyor C (mm)
+      PosPECA1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // The position of PEC from the beginning of conveyor A (mm)
+      PosPECA2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // The position of PEC from the end of the conveyor A (mm)
+      PosPECB1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // The position of PEC from the beginning of conveyor B (mm)
+      PosPECB2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // The position of PEC from the end of the conveyor B (mm)
+      PosPECC1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // The position of PEC from the beginning of conveyor C (mm)
+      PosPECC2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // The position of PEC from the end of the conveyor C (mm)
+      InitialSpeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Initial speed of each conveyor (mm/s)
+      Acceleration { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Acceleration (mm/s2)
+      MaximumSpeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Maximum speed (mm/s)
+      MinimumSpeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Minimum speed (mm/s)
+      MarginLength { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Extra length margin for acceleration (mm)
+      RequiredGap { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // The required gap (mm)
+      AllowedUpstreamGap { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Minimum upstream gap allowed to decelerate (mm)
+      AllowedParcelLength { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // The maximum length of a parcel allowed to accelerate or decelerate on one conveyor (mm)
+      LengthSpaceBetweenConv { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // The distance of free space between 2 conveyors (mm)
+      PosPECBos { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // The position of the PEC from the beginning of the conveyor (mm)
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_GAP01CabinetStatus"
+VERSION : 0.1
+   STRUCT
+      Status : Int;
+      Specific : Struct
+         "311A1" { S7_SetPoint := 'False'} : "UDT_RIOStatus";   // Status ET200SP station
+         "191A1" { S7_SetPoint := 'False'} : "UDT_PNNodeStatus";   // Status drive gateway
+         "24Vdc_151Q1Tripped" { S7_SetPoint := 'True'} : Bool;   // 24VDC Selective block tripped
+         "400VAC_CB196F1Tripped" : Bool;   // Thermal block motor supply tripped
+         i24VDC_IO_NOk : Bool;   // 24V for inputs/outputs not present
+         "24VDC_Safety_NOk" : Bool;   // 24V for Safety not present
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_GAP01CabinetStatistics"
+VERSION : 0.1
+   STRUCT
+      "311A1" { S7_SetPoint := 'False'} : "UDT_RIOStatistics";   // Status ET200SP station
+      "191A1" { S7_SetPoint := 'False'} : "UDT_PNNodeStatistics";   // Status drive gateway
+      "24Vdc_151Q1Tripped" { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // 24VDC Selective block tripped
+      "400VAC_CB196F1Tripped" { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // Thermal block motor supply tripped
+      i24VDC_IO_NOk { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // 24V for inputs/outputs not present
+      "24VDC_Safety_NOk" { S7_SetPoint := 'False'} : "UDT_EventStatistic";   // 24V for Safety not present
+   END_STRUCT;
+
+END_TYPE
+

@@ -1,0 +1,251 @@
+﻿TYPE "UDT_RATCommand"
+VERSION : 0.1
+   STRUCT
+      ManualMode : Bool;   // Manual mode command from HMI
+      ManualUp : Bool;   // Command to move section up
+      ManualDown : Bool;   // Command to move section down
+      ManualStartStop : Bool;   // Run conveyor in manual mode
+      ManualFullSpeed : Bool;   // Full speed conveyor in manual mode
+      ManualJog : Bool;   // Command to jog conveyor in slow speed from HMI
+      Reverse : Bool;   // Command to run conveyor in reverse direction from HMI
+      ManualSpeed : Int := 50;   // Manual mode speed as percentage of nominal speed [0-100%]
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_RATStatistics"
+VERSION : 0.1
+   STRUCT
+      AirPressure { S7_SetPoint := 'False'} : "UDT_EventStatistic";
+      DivertUpError : "UDT_EventStatistic";
+      DivertDownError : "UDT_EventStatistic";
+      ConveyorUp : "UDT_EventStatistic";
+      ConveyorDown : "UDT_EventStatistic";
+      ConveyorStop : "UDT_EventStatistic";
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_RATStatus"
+VERSION : 0.1
+   STRUCT
+      Status : Int;   // Common divert status
+      Specific : Struct
+         Up : Bool;   // Divert is in Upper position
+         Down : Bool;   // Divert is in lower position
+         Reverse : Bool;   // Conveyor is running in reverse direction
+         ErrAirpressureNotOk : Bool;   // Airpressure is not signalling
+         ErrRuntime : Bool;   // Divert took too long to move up or down
+         ErrOverrun : Bool;   // Parcel is in guard PEC, it moved too far and cant be devided
+         WarnAirPressure : Bool;   // Warning Airpressure is too low
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_HMMessageHeader"
+TITLE = UDT_H&MMessage
+VERSION : 0.1
+//User-defined structure of H&M message data.
+   STRUCT
+      STX { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Char;
+      PLCID { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[4];   // Integer that globally identifies the connection
+      SequenceNumber { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[8];   // Padded with leading zeros (8 characters total)
+      MessageHeader { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[15];   // Message type defined by header
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_RATConfiguration"
+VERSION : 0.1
+   STRUCT
+      OutfeedTimeDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : UDInt;   // PEC on delaytime
+      InfeedTimeDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : UDInt;   // PEC off delaytime
+      SectionUpMonitoringTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : UDInt := 500;   // Runtime delay lifting device up signal on delay
+      SectionDownMonitoringTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : UDInt := 500;   // Runtime delay lifting device down signal on delay
+      BladeStopUpMonitoringTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : UDInt := 500;   // Runtime delay lifting blade stop up signal on delay
+      BladeStopDownMonitoringTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : UDInt := 500;   // Runtime delay lifting blade stop down signal on delay
+      InfeedADistance { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Int;   // Distance between A infeed photoeye and place where we want to stop tail of product during infeed [mm]
+      InfeedBDistance { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Int;   // Distance between B infeed photoeye and place where we want to stop tail of product during infeed [mm]
+      InfeedCDistance { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Int;   // Distance between C infeed photoeye and place where we want to stop tail of product during infeed [mm]
+      InfeedDDistance { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Int;   // Distance between D infeed photoeye and place where we want to stop tail of product during infeed [mm]
+      InfeedTimeout { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : UDInt := 60000;   // The time after which an error is triggered when a package is not received [ms]
+      ReactivationTime { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : UDInt := 30000;   // After this time RAT will be restarted if hang [ms]
+      DefaultPosition { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Int;   // 0 = dont care, 1 = go down after, 2 = go up after
+      DefaultDestination { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Int;   // 1 = upstream conveyor default, 2 = downstream conveyor default, 3 = right conveyor default, 4 = left conveyor default, 0= wait until destination is received
+      ConveyorADestination { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Int;   // Unique Conveyor A outfeed destination number
+      ConveyorBDestination { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Int;   // Unique Conveyor B outfeed destination number
+      ConveyorCDestination { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Int;   // Unique Conveyor C outfeed destination number
+      ConveyorDDestination { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Int;   // Unique Conveyor D outfeed destination number
+      ControlProductWithPEC { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Bool := TRUE;   // TRUE when product presence should be checked by the diagonal PEC
+      BladeStopEoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Bool := FALSE;   // TRUE when blade stop at the end of section is present
+      BladeStopBoS { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Bool := FALSE;   // TRUE when blade stop at the beginning of section is present
+      PositionVerification { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Bool := FALSE;   // TRUE when position verification during movement is required
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_RATPositioning"
+VERSION : 0.1
+   STRUCT
+      Lower { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Roller part
+         StartPositionA { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Start position detected by OB30
+         StartPositionB { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;
+         EndPosition { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // End position defined by RAT FB
+         Start { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Start command set by RAT FB
+         Done { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // MCO finish positioning
+         ResetPosition { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+         PositionRequired { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      END_STRUCT;
+      Upper { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // UBT part
+         StartPositionC { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Start position detected by OB30
+         StartPositionD { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;
+         EndPosition { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // End position defined by RAT FB
+         Start { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Start command set by RAT FB
+         Done { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // MCO finish positioning
+         ResetPosition { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+         PositionRequired { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_CrossoverCommand"
+VERSION : 0.1
+   STRUCT
+      ManualMode : Bool;   // Manual mode command from HMI
+      ManualUp : Bool;   // Command to move devise up
+      ManualDown : Bool;   // Command to move devise down
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_CrossoverConfiguration"
+VERSION : 0.1
+   STRUCT
+      OutfeedTimeOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // PEC on delaytime
+      OutfeedTimeOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // PEC off delaytime
+      LiftRuntimeUpOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Runtime delay lifting device up signal on delay
+      LiftRuntimeUpOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Runtime delay lifting device up signal off delay
+      LiftRuntimeDownOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Runtime delay lifting device down signal on delay
+      LiftRuntimeDownOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt;   // Runtime delay lifting device down signal off delay
+      ParcelDefaultLength { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int := 600;   // Default length of parcel
+      OutfeedLength { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int := 500;   // Length feeding out
+      RollerConveyor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Lower deck settings
+         ConveyorLength { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Length of conveyor
+         LengthFrom1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int := 100;   // Offset length to position in [cm] when feeding from conveyor
+         LengthFrom2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int := 100;   // Offset length to position in [cm] when feeding from conveyor
+         Runfwd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool := TRUE;   // When true conveyor is running forward to feed in
+      END_STRUCT;
+      BeltConveyor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Upper deck settings
+         ConveyorLength { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Length of conveyor
+         LengthFrom3 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int := 100;   // Offset length to position in [cm] when feeding from conveyor
+         LengthFrom4 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int := 100;   // Offset length to position in [cm] when feeding from conveyor
+         Runfwd { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool := TRUE;   // When true conveyor is running forward to feed in
+      END_STRUCT;
+      Conveyor1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Conveyor 1 settings ( set to true is present )
+         IsInfeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool := TRUE;   // Is upstream conveyor
+         IsOutfeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Is downstream conveyor
+      END_STRUCT;
+      Conveyor2 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Conveyor 2 settings ( set to true is present )
+         IsInfeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Is upstream conveyor
+         IsOutfeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool := TRUE;   // Is downstream conveyor
+      END_STRUCT;
+      Conveyor3 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Conveyor 3 settings ( set to true is present )
+         IsInfeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool := TRUE;   // Is upstream conveyor
+         IsOutfeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Is downstream conveyor
+      END_STRUCT;
+      Conveyor4 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Conveyor 4 settings ( set to true is present )
+         IsInfeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool := TRUE;   // Is upstream conveyor
+         IsOutfeed { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Is downstream conveyor
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_Crossoverstatus"
+VERSION : 0.1
+   STRUCT
+      Status : Int;   // Common divert status
+      Specific : Struct
+         Up : Bool;   // Divert is in Upper position
+         Down : Bool;   // Divert is in lower position
+         Reverse : Bool;   // Conveyor is running in reverse direction
+         ErrAirpressureNotOk : Bool;   // Airpressure is not signalling
+         ErrRuntime : Bool;   // Divert took too long to move up or down
+         ErrOverrun : Bool;   // Parcel is in guard PEC, it moved too far and cant be devided
+         WarnAirPressure : Bool;   // Warning Airpressure is too low
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_PushUpDivertCommand"
+VERSION : 0.1
+   STRUCT
+      ManualStartStop : Bool;   // Run conveyor in manual mode
+      ManualFullSpeed : Bool;   // Full speed conveyor in manual mode
+      ManualJog : Bool;   // Command to jog conveyor in slow speed from HMI
+      Reverse : Bool;   // Command to run conveyor in reverse direction from HMI
+      ManualSpeed : Int := 50;   // Manual mode speed as percentage of nominal speed [0-100%]
+      ManualMode : Bool;   // Manual mode command from HMI
+      ManualUp : Bool;   // Command to move devise up
+      ManualDown : Bool;   // Command to move devise down
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_PushUpDivertConfiguration"
+VERSION : 0.1
+   STRUCT
+      PECTriggerTimeOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : UDInt;   // Time after which PEC full is detected
+      PECTriggerTimeOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : UDInt;   // Time after which PEC full is released
+      PECLeftTimeOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : UDInt;   // Time after which PEC full is detected
+      PECLeftTimeOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : UDInt;   // Time after which PEC full is released
+      PECRightTimeOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : UDInt;   // Time after which PEC full is detected
+      PECRightTimeOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : UDInt;   // Time after which PEC full is released
+      DivertMonitorUpOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : UDInt := 1000;   // Time after which sensor up is detected
+      DivertMonitorUPOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : UDInt;   // Time after which sensor up is released
+      DivertMonitorDownOnDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : UDInt := 1000;   // Time after which sensor down is detected
+      DivertMonitorDownOffDelay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : UDInt;   // Time after which sensor down is released
+      "Conveyor length" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Int := 1000;   // Length of the conveyor [mm]
+      DecisionPoint { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Int := 1000;   // Point of decision [mm]
+      ParcelDefaultLength { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Int := 600;   // Default length of the parcel if none was measured in [mm]
+      LengthIn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Int := 450;   // Length travelling in [mm]
+      LengthOut { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Int := 450;   // Length travelling out [mm]
+      PositionOffset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Int;   // Offset to position parcel to compensate speed and weight
+      SizeDivert { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Bool := TRUE;   // When true divert is done based on dimension of parcel
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_PushUpDivertStatus"
+VERSION : 0.1
+   STRUCT
+      Status : Int;   // Common divert status
+      Specific : Struct
+         Up : Bool;   // Divert is in Upper position
+         Down : Bool;   // Divert is in lower position
+         Reverse : Bool;   // Conveyor is running in reverse direction
+         ErrAirpressureNotOk : Bool;   // Airpressure is not signalling
+         ErrRuntime : Bool;   // Divert took too long to move up or down
+         ErrOverrun : Bool;   // Parcel is in guard PEC, it moved too far and cant be devided
+         WarnAirPressure : Bool;   // Warning Airpressure is too low
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+
+TYPE "UDT_HMMessage"
+TITLE = UDT_H&MMessage
+VERSION : 0.1
+//User-defined structure of H&M message data.
+   STRUCT
+      PLCID { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[4];   // Integer that globally identifies the connection
+      SequenceNumber { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[8];   // Padded with leading zeros (8 characters total)
+      MessageHeader { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String[15];   // Message type defined by header
+      Payload { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : String;   // Buffer for message data fields
+   END_STRUCT;
+
+END_TYPE
+
